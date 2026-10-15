@@ -1,0 +1,10 @@
+---
+description: Latest effective dependencies; 0 warnings and 0 errors
+alwaysApply: true
+---
+
+# Quality
+
+- **0 warnings, 0 errors.** Lint `--max-warnings=0`. Typecheck `strict`. `apptest` fails on any warning or error from lint, tsc, tests, or build. Do not add `eslint-disable`, `@ts-ignore`, or `@ts-expect-error` to hide either.
+- **Latest effective versions.** Current latest that work together (current NestJS with its matching Node and TypeScript). Do not pin an older major because a template did. Do not use a canary Expo or Nest does not support.
+- Run `npm run apptest` (lint → typecheck → test → build) before calling work done.
