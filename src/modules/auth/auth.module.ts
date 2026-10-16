@@ -13,7 +13,15 @@ import { RequestRecovery } from "./application/request-recovery";
 import { ResendVerification } from "./application/resend-verification";
 import { VerifyEmail } from "./application/verify-email";
 import { AuthController } from "./controllers/auth.controller";
-import { CaptureMailer, DevMailer, MAILER, Mailer, ProductionMailer } from "./domain/mailer";
+import {
+  CaptureMailer,
+  createSmtpMailer,
+  DevMailer,
+  MAILER,
+  Mailer,
+  ProductionMailer,
+  smtpFromEnv,
+} from "./domain/mailer";
 import { ARGON2_OPTIONS, ARGON2_PRODUCTION, ARGON2_TEST } from "./domain/password";
 import { RateLimit } from "./domain/rate-limit";
 import { RequireAccessToken } from "./policies/require-access-token";
@@ -21,13 +29,17 @@ import { EmailCodesRepository } from "./repositories/email-codes.repository";
 import { SecurityEventsRepository } from "./repositories/security-events.repository";
 import { SessionsRepository } from "./repositories/sessions.repository";
 
-/** Only local development prints codes to the console; every deployed environment needs a real provider. */
+/** Tests capture codes. SMTP sends when configured. Development without SMTP still prints the code. */
 function mailerFor(env: string): Mailer {
-  if (env === "development") {
-    return new DevMailer();
-  }
   if (env === "test") {
     return new CaptureMailer();
+  }
+  const smtp = smtpFromEnv();
+  if (smtp) {
+    return createSmtpMailer(smtp);
+  }
+  if (env === "development") {
+    return new DevMailer();
   }
   return new ProductionMailer();
 }

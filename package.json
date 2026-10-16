@@ -19,6 +19,7 @@
     "argon2": "^0.45.1",
     "jose": "^6.2.12",
     "mongodb": "^7.7.0",
+    "nodemailer": "^10.1.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "uuid": "^14.0.3"
@@ -31,6 +32,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",
+    "@types/nodemailer": "^8.0.2",
     "eslint": "^10.12.0",
     "jest": "^30.5.2",
     "mongodb-memory-server": "^11.3.0",
