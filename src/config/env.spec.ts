@@ -19,7 +19,7 @@ describe("loadConfig", () => {
   });
 
   it("refuses production without JWT_SECRET", () => {
-    expect(() => loadConfig({ APP_ENV: "production" })).toThrow(
+    expect(() => loadConfig({ APP_ENV: "production", MONGODB_URI: "mongodb://localhost:27017" })).toThrow(
       "JWT_SECRET is required in production",
     );
   });
@@ -28,7 +28,22 @@ describe("loadConfig", () => {
     const config = loadConfig({
       APP_ENV: "production",
       JWT_SECRET: "a".repeat(32),
+      MONGODB_URI: "mongodb://localhost:27017",
     });
     expect(config.appEnv).toBe("production");
+  });
+});
+
+describe("loadConfig database settings", () => {
+  it("reads MONGODB_URI and defaults the database name", () => {
+    const config = loadConfig({ MONGODB_URI: "mongodb://localhost:27017" });
+    expect(config.mongodbUri).toBe("mongodb://localhost:27017");
+    expect(config.mongodbDb).toBe("MyLedja");
+  });
+
+  it("refuses production without MONGODB_URI", () => {
+    expect(() => loadConfig({ APP_ENV: "production", JWT_SECRET: "a".repeat(32) })).toThrow(
+      "MONGODB_URI is required in production",
+    );
   });
 });

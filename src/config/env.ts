@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+
 export const APP_ENVS = [
   "development",
   "staging",
@@ -12,6 +14,8 @@ export interface AppConfig {
   port: number;
   appUrl: string;
   jwtSecret: string;
+  mongodbUri: string;
+  mongodbDb: string;
 }
 
 function isAppEnv(value: string): value is AppEnv {
@@ -29,6 +33,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("JWT_SECRET is required in production");
   }
 
+  const mongodbUri = env.MONGODB_URI ?? "";
+  if (rawEnv === "production" && !mongodbUri) {
+    throw new Error("MONGODB_URI is required in production");
+  }
+
   const port = Number(env.PORT ?? 4000);
   if (!Number.isInteger(port) || port < 1) {
     throw new Error(`Invalid PORT: ${env.PORT}`);
@@ -39,5 +48,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port,
     appUrl: env.APP_URL ?? "http://localhost:4000",
     jwtSecret,
+    mongodbUri,
+    mongodbDb: env.MONGODB_DB ?? "MyLedja",
   };
+}
+
+/** Loads .env.<APP_ENV> if present. Variables already set in the process win. */
+export function loadEnvFile(appEnv: string = process.env.APP_ENV ?? "development"): void {
+  const path = `.env.${appEnv}`;
+  if (existsSync(path)) {
+    process.loadEnvFile(path);
+  }
 }
