@@ -16,6 +16,9 @@ export interface AppConfig {
   jwtSecret: string;
   mongodbUri: string;
   mongodbDb: string;
+  monoSecKey: string;
+  monoPublicKey: string;
+  monoAppId: string;
 }
 
 function isAppEnv(value: string): value is AppEnv {
@@ -50,6 +53,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     jwtSecret,
     mongodbUri,
     mongodbDb: env.MONGODB_DB ?? "MyLedja",
+    monoSecKey: env.MONO_SEC_KEY ?? "",
+    monoPublicKey: env.MONO_PUBLIC_KEY ?? "",
+    monoAppId: env.MONO_APP_ID ?? "",
   };
 }
 

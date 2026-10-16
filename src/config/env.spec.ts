@@ -47,3 +47,22 @@ describe("loadConfig database settings", () => {
     );
   });
 });
+
+describe("loadConfig Mono settings", () => {
+  it("reads sandbox keys without logging them", () => {
+    const config = loadConfig({
+      MONO_SEC_KEY: "test_sk_example",
+      MONO_PUBLIC_KEY: "test_pk_example",
+      MONO_APP_ID: "6a2800772814c9ea0ed20b5e",
+    });
+    expect(config.monoSecKey).toBe("test_sk_example");
+    expect(config.monoPublicKey).toBe("test_pk_example");
+    expect(config.monoAppId).toBe("6a2800772814c9ea0ed20b5e");
+  });
+
+  it("defaults Mono settings to empty", () => {
+    const config = loadConfig({});
+    expect(config.monoSecKey).toBe("");
+    expect(config.monoAppId).toBe("");
+  });
+});
