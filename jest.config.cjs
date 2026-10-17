@@ -7,6 +7,7 @@ module.exports = {
     "^.+\\.ts$": "ts-jest",
   },
   testEnvironment: "node",
+  maxWorkers: 1,
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },

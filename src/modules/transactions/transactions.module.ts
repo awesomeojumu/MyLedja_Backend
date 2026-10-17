@@ -13,6 +13,6 @@ import { TransactionsRepository } from "@/modules/transactions/repositories/tran
   imports: [AuthModule, WorkspacesModule, AccountsModule, CategoriesMerchantsModule],
   controllers: [TransactionsController],
   providers: [TransactionsRepository, OperationsRepository, CreateTransaction, ChangeStatus],
-  exports: [TransactionsRepository],
+  exports: [TransactionsRepository, CreateTransaction],
 })
 export class TransactionsModule {}

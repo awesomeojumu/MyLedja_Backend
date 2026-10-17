@@ -41,6 +41,17 @@ export class MerchantsAndTags {
     return { status: "ok" as const, data: { id: doc._id, name: doc.name }, error: null };
   }
 
+  async listMerchants(userId: string, workspaceId: string) {
+    const membership = await this.memberships.execute(userId, workspaceId);
+    requireCapability(membership.role, "view");
+    const rows = await this.catalog.merchants.find({ workspaceId }).toArray();
+    return {
+      status: "ok" as const,
+      data: rows.map((row) => ({ id: row._id, name: row.name, categoryId: row.categoryId })),
+      error: null,
+    };
+  }
+
   async listTags(userId: string, workspaceId: string) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "view");

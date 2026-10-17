@@ -54,9 +54,9 @@ export async function verifyPassword(digest: string, password: string): Promise<
   }
 }
 
-let dummyHash: string | undefined;
+let unusedHash: string | undefined;
 
-export async function dummyPasswordCheck(password: string, options: HashOptions): Promise<void> {
-  dummyHash ??= await hashPassword("dummy-password-not-used", options);
-  await verifyPassword(dummyHash, password);
+export async function unusedPasswordWork(password: string, options: HashOptions): Promise<void> {
+  unusedHash ??= await hashPassword("unused-password-not-stored", options);
+  await verifyPassword(unusedHash, password);
 }

@@ -13,8 +13,8 @@ Every financial collection, report and invariant depends on how a money movement
 
 | Option | For | Against |
 |---|---|---|
-| **A. Conventional transactions with explicit account effects** | Simple to build and explain for a manual-first MVP. One document per user action. Maps directly onto screens and the offline outbox. | The invariants must be enforced in domain code and tests, not by the data structure itself. |
-| B. Double-entry journal and entries | Debits equal credits by construction. Immutability comes naturally. | Much more modelling up front, such as equity, income and expense ledgers for every workspace. Harder offline merges. Heavier for the MVP team. |
+| **A. Conventional transactions with explicit account effects** | Simple to build and explain for a manual-first first release. One document per user action. Maps directly onto screens and the offline outbox. | The invariants must be enforced in domain code and tests, not by the data structure itself. |
+| B. Double-entry journal and entries | Debits equal credits by construction. Immutability comes naturally. | Much more modelling up front, such as equity, income and expense ledgers for every workspace. Harder offline merges. Heavier for the first release team. |
 | C. Single-amount transactions (no effects) | Simplest of all. | Cannot express transfers, loans or investments without breaking INV-02, INV-07 and INV-10. Rejected. |
 
 ## Decision

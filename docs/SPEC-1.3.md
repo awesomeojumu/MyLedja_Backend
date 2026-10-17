@@ -27,9 +27,9 @@ Three questions: where is my money, where is it going, where is it supposed to g
 
 DEC-01 financial model · DEC-02 money storage · DEC-03 auth/recovery · DEC-04 workspace roles · DEC-05 offline mutation scope · DEC-06 retention/deletion · DEC-07 hosting · DEC-08 bank provider · DEC-09 entitlements · DEC-10 tax scope · DEC-11 workspaces module / health / OpenAPI home · DEC-12 Mongoose vs driver · DEC-13 reminder channels · DEC-14 MongoDB vs double-entry later
 
-## MVP vs gated
+## first release vs gated
 
-**MVP:** onboarding, personal workspace, manual accounts and transactions, transfers, categories, budgets, bills, goals, basic reports, offline, CSV, privacy/security.
+**first release:** onboarding, personal workspace, manual accounts and transactions, transfers, categories, budgets, bills, goals, basic reports, offline, CSV, privacy/security.
 
 **Gated:** family/business workspaces, bank aggregation, receipt OCR, tax, advanced investing, web client.
 

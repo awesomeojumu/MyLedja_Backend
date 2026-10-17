@@ -57,6 +57,15 @@ export class CatalogController {
     }
   }
 
+  @Get("merchants")
+  async listMerchants(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
+    try {
+      return await this.merchantsAndTags.listMerchants(getAuth(req).userId, workspace(workspaceId));
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
   @Post("merchants")
   async merchant(@Param("workspaceId") workspaceId: string, @Body() body: unknown, @Req() req: Request) {
     try {

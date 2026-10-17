@@ -5,7 +5,7 @@ import { runInTransaction } from "@/database/mongo/transaction";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import { CreatePersonalWorkspace } from "@/modules/workspaces/application/create-personal-workspace";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
-import { codeMatches, dummyCodeCheck, MAX_CODE_ATTEMPTS } from "@/modules/auth/domain/email-code";
+import { codeMatches, unusedCodeWork, MAX_CODE_ATTEMPTS } from "@/modules/auth/domain/email-code";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
@@ -32,7 +32,7 @@ export class VerifyEmail {
     const active = await this.codes.findActive(input.email, "verify");
     const now = new Date();
     if (!user || user.verifiedAt || !active || active.expiresAt <= now) {
-      dummyCodeCheck(input.code);
+      unusedCodeWork(input.code);
       this.rateLimit.record(ipKey);
       this.rateLimit.record(emailKey);
       throw new AuthFailure("unauthorized", "invalid code");

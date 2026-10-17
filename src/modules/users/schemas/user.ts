@@ -6,4 +6,5 @@ export interface UserDoc {
   passwordHash: string;
   verifiedAt: Date | null;
   createdAt: Date;
+  hideLockScreenAmounts?: boolean;
 }

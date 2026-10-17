@@ -1,7 +1,7 @@
 export const ACCOUNTS_COLLECTION = "accounts";
 
 export type ConnectionType = "manual" | "linked" | "imported";
-export type AccountKind = "bank" | "wallet" | "cash" | "savings" | "liability";
+export type AccountKind = "bank" | "wallet" | "cash" | "savings" | "liability" | "receivable";
 
 export interface AccountDoc {
   _id: string;
@@ -19,4 +19,6 @@ export interface AccountDoc {
   mask?: string;
   archivedAt: Date | null;
   createdAt: Date;
+  externalBalanceMinor?: bigint;
+  reconciledAsOf?: Date;
 }

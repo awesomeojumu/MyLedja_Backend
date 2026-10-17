@@ -5,7 +5,7 @@ import { loadConfig } from "@/config/env";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import { ACCESS_TTL_SECONDS, signAccessToken } from "@/modules/auth/domain/access-token";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
-import { ARGON2_OPTIONS, dummyPasswordCheck, verifyPassword } from "@/modules/auth/domain/password";
+import { ARGON2_OPTIONS, unusedPasswordWork, verifyPassword } from "@/modules/auth/domain/password";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import {
   issueRefreshToken,
@@ -36,7 +36,7 @@ export class Login {
     }
     const user = await this.users.findByEmail(input.email);
     if (!user) {
-      await dummyPasswordCheck(input.password, this.argon2);
+      await unusedPasswordWork(input.password, this.argon2);
       this.rateLimit.record(ipKey);
       this.rateLimit.record(emailKey);
       throw new AuthFailure("unauthorized", "invalid credentials");
@@ -51,6 +51,7 @@ export class Login {
       throw new AuthFailure("unverified", "email not verified");
     }
     this.rateLimit.reset(emailKey);
+    this.rateLimit.reset(ipKey);
     const now = new Date();
     const sid = newId();
     const familyId = newFamilyId();

@@ -26,6 +26,8 @@ export class GetWorkspace {
       name: workspace.name,
       role: membership.role,
       defaultCurrency: workspace.defaultCurrency ?? "NGN",
+      timezone: workspace.timezone ?? "Africa/Lagos",
+      weekStartsOn: workspace.weekStartsOn ?? "monday",
       setupProgress: workspace.setupProgress,
     };
   }

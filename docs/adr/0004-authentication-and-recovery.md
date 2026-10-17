@@ -54,5 +54,5 @@ MYL-005 must pass register → verify → login → refresh → logout end to en
 
 - We own security-critical code. It needs threat-model review, plus tests for rotation, reuse detection, neutral recovery and rate limits before launch.
 - An email delivery provider becomes a launch dependency (DEC-07).
-- Phone and SMS sign-in is not in the MVP. It can be added as a second verified method later.
+- Phone and SMS sign-in is not in the first release. It can be added as a second verified method later.
 - If passkeys or MFA effort outgrows the team, moving to a managed provider (Option B) is still possible, because the API exposes our own session contract rather than a vendor's.

@@ -33,7 +33,7 @@ export class WorkspacesRepository implements OnModuleInit {
 
   async patchSetup(
     id: string,
-    fields: Partial<Pick<WorkspaceDoc, "defaultCurrency" | "setupProgress">>,
+    fields: Partial<Pick<WorkspaceDoc, "defaultCurrency" | "setupProgress" | "timezone" | "weekStartsOn">>,
   ): Promise<void> {
     await this.col.updateOne({ _id: id }, { $set: fields });
   }

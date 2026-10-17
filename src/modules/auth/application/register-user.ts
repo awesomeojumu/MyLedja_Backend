@@ -3,14 +3,14 @@ import { newId } from "@/common/ids";
 import { HashOptions } from "argon2";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import {
-  dummyCodeCheck,
+  unusedCodeWork,
   generateEmailCode,
   hashEmailCode,
   VERIFY_CODE_TTL_MS,
 } from "@/modules/auth/domain/email-code";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
-import { ARGON2_OPTIONS, dummyPasswordCheck, hashPassword } from "@/modules/auth/domain/password";
+import { ARGON2_OPTIONS, unusedPasswordWork, hashPassword } from "@/modules/auth/domain/password";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
@@ -32,8 +32,8 @@ export class RegisterUser {
     this.rateLimit.record(ipKey);
     const existing = await this.users.findByEmail(input.email);
     if (existing) {
-      await dummyPasswordCheck(input.password, this.argon2);
-      dummyCodeCheck(generateEmailCode());
+      await unusedPasswordWork(input.password, this.argon2);
+      unusedCodeWork(generateEmailCode());
       return;
     }
     const now = new Date();

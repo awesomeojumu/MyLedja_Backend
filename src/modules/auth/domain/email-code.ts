@@ -28,6 +28,6 @@ export function isSixDigitCode(code: string): boolean {
 }
 
 /** Does the same work as a real check so a missing account or code takes the same time. */
-export function dummyCodeCheck(code: string): void {
+export function unusedCodeWork(code: string): void {
   codeMatches(hashEmailCode("000000"), code);
 }

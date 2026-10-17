@@ -1,0 +1,5 @@
+posted_at,narration,amount,type
+2026-10-02,SHOPRITE IKOYI,2500.00,expense
+2026-10-03,SALARY,150000.00,income
+not-a-date,BAD ROW,10.00,expense
+2026-10-04,=CMD|calc,12.00,expense

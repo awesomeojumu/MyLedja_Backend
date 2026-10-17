@@ -4,7 +4,7 @@ import { AccountFailure } from "@/modules/accounts/domain/account-failure";
 import { institutionById } from "@/modules/accounts/domain/institutions";
 import { AccountKind, ConnectionType } from "@/modules/accounts/schemas/account";
 
-const KINDS: AccountKind[] = ["bank", "wallet", "cash", "savings", "liability"];
+const KINDS: AccountKind[] = ["bank", "wallet", "cash", "savings", "liability", "receivable"];
 const CONNECTIONS: ConnectionType[] = ["manual", "linked", "imported"];
 
 function rec(body: unknown): Record<string, unknown> {

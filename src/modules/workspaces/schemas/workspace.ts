@@ -24,4 +24,6 @@ export interface WorkspaceDoc {
   createdAt: Date;
   defaultCurrency?: string;
   setupProgress?: SetupProgress;
+  timezone?: string;
+  weekStartsOn?: "monday" | "sunday";
 }

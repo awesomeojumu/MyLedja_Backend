@@ -3,7 +3,7 @@ import { newId } from "@/common/ids";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 import {
-  dummyCodeCheck,
+  unusedCodeWork,
   generateEmailCode,
   hashEmailCode,
   RECOVERY_CODE_TTL_MS,
@@ -30,7 +30,7 @@ export class RequestRecovery {
     this.rateLimit.record(ipKey);
     this.rateLimit.record(emailKey);
     const user = await this.users.findByEmail(input.email);
-    dummyCodeCheck(generateEmailCode());
+    unusedCodeWork(generateEmailCode());
     if (!user || !user.verifiedAt) {
       return;
     }

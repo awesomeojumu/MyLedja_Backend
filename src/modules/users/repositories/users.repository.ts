@@ -44,4 +44,8 @@ export class UsersRepository implements OnModuleInit {
   async setPassword(id: string, passwordHash: string, session?: ClientSession): Promise<void> {
     await this.col.updateOne({ _id: id }, { $set: { passwordHash } }, session ? { session } : undefined);
   }
+
+  async setHideAmounts(id: string, hideLockScreenAmounts: boolean): Promise<void> {
+    await this.col.updateOne({ _id: id }, { $set: { hideLockScreenAmounts } });
+  }
 }

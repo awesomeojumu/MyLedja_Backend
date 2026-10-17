@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { newId } from "@/common/ids";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
-import { dummyCodeCheck, generateEmailCode, hashEmailCode, VERIFY_CODE_TTL_MS } from "@/modules/auth/domain/email-code";
+import { unusedCodeWork, generateEmailCode, hashEmailCode, VERIFY_CODE_TTL_MS } from "@/modules/auth/domain/email-code";
 import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
@@ -27,7 +27,7 @@ export class ResendVerification {
     this.rateLimit.record(emailKey);
     const user = await this.users.findByEmail(input.email);
     if (!user || user.verifiedAt) {
-      dummyCodeCheck(generateEmailCode());
+      unusedCodeWork(generateEmailCode());
       return;
     }
     const now = new Date();

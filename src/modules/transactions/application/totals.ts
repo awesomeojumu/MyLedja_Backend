@@ -6,11 +6,15 @@ export function periodTotals(rows: readonly TransactionDoc[], currency = "NGN") 
   let expense = 0n;
   for (const row of rows) {
     if (row.status !== "posted") continue;
-    if (row.type === "income" || row.type === "refund") income += row.amountMinor;
+    if (row.type === "income") income += row.amountMinor;
     if (row.type === "expense") expense += row.amountMinor;
   }
+  const refund = rows
+    .filter((row) => row.status === "posted" && row.type === "refund")
+    .reduce((sum, row) => sum + row.amountMinor, 0n);
   return {
     income: formatMoney(money(income, currency)),
     expense: formatMoney(money(expense, currency)),
+    refund: formatMoney(money(refund, currency)),
   };
 }

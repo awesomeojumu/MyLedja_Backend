@@ -88,6 +88,8 @@ export class WorkspacesController {
       const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
       return await this.patchSetup.execute(getAuth(req).userId, workspaceId, {
         defaultCurrency: typeof record.defaultCurrency === "string" ? record.defaultCurrency : undefined,
+        timezone: typeof record.timezone === "string" ? record.timezone : undefined,
+        weekStartsOn: record.weekStartsOn === "sunday" || record.weekStartsOn === "monday" ? record.weekStartsOn : undefined,
         setupProgress:
           record.setupProgress && typeof record.setupProgress === "object"
             ? (record.setupProgress as Record<string, boolean>)

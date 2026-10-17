@@ -13,6 +13,14 @@ import { CategoriesMerchantsModule } from "@/modules/categories-merchants/catego
 import { TransactionsModule } from "@/modules/transactions/transactions.module";
 import { UsersModule } from "@/modules/users/users.module";
 import { WorkspacesModule } from "@/modules/workspaces/workspaces.module";
+import { BillsModule } from "@/modules/bills/bills.module";
+import { BudgetsModule } from "@/modules/budgets/budgets.module";
+import { DashboardModule } from "@/modules/dashboard/dashboard.module";
+import { DebtsModule } from "@/modules/debts/debts.module";
+import { ImportsExportsModule } from "@/modules/imports-exports/imports-exports.module";
+import { IncomeModule } from "@/modules/income/income.module";
+import { PlansGoalsModule } from "@/modules/plans-goals/plans-goals.module";
+import { SettingsPrivacyModule } from "@/modules/settings-privacy/settings-privacy.module";
 import { randomFillSync } from "node:crypto";
 
 export function testId(): string {
@@ -60,6 +68,14 @@ export async function startLedgerApp(): Promise<TestApp> {
       AccountsModule,
       CategoriesMerchantsModule,
       TransactionsModule,
+      DashboardModule,
+      BudgetsModule,
+      BillsModule,
+      IncomeModule,
+      PlansGoalsModule,
+      DebtsModule,
+      SettingsPrivacyModule,
+      ImportsExportsModule,
     ],
   })
     .overrideProvider(MAILER)

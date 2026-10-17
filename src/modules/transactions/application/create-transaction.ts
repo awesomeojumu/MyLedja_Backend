@@ -30,6 +30,8 @@ export interface CreateTxnInput {
   description: string;
   status?: LedgerStatus;
   tagIds?: string[];
+  occurredAt?: string;
+  originalTransactionId?: string;
 }
 
 @Injectable()
@@ -73,6 +75,11 @@ export class CreateTransaction {
 
     const from = await this.accounts.findById(workspaceId, input.accountId);
     if (!from || from.archivedAt) throw new LedgerFailure("bad_request", "Choose a valid account.");
+    if (input.type === "refund") {
+      if (!input.originalTransactionId) throw new LedgerFailure("bad_request", "Refund needs the original transaction.");
+      const original = await this.txns.findById(workspaceId, input.originalTransactionId);
+      if (!original) throw new LedgerFailure("bad_request", "Original transaction not found.");
+    }
 
     let merchantId = undefined as string | undefined;
     const merchants = await this.catalog.merchants.find({ workspaceId }).toArray();
@@ -80,7 +87,7 @@ export class CreateTransaction {
     if (matched) merchantId = matched._id;
 
     let categoryId = input.categoryId ?? matched?.categoryId;
-    if (input.type === "transfer") {
+    if (input.type === "transfer" || input.type === "allocation" || input.type === "loan_in" || input.type === "loan_out" || input.type === "principal_collect") {
       categoryId = undefined;
     } else if (categoryId) {
       const category = await this.catalog.categories.findOne({ _id: categoryId, workspaceId });
@@ -94,7 +101,7 @@ export class CreateTransaction {
     }
 
     const effects: Effect[] = [];
-    if (input.type === "transfer") {
+    if (input.type === "transfer" || input.type === "allocation") {
       if (!input.toAccountId || input.toAccountId === input.accountId) {
         throw new LedgerFailure("bad_request", "Pick two different accounts.");
       }
@@ -103,6 +110,30 @@ export class CreateTransaction {
       effects.push(
         { accountId: from._id, amountMinor: -amount.amountMinor, currency },
         { accountId: to._id, amountMinor: amount.amountMinor, currency },
+      );
+    } else if (input.type === "loan_in") {
+      if (!input.toAccountId) throw new LedgerFailure("bad_request", "Choose the liability account.");
+      const liability = await this.accounts.findById(workspaceId, input.toAccountId);
+      if (!liability || liability.archivedAt) throw new LedgerFailure("bad_request", "Choose a valid liability account.");
+      effects.push(
+        { accountId: from._id, amountMinor: amount.amountMinor, currency },
+        { accountId: liability._id, amountMinor: amount.amountMinor, currency },
+      );
+    } else if (input.type === "loan_out") {
+      if (!input.toAccountId) throw new LedgerFailure("bad_request", "Choose the receivable account.");
+      const recv = await this.accounts.findById(workspaceId, input.toAccountId);
+      if (!recv || recv.archivedAt) throw new LedgerFailure("bad_request", "Choose a valid receivable account.");
+      effects.push(
+        { accountId: from._id, amountMinor: -amount.amountMinor, currency },
+        { accountId: recv._id, amountMinor: amount.amountMinor, currency },
+      );
+    } else if (input.type === "principal_collect") {
+      if (!input.toAccountId) throw new LedgerFailure("bad_request", "Choose the receivable account.");
+      const recv = await this.accounts.findById(workspaceId, input.toAccountId);
+      if (!recv || recv.archivedAt) throw new LedgerFailure("bad_request", "Choose a valid receivable account.");
+      effects.push(
+        { accountId: from._id, amountMinor: amount.amountMinor, currency },
+        { accountId: recv._id, amountMinor: -amount.amountMinor, currency },
       );
     } else if (input.type === "expense") {
       effects.push({ accountId: from._id, amountMinor: -amount.amountMinor, currency });
@@ -126,6 +157,8 @@ export class CreateTransaction {
       effects,
       version: 1,
       createdAt: new Date(),
+      occurredAt: input.occurredAt ? new Date(input.occurredAt) : new Date(),
+      originalTransactionId: input.originalTransactionId,
     };
 
     await runInTransaction(this.client, async (session) => {

@@ -20,6 +20,7 @@ import { TaxesModule } from "@/modules/taxes/taxes.module";
 import { TransactionsModule } from "@/modules/transactions/transactions.module";
 import { UsersModule } from "@/modules/users/users.module";
 import { WorkspacesModule } from "@/modules/workspaces/workspaces.module";
+import { DashboardModule } from "@/modules/dashboard/dashboard.module";
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { WorkspacesModule } from "@/modules/workspaces/workspaces.module";
     BankIntegrationsModule,
     SettingsPrivacyModule,
     SupportOperationsModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

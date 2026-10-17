@@ -7,14 +7,14 @@
 
 ## Context
 
-MyLedja is offline-first (CON-07). Every change allowed offline adds conflict cases, so the MVP must freeze which mutations work offline, how they are queued, and how the server settles competing changes. §6.1 proposes a scope, §6.3 an outbox record, §6.4 a conflict policy and §6.5 sync states. §15.1 requires one ID strategy, with offline-created IDs that are stable and validated by the server.
+MyLedja is offline-first (CON-07). Every change allowed offline adds conflict cases, so the first release must freeze which mutations work offline, how they are queued, and how the server settles competing changes. §6.1 proposes a scope, §6.3 an outbox record, §6.4 a conflict policy and §6.5 sync states. §15.1 requires one ID strategy, with offline-created IDs that are stable and validated by the server.
 
 ## Options
 
 | Option | For | Against |
 |---|---|---|
 | A. Read-only offline | No conflicts at all. | Fails the core need: recording an expense at the market with no signal. |
-| **B. Narrow write set offline (transactions, plus accounts and categories) and everything else online** | Covers everyday capture. The conflict surface stays small and testable. | Budgets, bills and goals cannot be edited without a connection in the MVP. |
+| **B. Narrow write set offline (transactions, plus accounts and categories) and everything else online** | Covers everyday capture. The conflict surface stays small and testable. | Budgets, bills and goals cannot be edited without a connection in the first release. |
 | C. Everything offline, last write wins | Feels seamless. | Silently overwrites money data, which §6.4 forbids. |
 | D. Everything offline with CRDT merging | No lost writes. | Far too complex for financial records with strict invariants. |
 
@@ -22,7 +22,7 @@ MyLedja is offline-first (CON-07). Every change allowed offline adds conflict ca
 
 **Option B.**
 
-### Offline matrix (MVP)
+### Offline matrix (first release)
 
 | Action | Offline? |
 |---|---|
@@ -32,7 +32,7 @@ MyLedja is offline-first (CON-07). Every change allowed offline adds conflict ca
 | Create an account, and edit its name, colour or icon | **Yes**, through the outbox |
 | Create a category | **Yes**, through the outbox |
 | Archive an account, or change an opening balance | No, online only |
-| Budgets, bills, goals: create or edit | No, online only in the MVP; to be reviewed after launch |
+| Budgets, bills, goals: create or edit | No, online only in the first release; to be reviewed after launch |
 | Commit an import (the preview may run locally) | No, online only |
 | Members, roles, security, workspace settings, sessions | No, online only, with strict version checks |
 | Bank connections, subscriptions, permanent deletion, exports | No, online only and confirmed by the server |
@@ -69,7 +69,7 @@ Operations on the same entity are sent in order. A record created offline must s
 
 ## Consequences
 
-- The conflict screen and the outbox are MVP work for the frontend `sync/` and `database/` folders, not polish.
+- The conflict screen and the outbox are first release work for the frontend `sync/` and `database/` folders, not polish.
 - Every offline-capable endpoint needs idempotency and version tests, plus the offline test matrix: airplane mode, app kill, reconnect, retry, conflict, logout and account switch (§10).
 - Using UUIDv7 rather than ObjectId keeps one ID type end to end. Indexes stay time-ordered.
 - Widening the offline set later (budgets, bills, goals) means updating this ADR and extending the version checks to those entities.

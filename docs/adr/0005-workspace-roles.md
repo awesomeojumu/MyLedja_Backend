@@ -1,4 +1,4 @@
-# ADR-0005: Four workspace roles, enforced on the server, with no per-account privacy in MVP (DEC-04)
+# ADR-0005: Four workspace roles, enforced on the server, with no per-account privacy in first release (DEC-04)
 
 - Status: Accepted
 - Date: 2026-10-16
@@ -13,7 +13,7 @@ Workspaces are the primary boundary for both data and permissions. Every record 
 2. Is account-level privacy supported inside a shared workspace?
 3. Can viewers see all balances?
 
-The MVP ships with personal workspaces only. Family and business workspaces are gated, but the model must already be multi-user (CON-05).
+The first release ships with personal workspaces only. Family and business workspaces are gated, but the model must already be multi-user (CON-05).
 
 ## Options
 
@@ -50,4 +50,4 @@ The MVP ships with personal workspaces only. Family and business workspaces are 
 - Every endpoint declares a required capability, and tests cover each role for it. A role matrix test table becomes part of every workspace-scoped story.
 - A user who wants private money and shared money keeps two workspaces. Onboarding copy must explain this.
 - Per-account privacy can be added later only through a new ADR, because it changes how every aggregate is computed.
-- In the MVP each user only has their own personal workspace as owner. The matrix is still enforced from day one, so family and business workspaces need no security rework.
+- In the first release each user only has their own personal workspace as owner. The matrix is still enforced from day one, so family and business workspaces need no security rework.

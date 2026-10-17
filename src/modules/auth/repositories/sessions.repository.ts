@@ -58,4 +58,13 @@ export class SessionsRepository implements OnModuleInit {
   async revokeUser(userId: string, at: Date): Promise<void> {
     await this.col.updateMany({ userId, revokedAt: null }, { $set: { revokedAt: at } });
   }
+
+  async listByUser(userId: string): Promise<SessionDoc[]> {
+    return this.col.find({ userId }).toArray();
+  }
+
+  async revokeById(id: string, userId: string, at: Date): Promise<boolean> {
+    const result = await this.col.updateOne({ _id: id, userId, revokedAt: null }, { $set: { revokedAt: at } });
+    return result.modifiedCount === 1;
+  }
 }

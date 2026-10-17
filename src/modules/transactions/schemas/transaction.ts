@@ -1,7 +1,15 @@
 export const TRANSACTIONS_COLLECTION = "transactions";
 export const OPERATIONS_COLLECTION = "operations";
 
-export type LedgerType = "income" | "expense" | "transfer" | "refund";
+export type LedgerType =
+  | "income"
+  | "expense"
+  | "transfer"
+  | "refund"
+  | "allocation"
+  | "loan_in"
+  | "loan_out"
+  | "principal_collect";
 export type LedgerStatus = "pending" | "posted" | "reversed" | "voided";
 
 export interface Effect {
@@ -26,6 +34,10 @@ export interface TransactionDoc {
   effects: Effect[];
   version: number;
   createdAt: Date;
+  occurredAt?: Date;
+  originalTransactionId?: string;
+  parentId?: string;
+  importId?: string;
 }
 
 export interface OperationDoc {

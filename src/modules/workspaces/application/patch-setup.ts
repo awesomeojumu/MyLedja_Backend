@@ -14,7 +14,12 @@ export class PatchSetup {
   async execute(
     userId: string,
     workspaceId: string,
-    input: { defaultCurrency?: string; setupProgress?: Partial<SetupProgress> },
+    input: {
+      defaultCurrency?: string;
+      setupProgress?: Partial<SetupProgress>;
+      timezone?: string;
+      weekStartsOn?: "monday" | "sunday";
+    },
   ) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "update_workspace");
@@ -22,11 +27,19 @@ export class PatchSetup {
     const setupProgress = { ...(current?.setupProgress ?? EMPTY_SETUP), ...input.setupProgress };
     await this.workspaces.patchSetup(workspaceId, {
       ...(input.defaultCurrency ? { defaultCurrency: input.defaultCurrency } : {}),
+      ...(input.timezone ? { timezone: input.timezone } : {}),
+      ...(input.weekStartsOn ? { weekStartsOn: input.weekStartsOn } : {}),
       setupProgress,
     });
     return {
       status: "ok" as const,
-      data: { id: workspaceId, defaultCurrency: input.defaultCurrency ?? current?.defaultCurrency ?? "NGN", setupProgress },
+      data: {
+        id: workspaceId,
+        defaultCurrency: input.defaultCurrency ?? current?.defaultCurrency ?? "NGN",
+        timezone: input.timezone ?? current?.timezone ?? "Africa/Lagos",
+        weekStartsOn: input.weekStartsOn ?? current?.weekStartsOn ?? "monday",
+        setupProgress,
+      },
       error: null,
     };
   }

@@ -50,7 +50,7 @@ export class SeedAndListCategories {
   ) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "write_records");
-    let parentId = input.parentId ?? null;
+    const parentId = input.parentId ?? null;
     if (parentId) {
       const parent = await this.catalog.categories.findOne({ _id: parentId, workspaceId });
       if (!parent) throw new CatalogFailure("bad_request", "Unknown parent category.");

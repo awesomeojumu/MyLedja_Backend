@@ -22,7 +22,7 @@ export class CreateAccount {
     workspaceId: string,
     input: {
       name: string;
-      kind: "bank" | "wallet" | "cash" | "savings" | "liability";
+      kind: "bank" | "wallet" | "cash" | "savings" | "liability" | "receivable";
       institutionId: string | null;
       connectionType: "manual" | "linked" | "imported";
       currency: string;

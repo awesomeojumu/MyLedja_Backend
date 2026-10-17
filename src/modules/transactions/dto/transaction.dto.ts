@@ -7,13 +7,22 @@ function rec(body: unknown): Record<string, unknown> {
   return body as Record<string, unknown>;
 }
 
-const TYPES: LedgerType[] = ["income", "expense", "transfer", "refund"];
+const TYPES: LedgerType[] = [
+  "income",
+  "expense",
+  "transfer",
+  "refund",
+  "allocation",
+  "loan_in",
+  "loan_out",
+  "principal_collect",
+];
 const STATUSES: LedgerStatus[] = ["pending", "posted", "reversed", "voided"];
 
 export function parseCreateTxn(body: unknown) {
   const r = rec(body);
   if (!isId(r.operationId)) throw new LedgerFailure("bad_request", "operationId must be a UUIDv7.");
-  if (!TYPES.includes(r.type as LedgerType)) throw new LedgerFailure("bad_request", "Choose income, expense, transfer or refund.");
+  if (!TYPES.includes(r.type as LedgerType)) throw new LedgerFailure("bad_request", "Choose a valid transaction type.");
   if (typeof r.amount !== "string") throw new LedgerFailure("bad_request", "Enter an amount.");
   if (typeof r.accountId !== "string") throw new LedgerFailure("bad_request", "Choose an account.");
   const status = r.status === undefined ? "posted" : (r.status as LedgerStatus);
@@ -29,6 +38,8 @@ export function parseCreateTxn(body: unknown) {
     description: typeof r.description === "string" ? r.description : "",
     status,
     tagIds: Array.isArray(r.tagIds) ? r.tagIds.filter((id): id is string => typeof id === "string") : [],
+    occurredAt: typeof r.occurredAt === "string" ? r.occurredAt : undefined,
+    originalTransactionId: typeof r.originalTransactionId === "string" ? r.originalTransactionId : undefined,
   };
 }
 
