@@ -1,8 +1,8 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { ClientSession, Collection, Db } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { WorkspaceRole } from "../domain/roles";
-import { MEMBERSHIPS_COLLECTION, MembershipDoc } from "../schemas/membership";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { WorkspaceRole } from "@/modules/workspaces/domain/roles";
+import { MEMBERSHIPS_COLLECTION, MembershipDoc } from "@/modules/workspaces/schemas/membership";
 
 @Injectable()
 export class MembershipsRepository implements OnModuleInit {

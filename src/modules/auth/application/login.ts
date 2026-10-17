@@ -1,18 +1,18 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { newId } from "../../../common/ids";
+import { newId } from "@/common/ids";
 import { HashOptions } from "argon2";
-import { loadConfig } from "../../../config/env";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { ACCESS_TTL_SECONDS, signAccessToken } from "../domain/access-token";
-import { AuthFailure } from "../domain/auth-failure";
-import { ARGON2_OPTIONS, dummyPasswordCheck, verifyPassword } from "../domain/password";
-import { RateLimit } from "../domain/rate-limit";
+import { loadConfig } from "@/config/env";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { ACCESS_TTL_SECONDS, signAccessToken } from "@/modules/auth/domain/access-token";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { ARGON2_OPTIONS, dummyPasswordCheck, verifyPassword } from "@/modules/auth/domain/password";
+import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import {
   issueRefreshToken,
   newFamilyId,
   refreshWindows,
-} from "../domain/refresh-token";
-import { SessionsRepository } from "../repositories/sessions.repository";
+} from "@/modules/auth/domain/refresh-token";
+import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 
 @Injectable()
 export class Login {

@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { Collection, Db } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { SESSIONS_COLLECTION, SessionDoc } from "../schemas/session";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { SESSIONS_COLLECTION, SessionDoc } from "@/modules/auth/schemas/session";
 
 @Injectable()
 export class SessionsRepository implements OnModuleInit {

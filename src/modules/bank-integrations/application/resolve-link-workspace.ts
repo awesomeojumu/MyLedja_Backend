@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { MembershipsRepository } from "../../workspaces/repositories/memberships.repository";
-import { MonoFailure } from "../domain/mono-failure";
+import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
 
 @Injectable()
 export class ResolveLinkWorkspace {

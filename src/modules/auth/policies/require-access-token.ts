@@ -1,9 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Request } from "express";
-import { loadConfig } from "../../../config/env";
-import { AccessClaims, readAccessToken } from "../domain/access-token";
-import { AuthFailure } from "../domain/auth-failure";
-import { SessionsRepository } from "../repositories/sessions.repository";
+import { loadConfig } from "@/config/env";
+import { AccessClaims, readAccessToken } from "@/modules/auth/domain/access-token";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 
 export const AUTH_CONTEXT = "authContext";
 

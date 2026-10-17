@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { WorkspaceRole } from "../domain/roles";
-import { MembershipsRepository } from "../repositories/memberships.repository";
-import { WorkspacesRepository } from "../repositories/workspaces.repository";
+import { WorkspaceRole } from "@/modules/workspaces/domain/roles";
+import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
+import { WorkspacesRepository } from "@/modules/workspaces/repositories/workspaces.repository";
 
 export interface WorkspaceSummary {
   id: string;

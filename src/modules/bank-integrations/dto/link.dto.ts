@@ -1,4 +1,4 @@
-import { MonoFailure } from "../domain/mono-failure";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
 
 export function parseWorkspaceId(body: unknown): string | undefined {
   if (body === undefined || body === null) return undefined;

@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { newId } from "../../../common/ids";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { AuthFailure } from "../domain/auth-failure";
-import { dummyCodeCheck, generateEmailCode, hashEmailCode, VERIFY_CODE_TTL_MS } from "../domain/email-code";
-import { MAILER, Mailer } from "../domain/mailer";
-import { RateLimit } from "../domain/rate-limit";
-import { EmailCodesRepository } from "../repositories/email-codes.repository";
+import { newId } from "@/common/ids";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { dummyCodeCheck, generateEmailCode, hashEmailCode, VERIFY_CODE_TTL_MS } from "@/modules/auth/domain/email-code";
+import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
+import { RateLimit } from "@/modules/auth/domain/rate-limit";
+import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
 /** Sends a fresh verification code to an unverified account. Always looks the same to the caller. */
 @Injectable()

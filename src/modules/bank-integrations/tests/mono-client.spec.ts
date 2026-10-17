@@ -1,6 +1,6 @@
-import { customerNameFromEmail, linkReference } from "../domain/customer-name";
-import { MonoClient } from "../domain/mono-client";
-import { MonoFailure } from "../domain/mono-failure";
+import { customerNameFromEmail, linkReference } from "@/modules/bank-integrations/domain/customer-name";
+import { MonoClient } from "@/modules/bank-integrations/domain/mono-client";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

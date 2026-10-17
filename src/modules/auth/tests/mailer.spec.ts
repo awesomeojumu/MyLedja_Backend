@@ -1,4 +1,4 @@
-import { SmtpMailer, smtpFromEnv } from "../domain/mailer";
+import { SmtpMailer, smtpFromEnv } from "@/modules/auth/domain/mailer";
 
 describe("smtpFromEnv", () => {
   it("returns nothing until host, user, pass and from are all set", () => {

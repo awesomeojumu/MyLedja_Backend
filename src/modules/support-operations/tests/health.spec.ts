@@ -1,8 +1,8 @@
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { HealthController } from "../controllers/health.controller";
-import { checkHealth } from "../domain/health";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { HealthController } from "@/modules/support-operations/controllers/health.controller";
+import { checkHealth } from "@/modules/support-operations/domain/health";
 
 describe("checkHealth", () => {
   it("reports up when the database answers", async () => {

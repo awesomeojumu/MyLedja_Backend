@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { loadConfig } from "../../../config/env";
-import { newId } from "../../../common/ids";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { MonoClient } from "../domain/mono-client";
-import { MonoFailure } from "../domain/mono-failure";
-import { BankConnectionsRepository } from "../repositories/bank-connections.repository";
-import { ResolveLinkWorkspace } from "./resolve-link-workspace";
+import { loadConfig } from "@/config/env";
+import { newId } from "@/common/ids";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { MonoClient } from "@/modules/bank-integrations/domain/mono-client";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
+import { BankConnectionsRepository } from "@/modules/bank-integrations/repositories/bank-connections.repository";
+import { ResolveLinkWorkspace } from "@/modules/bank-integrations/application/resolve-link-workspace";
 
 export interface LinkedBank {
   provider: "mono";

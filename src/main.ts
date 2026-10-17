@@ -2,9 +2,9 @@ import "reflect-metadata";
 import { setServers } from "node:dns";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { AppModule } from "./app.module";
-import { configureApp } from "./app.setup";
-import { loadConfig, loadEnvFile } from "./config/env";
+import { AppModule } from "@/app.module";
+import { configureApp } from "@/app.setup";
+import { loadConfig, loadEnvFile } from "@/config/env";
 
 async function bootstrap(): Promise<void> {
   loadEnvFile();

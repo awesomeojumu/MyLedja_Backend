@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { AuthFailure } from "../domain/auth-failure";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 
 @Injectable()
 export class GetMe {

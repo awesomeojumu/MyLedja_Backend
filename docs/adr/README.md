@@ -8,5 +8,7 @@
 | [0004](0004-authentication-and-recovery.md) | Email and password, rotating refresh tokens, neutral recovery | DEC-03 |
 | [0005](0005-workspace-roles.md) | Owner / Admin / Editor / Viewer, server-enforced | DEC-04 |
 | [0006](0006-offline-mutation-contract.md) | Offline matrix, outbox, idempotency, version conflicts | DEC-05 |
+| [0007](0007-bank-provider-mono-proposed.md) | Mono primary (Proposed until KYB + counsel) | DEC-08 |
+| [0008](0008-transaction-status-four-values.md) | pending / posted / reversed / voided | F-004 |
 
 Each ADR records its context, options, decision, consequences and date. To change a decision, write a new ADR that supersedes the old one; don't edit an accepted ADR's decision.

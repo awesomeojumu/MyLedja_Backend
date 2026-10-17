@@ -1,22 +1,22 @@
 import { Body, Controller, Get, HttpCode, HttpException, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
-import { ConfirmRecovery } from "../application/confirm-recovery";
-import { GetMe } from "../application/get-me";
-import { Login } from "../application/login";
-import { Logout } from "../application/logout";
-import { RefreshSession } from "../application/refresh-session";
-import { RegisterUser } from "../application/register-user";
-import { RequestRecovery } from "../application/request-recovery";
-import { ResendVerification } from "../application/resend-verification";
-import { VerifyEmail } from "../application/verify-email";
-import { AuthFailure, AuthFailureStatus } from "../domain/auth-failure";
-import { parseLogin } from "../dto/login.dto";
-import { parseLogout } from "../dto/logout.dto";
-import { parseRecoveryConfirm, parseRecoveryRequest } from "../dto/recovery.dto";
-import { getAuth, RequireAccessToken } from "../policies/require-access-token";
-import { parseRefresh } from "../dto/refresh.dto";
-import { parseRegister } from "../dto/register.dto";
-import { parseVerify } from "../dto/verify.dto";
+import { ConfirmRecovery } from "@/modules/auth/application/confirm-recovery";
+import { GetMe } from "@/modules/auth/application/get-me";
+import { Login } from "@/modules/auth/application/login";
+import { Logout } from "@/modules/auth/application/logout";
+import { RefreshSession } from "@/modules/auth/application/refresh-session";
+import { RegisterUser } from "@/modules/auth/application/register-user";
+import { RequestRecovery } from "@/modules/auth/application/request-recovery";
+import { ResendVerification } from "@/modules/auth/application/resend-verification";
+import { VerifyEmail } from "@/modules/auth/application/verify-email";
+import { AuthFailure, AuthFailureStatus } from "@/modules/auth/domain/auth-failure";
+import { parseLogin } from "@/modules/auth/dto/login.dto";
+import { parseLogout } from "@/modules/auth/dto/logout.dto";
+import { parseRecoveryConfirm, parseRecoveryRequest } from "@/modules/auth/dto/recovery.dto";
+import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
+import { parseRefresh } from "@/modules/auth/dto/refresh.dto";
+import { parseRegister } from "@/modules/auth/dto/register.dto";
+import { parseVerify } from "@/modules/auth/dto/verify.dto";
 
 const STATUS_CODE: Record<AuthFailureStatus, number> = {
   bad_request: 400,

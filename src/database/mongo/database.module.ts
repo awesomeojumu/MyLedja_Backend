@@ -1,8 +1,8 @@
 import { Global, Inject, Module, OnApplicationShutdown } from "@nestjs/common";
 import { Db, MongoClient } from "mongodb";
-import { loadConfig } from "../../config/env";
-import { connectMongo } from "./connect";
-import { MONGO_CLIENT, MONGO_DB } from "./mongo.constants";
+import { loadConfig } from "@/config/env";
+import { connectMongo } from "@/database/mongo/connect";
+import { MONGO_CLIENT, MONGO_DB } from "@/database/mongo/mongo.constants";
 
 @Global()
 @Module({

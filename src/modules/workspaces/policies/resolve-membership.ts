@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { WorkspaceFailure } from "../domain/roles";
-import { MembershipsRepository } from "../repositories/memberships.repository";
-import { MembershipDoc } from "../schemas/membership";
+import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
+import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
+import { MembershipDoc } from "@/modules/workspaces/schemas/membership";
 
 @Injectable()
 export class ResolveMembership {

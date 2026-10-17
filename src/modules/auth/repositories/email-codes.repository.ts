@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ClientSession, Collection, Db } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { EMAIL_CODES_COLLECTION, EmailCodeDoc, EmailCodePurpose } from "../schemas/email-code";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { EMAIL_CODES_COLLECTION, EmailCodeDoc, EmailCodePurpose } from "@/modules/auth/schemas/email-code";
 
 @Injectable()
 export class EmailCodesRepository {

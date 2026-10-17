@@ -1,14 +1,14 @@
 import { argon2id } from "argon2";
 import { INestApplication } from "@nestjs/common";
-import { ARGON2_PRODUCTION } from "../domain/password";
-import { CaptureMailer } from "../domain/mailer";
+import { ARGON2_PRODUCTION } from "@/modules/auth/domain/password";
+import { CaptureMailer } from "@/modules/auth/domain/mailer";
 import {
   http,
   registerAndVerify,
   startAuthApp,
   TEST_PASSWORD,
   TestApp,
-} from "./test-app";
+} from "@/modules/auth/tests/test-app";
 
 jest.setTimeout(120_000);
 

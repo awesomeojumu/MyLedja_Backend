@@ -1,4 +1,4 @@
-import { parseRefresh, RefreshInput } from "./refresh.dto";
+import { parseRefresh, RefreshInput } from "@/modules/auth/dto/refresh.dto";
 
 export type LogoutInput = RefreshInput;
 

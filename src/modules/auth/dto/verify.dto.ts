@@ -1,6 +1,6 @@
-import { isEmail, normalizeEmail } from "../../users/domain/email";
-import { AuthFailure } from "../domain/auth-failure";
-import { isSixDigitCode } from "../domain/email-code";
+import { isEmail, normalizeEmail } from "@/modules/users/domain/email";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { isSixDigitCode } from "@/modules/auth/domain/email-code";
 
 export interface VerifyInput {
   email: string;

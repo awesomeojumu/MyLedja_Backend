@@ -1,6 +1,6 @@
-import { isEmail, normalizeEmail } from "../../users/domain/email";
-import { AuthFailure } from "../domain/auth-failure";
-import { passwordError } from "../domain/password";
+import { isEmail, normalizeEmail } from "@/modules/users/domain/email";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { passwordError } from "@/modules/auth/domain/password";
 
 export interface RegisterInput {
   email: string;

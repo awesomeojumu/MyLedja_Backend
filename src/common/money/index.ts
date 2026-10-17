@@ -1,2 +1,2 @@
-export * from "./currencies";
-export * from "./money";
+export * from "@/common/money/currencies";
+export * from "@/common/money/money";

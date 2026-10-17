@@ -14,7 +14,7 @@ import {
   subtract,
   sum,
   UnknownCurrencyError,
-} from "./index";
+} from "@/common/money/index";
 
 const ngn = (s: string) => parseMoney(s, "NGN");
 

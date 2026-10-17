@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { requireCapability } from "../domain/capabilities";
-import { WorkspaceRole } from "../domain/roles";
-import { ResolveMembership } from "../policies/resolve-membership";
-import { WorkspacesRepository } from "../repositories/workspaces.repository";
+import { requireCapability } from "@/modules/workspaces/domain/capabilities";
+import { WorkspaceRole } from "@/modules/workspaces/domain/roles";
+import { ResolveMembership } from "@/modules/workspaces/policies/resolve-membership";
+import { WorkspacesRepository } from "@/modules/workspaces/repositories/workspaces.repository";
 
 @Injectable()
 export class UpdateWorkspace {

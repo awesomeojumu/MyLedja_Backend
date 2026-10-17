@@ -1,6 +1,6 @@
 import { INestApplication } from "@nestjs/common";
-import { CaptureMailer } from "../domain/mailer";
-import { http, registerAndVerify, startAuthApp, TestApp } from "./test-app";
+import { CaptureMailer } from "@/modules/auth/domain/mailer";
+import { http, registerAndVerify, startAuthApp, TestApp } from "@/modules/auth/tests/test-app";
 
 jest.setTimeout(120_000);
 

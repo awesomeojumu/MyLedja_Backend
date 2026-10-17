@@ -1,5 +1,5 @@
 import { INestApplication } from "@nestjs/common";
-import { http, startAuthApp, TestApp } from "./test-app";
+import { http, startAuthApp, TestApp } from "@/modules/auth/tests/test-app";
 
 jest.setTimeout(120_000);
 

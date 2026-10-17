@@ -10,6 +10,11 @@
     "sourceMap": true,
     "rootDir": "./src",
     "outDir": "./dist",
+    "baseUrl": "./",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "incremental": true,
     "skipLibCheck": true,
     "types": ["node", "jest"],

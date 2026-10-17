@@ -1,4 +1,4 @@
-import { CurrencyCode, currencyScale, isCurrencyCode } from "./currencies";
+import { CurrencyCode, currencyScale, isCurrencyCode } from "@/common/money/currencies";
 
 /** An exact amount: integer minor units plus its currency (ADR-0001). */
 export interface Money {

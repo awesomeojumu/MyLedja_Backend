@@ -1,4 +1,4 @@
-import { WorkspaceFailure, WorkspaceRole } from "./roles";
+import { WorkspaceFailure, WorkspaceRole } from "@/modules/workspaces/domain/roles";
 
 /** Role matrix from ADR-0005. Every workspace use case names one capability. */
 export type Capability =

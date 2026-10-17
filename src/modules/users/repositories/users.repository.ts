@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { ClientSession, Collection, Db, MongoServerError } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { USERS_COLLECTION, UserDoc } from "../schemas/user";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { USERS_COLLECTION, UserDoc } from "@/modules/users/schemas/user";
 
 const DUPLICATE_KEY = 11000;
 

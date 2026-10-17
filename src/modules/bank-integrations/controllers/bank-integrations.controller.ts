@@ -1,10 +1,10 @@
 import { Body, Controller, HttpCode, HttpException, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
-import { getAuth, RequireAccessToken } from "../../auth/policies/require-access-token";
-import { CompleteLink } from "../application/complete-link";
-import { StartLink } from "../application/start-link";
-import { MonoFailure } from "../domain/mono-failure";
-import { parseCompleteLink, parseWorkspaceId } from "../dto/link.dto";
+import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
+import { CompleteLink } from "@/modules/bank-integrations/application/complete-link";
+import { StartLink } from "@/modules/bank-integrations/application/start-link";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
+import { parseCompleteLink, parseWorkspaceId } from "@/modules/bank-integrations/dto/link.dto";
 
 const STATUS_CODE = {
   bad_request: 400,

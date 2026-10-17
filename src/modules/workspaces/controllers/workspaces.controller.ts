@@ -10,16 +10,17 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { Request } from "express";
-import { getAuth, RequireAccessToken } from "../../auth/policies/require-access-token";
-import { AddMember } from "../application/add-member";
-import { ChangeRole } from "../application/change-role";
-import { GetWorkspace } from "../application/get-workspace";
-import { ListWorkspaces } from "../application/list-workspaces";
-import { UpdateWorkspace } from "../application/update-workspace";
-import { WorkspaceFailure } from "../domain/roles";
-import { parseAddMember } from "../dto/add-member.dto";
-import { parseChangeRole } from "../dto/change-role.dto";
-import { parseUpdateWorkspace } from "../dto/update-workspace.dto";
+import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
+import { AddMember } from "@/modules/workspaces/application/add-member";
+import { ChangeRole } from "@/modules/workspaces/application/change-role";
+import { GetWorkspace } from "@/modules/workspaces/application/get-workspace";
+import { ListWorkspaces } from "@/modules/workspaces/application/list-workspaces";
+import { PatchSetup } from "@/modules/workspaces/application/patch-setup";
+import { UpdateWorkspace } from "@/modules/workspaces/application/update-workspace";
+import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
+import { parseAddMember } from "@/modules/workspaces/dto/add-member.dto";
+import { parseChangeRole } from "@/modules/workspaces/dto/change-role.dto";
+import { parseUpdateWorkspace } from "@/modules/workspaces/dto/update-workspace.dto";
 
 const STATUS_CODE = {
   bad_request: 400,
@@ -43,6 +44,7 @@ export class WorkspacesController {
     private readonly addMember: AddMember,
     private readonly changeRole: ChangeRole,
     private readonly listWorkspaces: ListWorkspaces,
+    private readonly patchSetup: PatchSetup,
   ) {}
 
   @Get()
@@ -75,6 +77,22 @@ export class WorkspacesController {
         workspaceId,
         parseUpdateWorkspace(body).name,
       );
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch(":workspaceId/setup")
+  async setup(@Param("workspaceId") workspaceId: string, @Body() body: unknown, @Req() req: Request) {
+    try {
+      const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+      return await this.patchSetup.execute(getAuth(req).userId, workspaceId, {
+        defaultCurrency: typeof record.defaultCurrency === "string" ? record.defaultCurrency : undefined,
+        setupProgress:
+          record.setupProgress && typeof record.setupProgress === "object"
+            ? (record.setupProgress as Record<string, boolean>)
+            : undefined,
+      });
     } catch (error) {
       toHttp(error);
     }

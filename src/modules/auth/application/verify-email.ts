@@ -1,13 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { MongoClient } from "mongodb";
-import { MONGO_CLIENT } from "../../../database/mongo/mongo.constants";
-import { runInTransaction } from "../../../database/mongo/transaction";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { CreatePersonalWorkspace } from "../../workspaces/application/create-personal-workspace";
-import { AuthFailure } from "../domain/auth-failure";
-import { codeMatches, dummyCodeCheck, MAX_CODE_ATTEMPTS } from "../domain/email-code";
-import { RateLimit } from "../domain/rate-limit";
-import { EmailCodesRepository } from "../repositories/email-codes.repository";
+import { MONGO_CLIENT } from "@/database/mongo/mongo.constants";
+import { runInTransaction } from "@/database/mongo/transaction";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { CreatePersonalWorkspace } from "@/modules/workspaces/application/create-personal-workspace";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { codeMatches, dummyCodeCheck, MAX_CODE_ATTEMPTS } from "@/modules/auth/domain/email-code";
+import { RateLimit } from "@/modules/auth/domain/rate-limit";
+import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
 @Injectable()
 export class VerifyEmail {

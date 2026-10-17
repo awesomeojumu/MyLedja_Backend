@@ -2,15 +2,15 @@ import { DynamicModule, Global, INestApplication, Module } from "@nestjs/common"
 import { Test } from "@nestjs/testing";
 import { Db, MongoClient } from "mongodb";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { configureApp } from "../../../app.setup";
-import { connectMongo } from "../../../database/mongo/connect";
-import { MONGO_CLIENT, MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { AuthModule } from "../../auth/auth.module";
-import { CaptureMailer, MAILER } from "../../auth/domain/mailer";
-import { UsersModule } from "../../users/users.module";
-import { WorkspacesModule } from "../../workspaces/workspaces.module";
-import { BankIntegrationsModule } from "../bank-integrations.module";
-import { MONO_FETCH } from "../domain/mono-client";
+import { configureApp } from "@/app.setup";
+import { connectMongo } from "@/database/mongo/connect";
+import { MONGO_CLIENT, MONGO_DB } from "@/database/mongo/mongo.constants";
+import { AuthModule } from "@/modules/auth/auth.module";
+import { CaptureMailer, MAILER } from "@/modules/auth/domain/mailer";
+import { UsersModule } from "@/modules/users/users.module";
+import { WorkspacesModule } from "@/modules/workspaces/workspaces.module";
+import { BankIntegrationsModule } from "@/modules/bank-integrations/bank-integrations.module";
+import { MONO_FETCH } from "@/modules/bank-integrations/domain/mono-client";
 
 @Global()
 @Module({})

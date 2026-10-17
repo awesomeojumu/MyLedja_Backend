@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { hashRefreshToken } from "../domain/refresh-token";
-import { SessionsRepository } from "../repositories/sessions.repository";
+import { hashRefreshToken } from "@/modules/auth/domain/refresh-token";
+import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 
 @Injectable()
 export class Logout {

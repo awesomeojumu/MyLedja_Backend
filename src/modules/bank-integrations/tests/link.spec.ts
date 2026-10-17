@@ -1,6 +1,6 @@
-import { http, registerAndVerify, TEST_PASSWORD } from "../../auth/tests/test-app";
-import { BANK_CONNECTIONS_COLLECTION } from "../schemas/bank-connection";
-import { startLinkApp } from "./test-app";
+import { http, registerAndVerify, TEST_PASSWORD } from "@/modules/auth/tests/test-app";
+import { BANK_CONNECTIONS_COLLECTION } from "@/modules/bank-integrations/schemas/bank-connection";
+import { startLinkApp } from "@/modules/bank-integrations/tests/test-app";
 
 jest.setTimeout(120_000);
 

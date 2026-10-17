@@ -1,18 +1,19 @@
 import { Module } from "@nestjs/common";
-import { RequireAccessToken } from "../auth/policies/require-access-token";
-import { SessionsRepository } from "../auth/repositories/sessions.repository";
-import { UsersModule } from "../users/users.module";
-import { AddMember } from "./application/add-member";
-import { ChangeRole } from "./application/change-role";
-import { CreatePersonalWorkspace } from "./application/create-personal-workspace";
-import { GetWorkspace } from "./application/get-workspace";
-import { ListWorkspaces } from "./application/list-workspaces";
-import { UpdateWorkspace } from "./application/update-workspace";
-import { WorkspacesController } from "./controllers/workspaces.controller";
-import { ResolveMembership } from "./policies/resolve-membership";
-import { AuditEventsRepository } from "./repositories/audit-events.repository";
-import { MembershipsRepository } from "./repositories/memberships.repository";
-import { WorkspacesRepository } from "./repositories/workspaces.repository";
+import { RequireAccessToken } from "@/modules/auth/policies/require-access-token";
+import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
+import { UsersModule } from "@/modules/users/users.module";
+import { AddMember } from "@/modules/workspaces/application/add-member";
+import { ChangeRole } from "@/modules/workspaces/application/change-role";
+import { CreatePersonalWorkspace } from "@/modules/workspaces/application/create-personal-workspace";
+import { GetWorkspace } from "@/modules/workspaces/application/get-workspace";
+import { ListWorkspaces } from "@/modules/workspaces/application/list-workspaces";
+import { PatchSetup } from "@/modules/workspaces/application/patch-setup";
+import { UpdateWorkspace } from "@/modules/workspaces/application/update-workspace";
+import { WorkspacesController } from "@/modules/workspaces/controllers/workspaces.controller";
+import { ResolveMembership } from "@/modules/workspaces/policies/resolve-membership";
+import { AuditEventsRepository } from "@/modules/workspaces/repositories/audit-events.repository";
+import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
+import { WorkspacesRepository } from "@/modules/workspaces/repositories/workspaces.repository";
 
 @Module({
   imports: [UsersModule],
@@ -30,7 +31,14 @@ import { WorkspacesRepository } from "./repositories/workspaces.repository";
     AddMember,
     ChangeRole,
     ListWorkspaces,
+    PatchSetup,
   ],
-  exports: [CreatePersonalWorkspace, WorkspacesRepository, MembershipsRepository, AuditEventsRepository],
+  exports: [
+    CreatePersonalWorkspace,
+    WorkspacesRepository,
+    MembershipsRepository,
+    AuditEventsRepository,
+    ResolveMembership,
+  ],
 })
 export class WorkspacesModule {}

@@ -1,4 +1,4 @@
-import { AuthFailure } from "../domain/auth-failure";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 
 export interface RefreshInput {
   refreshToken: string;

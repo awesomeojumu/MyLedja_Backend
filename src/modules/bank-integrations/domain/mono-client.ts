@@ -1,4 +1,4 @@
-import { MonoFailure } from "./mono-failure";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
 
 export const MONO_BASE_URL = "https://api.withmono.com";
 export const MONO_FETCH = Symbol("MONO_FETCH");

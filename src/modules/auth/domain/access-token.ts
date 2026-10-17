@@ -1,5 +1,5 @@
 import { jwtVerify, SignJWT } from "jose";
-import { AuthFailure } from "./auth-failure";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
 

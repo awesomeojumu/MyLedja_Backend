@@ -1,7 +1,7 @@
 import { Collection, Db, MongoClient } from "mongodb";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { connectMongo } from "./connect";
-import { runInTransaction } from "./transaction";
+import { connectMongo } from "@/database/mongo/connect";
+import { runInTransaction } from "@/database/mongo/transaction";
 
 interface AccountDoc {
   _id: string;

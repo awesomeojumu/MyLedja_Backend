@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { Collection, Db, MongoServerError } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { BANK_CONNECTIONS_COLLECTION, BankConnectionDoc } from "../schemas/bank-connection";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { BANK_CONNECTIONS_COLLECTION, BankConnectionDoc } from "@/modules/bank-integrations/schemas/bank-connection";
 
 const DUPLICATE_KEY = 11000;
 

@@ -1,5 +1,5 @@
-import { can, canAssignRole, Capability } from "../domain/capabilities";
-import { WORKSPACE_ROLES } from "../domain/roles";
+import { can, canAssignRole, Capability } from "@/modules/workspaces/domain/capabilities";
+import { WORKSPACE_ROLES } from "@/modules/workspaces/domain/roles";
 
 const MUTATIONS: Capability[] = [
   "update_workspace",

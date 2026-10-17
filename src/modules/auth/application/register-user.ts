@@ -1,18 +1,18 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { newId } from "../../../common/ids";
+import { newId } from "@/common/ids";
 import { HashOptions } from "argon2";
-import { UsersRepository } from "../../users/repositories/users.repository";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import {
   dummyCodeCheck,
   generateEmailCode,
   hashEmailCode,
   VERIFY_CODE_TTL_MS,
-} from "../domain/email-code";
-import { AuthFailure } from "../domain/auth-failure";
-import { MAILER, Mailer } from "../domain/mailer";
-import { ARGON2_OPTIONS, dummyPasswordCheck, hashPassword } from "../domain/password";
-import { RateLimit } from "../domain/rate-limit";
-import { EmailCodesRepository } from "../repositories/email-codes.repository";
+} from "@/modules/auth/domain/email-code";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
+import { ARGON2_OPTIONS, dummyPasswordCheck, hashPassword } from "@/modules/auth/domain/password";
+import { RateLimit } from "@/modules/auth/domain/rate-limit";
+import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
 @Injectable()
 export class RegisterUser {

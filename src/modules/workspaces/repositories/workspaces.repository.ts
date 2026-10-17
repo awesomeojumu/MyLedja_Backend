@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { ClientSession, Collection, Db } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { WORKSPACES_COLLECTION, WorkspaceDoc } from "../schemas/workspace";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { WORKSPACES_COLLECTION, WorkspaceDoc } from "@/modules/workspaces/schemas/workspace";
 
 @Injectable()
 export class WorkspacesRepository implements OnModuleInit {
@@ -29,5 +29,12 @@ export class WorkspacesRepository implements OnModuleInit {
 
   async updateName(id: string, name: string): Promise<void> {
     await this.col.updateOne({ _id: id }, { $set: { name } });
+  }
+
+  async patchSetup(
+    id: string,
+    fields: Partial<Pick<WorkspaceDoc, "defaultCurrency" | "setupProgress">>,
+  ): Promise<void> {
+    await this.col.updateOne({ _id: id }, { $set: fields });
   }
 }

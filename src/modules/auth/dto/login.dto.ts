@@ -1,4 +1,4 @@
-import { RegisterInput, readEmailPassword } from "./register.dto";
+import { RegisterInput, readEmailPassword } from "@/modules/auth/dto/register.dto";
 
 export type LoginInput = RegisterInput;
 

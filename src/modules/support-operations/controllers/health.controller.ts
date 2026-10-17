@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, ServiceUnavailableException } from "@nestjs/common";
 import { Db } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { checkHealth, HealthStatus } from "../domain/health";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { checkHealth, HealthStatus } from "@/modules/support-operations/domain/health";
 
 @Controller("health")
 export class HealthController {

@@ -1,4 +1,4 @@
-import { WorkspaceRole } from "../domain/roles";
+import { WorkspaceRole } from "@/modules/workspaces/domain/roles";
 
 export const MEMBERSHIPS_COLLECTION = "memberships";
 

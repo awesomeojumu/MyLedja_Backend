@@ -5,9 +5,9 @@ import {
   startAuthApp,
   TEST_PASSWORD,
   TestApp,
-} from "../../auth/tests/test-app";
-import { CaptureMailer } from "../../auth/domain/mailer";
-import { AUDIT_EVENTS_COLLECTION } from "../schemas/audit-event";
+} from "@/modules/auth/tests/test-app";
+import { CaptureMailer } from "@/modules/auth/domain/mailer";
+import { AUDIT_EVENTS_COLLECTION } from "@/modules/workspaces/schemas/audit-event";
 
 jest.setTimeout(120_000);
 

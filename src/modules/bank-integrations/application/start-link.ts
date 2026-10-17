@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { loadConfig } from "../../../config/env";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { customerNameFromEmail, linkReference } from "../domain/customer-name";
-import { MonoClient } from "../domain/mono-client";
-import { MonoFailure } from "../domain/mono-failure";
-import { ResolveLinkWorkspace } from "./resolve-link-workspace";
+import { loadConfig } from "@/config/env";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { customerNameFromEmail, linkReference } from "@/modules/bank-integrations/domain/customer-name";
+import { MonoClient } from "@/modules/bank-integrations/domain/mono-client";
+import { MonoFailure } from "@/modules/bank-integrations/domain/mono-failure";
+import { ResolveLinkWorkspace } from "@/modules/bank-integrations/application/resolve-link-workspace";
 
 const SANDBOX_REDIRECT = "https://mono.co";
 

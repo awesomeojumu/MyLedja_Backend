@@ -1,14 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { HashOptions } from "argon2";
-import { newId } from "../../../common/ids";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { AuthFailure } from "../domain/auth-failure";
-import { codeMatches, dummyCodeCheck, MAX_CODE_ATTEMPTS } from "../domain/email-code";
-import { ARGON2_OPTIONS, hashPassword } from "../domain/password";
-import { RateLimit } from "../domain/rate-limit";
-import { EmailCodesRepository } from "../repositories/email-codes.repository";
-import { SecurityEventsRepository } from "../repositories/security-events.repository";
-import { SessionsRepository } from "../repositories/sessions.repository";
+import { newId } from "@/common/ids";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
+import { codeMatches, dummyCodeCheck, MAX_CODE_ATTEMPTS } from "@/modules/auth/domain/email-code";
+import { ARGON2_OPTIONS, hashPassword } from "@/modules/auth/domain/password";
+import { RateLimit } from "@/modules/auth/domain/rate-limit";
+import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
+import { SecurityEventsRepository } from "@/modules/auth/repositories/security-events.repository";
+import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 
 @Injectable()
 export class ConfirmRecovery {

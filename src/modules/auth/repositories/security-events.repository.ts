@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Collection, Db } from "mongodb";
-import { MONGO_DB } from "../../../database/mongo/mongo.constants";
-import { SECURITY_EVENTS_COLLECTION, SecurityEventDoc } from "../schemas/security-event";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
+import { SECURITY_EVENTS_COLLECTION, SecurityEventDoc } from "@/modules/auth/schemas/security-event";
 
 @Injectable()
 export class SecurityEventsRepository {

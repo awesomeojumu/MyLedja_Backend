@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { newId } from "../../../common/ids";
+import { newId } from "@/common/ids";
 import { ClientSession } from "mongodb";
-import { MembershipsRepository } from "../repositories/memberships.repository";
-import { WorkspacesRepository } from "../repositories/workspaces.repository";
+import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
+import { WorkspacesRepository } from "@/modules/workspaces/repositories/workspaces.repository";
 
 @Injectable()
 export class CreatePersonalWorkspace {
@@ -21,6 +21,14 @@ export class CreatePersonalWorkspace {
         kind: "personal",
         ownerId: userId,
         createdAt: now,
+        defaultCurrency: "NGN",
+        setupProgress: {
+          currency: false,
+          firstAccount: false,
+          opening: false,
+          categories: false,
+          firstTransaction: false,
+        },
       },
       session,
     );

@@ -1,16 +1,16 @@
 import { Injectable } from "@nestjs/common";
-import { loadConfig } from "../../../config/env";
-import { newId } from "../../../common/ids";
-import { ACCESS_TTL_SECONDS, signAccessToken } from "../domain/access-token";
-import { AuthFailure } from "../domain/auth-failure";
+import { loadConfig } from "@/config/env";
+import { newId } from "@/common/ids";
+import { ACCESS_TTL_SECONDS, signAccessToken } from "@/modules/auth/domain/access-token";
+import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 import {
   familyIdFrom,
   hashRefreshToken,
   issueRefreshToken,
   REFRESH_IDLE_MS,
-} from "../domain/refresh-token";
-import { SecurityEventsRepository } from "../repositories/security-events.repository";
-import { SessionsRepository } from "../repositories/sessions.repository";
+} from "@/modules/auth/domain/refresh-token";
+import { SecurityEventsRepository } from "@/modules/auth/repositories/security-events.repository";
+import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 
 @Injectable()
 export class RefreshSession {

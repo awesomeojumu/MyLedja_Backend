@@ -1,1 +1,1 @@
-export { requireCapability } from "../domain/capabilities";
+export { requireCapability } from "@/modules/workspaces/domain/capabilities";

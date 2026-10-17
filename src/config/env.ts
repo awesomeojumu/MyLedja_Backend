@@ -19,6 +19,7 @@ export interface AppConfig {
   monoSecKey: string;
   monoPublicKey: string;
   monoAppId: string;
+  accountNumberKey: string;
 }
 
 function isAppEnv(value: string): value is AppEnv {
@@ -41,6 +42,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("MONGODB_URI is required in production");
   }
 
+  const accountNumberKey = env.ACCOUNT_NUMBER_KEY ?? "";
+  if ((rawEnv === "production" || rawEnv === "staging") && accountNumberKey.length < 64) {
+    throw new Error("ACCOUNT_NUMBER_KEY is required in staging and production");
+  }
+
   const port = Number(env.PORT ?? 4000);
   if (!Number.isInteger(port) || port < 1) {
     throw new Error(`Invalid PORT: ${env.PORT}`);
@@ -56,6 +62,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     monoSecKey: env.MONO_SEC_KEY ?? "",
     monoPublicKey: env.MONO_PUBLIC_KEY ?? "",
     monoAppId: env.MONO_APP_ID ?? "",
+    accountNumberKey,
   };
 }
 

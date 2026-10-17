@@ -1,4 +1,4 @@
-import { loadConfig } from "./env";
+import { loadConfig } from "@/config/env";
 
 describe("loadConfig", () => {
   it("loads development defaults", () => {
@@ -12,6 +12,7 @@ describe("loadConfig", () => {
       APP_ENV: "staging",
       PORT: "4100",
       APP_URL: "https://staging.example.com",
+      ACCOUNT_NUMBER_KEY: "ab".repeat(32),
     });
     expect(config.appEnv).toBe("staging");
     expect(config.port).toBe(4100);
@@ -29,6 +30,7 @@ describe("loadConfig", () => {
       APP_ENV: "production",
       JWT_SECRET: "a".repeat(32),
       MONGODB_URI: "mongodb://localhost:27017",
+      ACCOUNT_NUMBER_KEY: "ab".repeat(32),
     });
     expect(config.appEnv).toBe("production");
   });
@@ -64,5 +66,16 @@ describe("loadConfig Mono settings", () => {
     const config = loadConfig({});
     expect(config.monoSecKey).toBe("");
     expect(config.monoAppId).toBe("");
+  });
+});
+
+describe("loadConfig account number key", () => {
+  it("refuses staging without ACCOUNT_NUMBER_KEY", () => {
+    expect(() => loadConfig({ APP_ENV: "staging" })).toThrow("ACCOUNT_NUMBER_KEY is required");
+  });
+
+  it("accepts a 64-character hex key", () => {
+    const key = "ab".repeat(32);
+    expect(loadConfig({ ACCOUNT_NUMBER_KEY: key }).accountNumberKey).toBe(key);
   });
 });

@@ -1,1 +1,1 @@
-export { ResolveLinkWorkspace as RequireLinkWorkspace } from "../application/resolve-link-workspace";
+export { ResolveLinkWorkspace as RequireLinkWorkspace } from "@/modules/bank-integrations/application/resolve-link-workspace";

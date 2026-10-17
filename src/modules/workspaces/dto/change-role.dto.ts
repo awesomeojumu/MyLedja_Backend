@@ -1,4 +1,4 @@
-import { WorkspaceFailure } from "../domain/roles";
+import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
 
 export interface ChangeRoleInput {
   role: "editor" | "viewer";

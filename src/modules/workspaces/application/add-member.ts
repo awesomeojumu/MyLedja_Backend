@@ -1,14 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { MongoClient } from "mongodb";
-import { newId } from "../../../common/ids";
-import { MONGO_CLIENT } from "../../../database/mongo/mongo.constants";
-import { runInTransaction } from "../../../database/mongo/transaction";
-import { UsersRepository } from "../../users/repositories/users.repository";
-import { requireCapability } from "../domain/capabilities";
-import { WorkspaceFailure, WorkspaceRole } from "../domain/roles";
-import { ResolveMembership } from "../policies/resolve-membership";
-import { AuditEventsRepository } from "../repositories/audit-events.repository";
-import { MembershipsRepository } from "../repositories/memberships.repository";
+import { newId } from "@/common/ids";
+import { MONGO_CLIENT } from "@/database/mongo/mongo.constants";
+import { runInTransaction } from "@/database/mongo/transaction";
+import { UsersRepository } from "@/modules/users/repositories/users.repository";
+import { requireCapability } from "@/modules/workspaces/domain/capabilities";
+import { WorkspaceFailure, WorkspaceRole } from "@/modules/workspaces/domain/roles";
+import { ResolveMembership } from "@/modules/workspaces/policies/resolve-membership";
+import { AuditEventsRepository } from "@/modules/workspaces/repositories/audit-events.repository";
+import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
 
 @Injectable()
 export class AddMember {
