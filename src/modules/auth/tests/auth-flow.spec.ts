@@ -48,7 +48,8 @@ describe("register → verify → login → refresh → logout", () => {
     expect(first.code).toBe(202);
     expect(first.json).toEqual({ status: "accepted" });
     expect(second.json).toEqual(first.json);
-    expect(mailer.sent.filter((item) => item.email === email && item.purpose === "verify")).toHaveLength(1);
+    // Registering again before verifying sends a fresh code, with the same neutral reply.
+    expect(mailer.sent.filter((item) => item.email === email && item.purpose === "verify")).toHaveLength(2);
 
     const unverified = await http(app, "POST", "/v1/auth/login", { email, password: TEST_PASSWORD });
     expect(unverified.code).toBe(403);
@@ -70,5 +71,29 @@ describe("register → verify → login → refresh → logout", () => {
     expect(loggedOut.code).toBe(200);
     const reused = await http(app, "POST", "/v1/auth/refresh", { refreshToken: next.refreshToken });
     expect(reused.code).toBe(401);
+  });
+
+  it("keeps sign-up and recovery neutral when the mail server rejects the address", async () => {
+    const email = "bounce@example.com";
+    mailer.rejects.add(email);
+    const bounced = await http(app, "POST", "/v1/auth/register", { email, password: TEST_PASSWORD });
+    expect(bounced.code).toBe(202);
+    expect(bounced.json).toEqual({ status: "accepted" });
+
+    mailer.rejects.delete(email);
+    const resend = await http(app, "POST", "/v1/auth/verify/resend", { email });
+    expect(resend.code).toBe(202);
+    expect(resend.json).toEqual({ status: "accepted" });
+    const code = mailer.lastCode(email, "verify");
+    expect(code).toMatch(/^\d{6}$/);
+    const verified = await http(app, "POST", "/v1/auth/verify", { email, code });
+    expect(verified.code).toBe(200);
+
+    mailer.rejects.add(email);
+    const recovery = await http(app, "POST", "/v1/auth/recovery", { email });
+    const unknown = await http(app, "POST", "/v1/auth/recovery", { email: "never-registered@example.com" });
+    expect(recovery.code).toBe(202);
+    expect(recovery.json).toEqual(unknown.json);
+    mailer.rejects.delete(email);
   });
 });

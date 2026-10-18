@@ -5,6 +5,7 @@ describe("loadConfig", () => {
     const config = loadConfig({ APP_ENV: "development" });
     expect(config.appEnv).toBe("development");
     expect(config.port).toBe(4000);
+    expect(config.accountNumberKey.length).toBe(64);
   });
 
   it("loads staging", () => {

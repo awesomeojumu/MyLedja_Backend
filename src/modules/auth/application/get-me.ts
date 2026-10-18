@@ -6,11 +6,11 @@ import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 export class GetMe {
   constructor(private readonly users: UsersRepository) {}
 
-  async execute(userId: string): Promise<{ userId: string; email: string }> {
+  async execute(userId: string): Promise<{ userId: string; email: string; hideLockScreenAmounts: boolean }> {
     const user = await this.users.findById(userId);
     if (!user) {
       throw new AuthFailure("unauthorized", "invalid access token");
     }
-    return { userId: user._id, email: user.email };
+    return { userId: user._id, email: user.email, hideLockScreenAmounts: user.hideLockScreenAmounts !== false };
   }
 }

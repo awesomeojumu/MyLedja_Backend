@@ -58,8 +58,8 @@ Official Sprint 1–4 ACs. Pass = named test green. Human rows stay human.
 | MYL-022 | O1–O3 CSV | Pass | `workspace-flows.spec` O1–O3 + `fixtures/gtbank-mixed.csv` |
 | MYL-023 | Q1–Q3 privacy | Pass | `workspace-flows.spec` Q1 + `lock-copy.test.ts` |
 | MYL-024 | S1–S3 search/a11y/loading | Pass | `workspace-flows.spec` S1 + `a11y-journeys.test.ts` |
-| MYL-025 | INV-01–24 | Pass | `invariants.spec.ts` |
-| MYL-025 | Z1 scans | Pass | gitleaks both CI files |
+| MYL-025 | INV-01–24 | Pass | `invariants.spec.ts` titles match Appendix A / SPEC-1.3 |
+| MYL-025 | Z1 scans | Pass | gitleaks + `npm run audit:prod` (backend 0; frontend only two no-patch Expo GHSAs) |
 | MYL-025 | Z2 tester install | Fail (human) | `docs/beta-artifacts.md` |
 
 ## Page walk through MYL-025

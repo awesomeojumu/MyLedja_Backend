@@ -9,6 +9,7 @@
     "test": "node --experimental-vm-modules --disable-warning=ExperimentalWarning node_modules/jest/bin/jest.js --ci",
     "build": "nest build && tsc-alias -p tsconfig.build.json",
     "apptest": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "audit:prod": "npm audit --omit=dev",
     "start": "nest start",
     "start:dev": "nest start --watch"
   },

@@ -8,7 +8,7 @@ import {
   hashEmailCode,
   RECOVERY_CODE_TTL_MS,
 } from "@/modules/auth/domain/email-code";
-import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
+import { MAILER, Mailer, sendCodeQuietly } from "@/modules/auth/domain/mailer";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
@@ -46,6 +46,6 @@ export class RequestRecovery {
       usedAt: null,
       createdAt: now,
     });
-    await this.mailer.sendCode({ email: input.email, purpose: "recovery", code });
+    await sendCodeQuietly(this.mailer, { email: input.email, purpose: "recovery", code });
   }
 }

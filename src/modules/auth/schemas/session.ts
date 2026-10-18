@@ -10,4 +10,5 @@ export interface SessionDoc {
   idleExpiresAt: Date;
   absoluteExpiresAt: Date;
   revokedAt: Date | null;
+  deviceLabel?: string;
 }

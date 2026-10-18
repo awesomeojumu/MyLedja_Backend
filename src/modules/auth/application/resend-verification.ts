@@ -3,7 +3,7 @@ import { newId } from "@/common/ids";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
 import { unusedCodeWork, generateEmailCode, hashEmailCode, VERIFY_CODE_TTL_MS } from "@/modules/auth/domain/email-code";
-import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
+import { MAILER, Mailer, sendCodeQuietly } from "@/modules/auth/domain/mailer";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
 
@@ -42,6 +42,6 @@ export class ResendVerification {
       usedAt: null,
       createdAt: now,
     });
-    await this.mailer.sendCode({ email: input.email, purpose: "verify", code });
+    await sendCodeQuietly(this.mailer, { email: input.email, purpose: "verify", code });
   }
 }

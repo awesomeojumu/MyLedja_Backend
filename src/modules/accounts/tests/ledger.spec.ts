@@ -74,6 +74,25 @@ describe("accounts, ledger, catalog, setup", () => {
       token,
     );
     expect(cash.code).toBe(201);
+    const cashId = (cash.json as { data: { id: string } }).data.id;
+    const kindBad = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/accounts/${cashId}/kind`,
+      { kind: "not-a-type" },
+      token,
+    );
+    expect(kindBad.code).toBe(400);
+    const kindOk = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/accounts/${cashId}/kind`,
+      { kind: "bank" },
+      token,
+    );
+    expect(kindOk.code).toBe(201);
+    expect((kindOk.json as { data: { kind: string } }).data.kind).toBe("bank");
+    expect((await harness.db.collection<AccountDoc>(ACCOUNTS_COLLECTION).findOne({ _id: cashId }))?.kind).toBe("bank");
 
     const cats = await http(app, "GET", `/v1/workspaces/${workspaceId}/categories`, undefined, token);
     expect(cats.code).toBe(200);
@@ -126,6 +145,88 @@ describe("accounts, ledger, catalog, setup", () => {
     const still = await harness.db.collection<AccountDoc>(ACCOUNTS_COLLECTION).findOne({ _id: account.id });
     expect(still).toBeTruthy();
     expect(still?.archivedAt).toBeTruthy();
+
+    const liveAfterArchive = await http(app, "GET", `/v1/workspaces/${workspaceId}/accounts`, undefined, token);
+    expect(
+      (liveAfterArchive.json as { data: { id: string }[] }).data.some((row) => row.id === account.id),
+    ).toBe(false);
+
+    const one = await http(app, "GET", `/v1/workspaces/${workspaceId}/accounts/${cashId}`, undefined, token);
+    expect(one.code).toBe(200);
+    expect((one.json as { data: { id: string } }).data.id).toBe(cashId);
+
+    const renamed = await http(
+      app,
+      "PATCH",
+      `/v1/workspaces/${workspaceId}/accounts/${cashId}`,
+      { name: "Till" },
+      token,
+    );
+    expect(renamed.code).toBe(200);
+    const renamedBody = (renamed.json as { data: { name: string; balance: string; opening: string } }).data;
+    expect(renamedBody.name).toBe("Till");
+    expect(renamedBody.balance).toBe((one.json as { data: { balance: string } }).data.balance);
+    expect(renamedBody.opening).toBe((one.json as { data: { opening: string } }).data.opening);
+
+    const archiveCash = await http(app, "DELETE", `/v1/workspaces/${workspaceId}/accounts/${cashId}`, undefined, token);
+    expect(archiveCash.code).toBe(200);
+    const renameArchived = await http(
+      app,
+      "PATCH",
+      `/v1/workspaces/${workspaceId}/accounts/${cashId}`,
+      { name: "Nope" },
+      token,
+    );
+    expect(renameArchived.code).toBe(409);
+
+    const restored = await http(app, "POST", `/v1/workspaces/${workspaceId}/accounts/${account.id}/restore`, {}, token);
+    expect(restored.code).toBe(201);
+    expect((restored.json as { data: { archived: boolean } }).data.archived).toBe(false);
+    const liveAgain = await http(app, "GET", `/v1/workspaces/${workspaceId}/accounts`, undefined, token);
+    expect((liveAgain.json as { data: { id: string }[] }).data.some((row) => row.id === account.id)).toBe(true);
+    const postAgain = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      {
+        operationId: testId(),
+        type: "expense",
+        amount: "1.00",
+        accountId: account.id,
+        description: "After restore",
+      },
+      token,
+    );
+    expect(postAgain.code).toBe(201);
+
+    const firstCompare = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/accounts/${account.id}/reconcile`,
+      { externalBalance: "8000.00" },
+      token,
+    );
+    expect(firstCompare.code).toBe(201);
+    const secondCompare = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/accounts/${account.id}/reconcile`,
+      { externalBalance: "8999.00" },
+      token,
+    );
+    expect(secondCompare.code).toBe(201);
+    const history = await http(
+      app,
+      "GET",
+      `/v1/workspaces/${workspaceId}/accounts/${account.id}/reconciliations`,
+      undefined,
+      token,
+    );
+    expect(history.code).toBe(200);
+    const events = (history.json as { data: { calculated: string; reconciled: boolean }[] }).data;
+    expect(events).toHaveLength(2);
+    const got = await http(app, "GET", `/v1/workspaces/${workspaceId}/accounts/${account.id}`, undefined, token);
+    expect(events[0]?.calculated).toBe((got.json as { data: { balance: string } }).data.balance);
   });
 
   it("TC-01 TC-02 TC-11 four statuses aliases preview journey", async () => {

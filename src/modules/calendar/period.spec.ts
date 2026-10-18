@@ -1,4 +1,4 @@
-import { clampDay, monthEnd, nextMonthly } from "@/modules/calendar/period";
+import { clampDay, monthEnd, nextMonthly, zonedInstant } from "@/modules/calendar/period";
 
 describe("I1 bill calendar", () => {
   it("clamps month-end 31 onto September 30", () => {
@@ -17,5 +17,11 @@ describe("I1 bill calendar", () => {
   it("rolls a passed monthly anchor into the next month", () => {
     const next = nextMonthly(new Date("2026-10-18T00:00:00.000Z"), 17);
     expect(next.toISOString().slice(0, 10)).toBe("2026-11-17");
+  });
+
+  it("places a UTC evening into the next Lagos day and the same New York day", () => {
+    const at = new Date("2026-10-31T23:30:00.000Z");
+    expect(zonedInstant(at, "Africa/Lagos").getUTCDate()).toBe(1);
+    expect(zonedInstant(at, "America/New_York").getUTCDate()).toBe(31);
   });
 });

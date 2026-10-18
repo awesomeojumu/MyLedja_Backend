@@ -17,6 +17,7 @@ import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-acc
 import { parseRefresh } from "@/modules/auth/dto/refresh.dto";
 import { parseRegister } from "@/modules/auth/dto/register.dto";
 import { parseVerify } from "@/modules/auth/dto/verify.dto";
+import { deviceLabelFromUa } from "@/modules/auth/domain/device-label";
 
 const STATUS_CODE: Record<AuthFailureStatus, number> = {
   bad_request: 400,
@@ -93,7 +94,7 @@ export class AuthController {
 
   @Get("me")
   @UseGuards(RequireAccessToken)
-  async me(@Req() req: Request): Promise<{ userId: string; email: string }> {
+  async me(@Req() req: Request): Promise<{ userId: string; email: string; hideLockScreenAmounts: boolean }> {
     try {
       return await this.getMe.execute(getAuth(req).userId);
     } catch (error) {
@@ -110,7 +111,11 @@ export class AuthController {
     expiresIn: number;
   }> {
     try {
-      return await this.login.execute({ ...parseLogin(body), ip: clientIp(req) });
+      return await this.login.execute({
+        ...parseLogin(body),
+        ip: clientIp(req),
+        deviceLabel: deviceLabelFromUa(req.get("user-agent")),
+      });
     } catch (error) {
       toHttp(error);
     }

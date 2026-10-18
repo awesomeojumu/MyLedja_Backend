@@ -34,6 +34,9 @@ export function parseCreateAccount(body: unknown): {
     throw new AccountFailure("bad_request", "Choose a valid connection type.");
   }
   const institutionId = r.institutionId == null || r.institutionId === "" ? null : String(r.institutionId);
+  if ((r.kind === "bank" || r.kind === "wallet") && !institutionId) {
+    throw new AccountFailure("bad_request", "Pick an institution. It is stored separately from this account.");
+  }
   if (institutionId && !institutionById(institutionId)) {
     throw new AccountFailure("bad_request", "Unknown institution.");
   }
@@ -48,6 +51,21 @@ export function parseOpening(body: unknown): { opening: string } {
   const r = rec(body);
   if (typeof r.opening !== "string") throw new AccountFailure("bad_request", "Opening balance must be a naira amount.");
   return { opening: r.opening };
+}
+
+export function parseKind(body: unknown): { kind: AccountKind } {
+  const r = rec(body);
+  if (!KINDS.includes(r.kind as AccountKind)) {
+    throw new AccountFailure("bad_request", "Choose a valid account type.");
+  }
+  return { kind: r.kind as AccountKind };
+}
+
+export function parseRename(body: unknown): { name: string } {
+  const r = rec(body);
+  const name = typeof r.name === "string" ? r.name.trim() : "";
+  if (!name) throw new AccountFailure("bad_request", "Give this account a name.");
+  return { name };
 }
 
 export function parseWorkspaceId(id: string): string {

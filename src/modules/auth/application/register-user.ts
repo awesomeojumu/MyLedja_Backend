@@ -9,7 +9,7 @@ import {
   VERIFY_CODE_TTL_MS,
 } from "@/modules/auth/domain/email-code";
 import { AuthFailure } from "@/modules/auth/domain/auth-failure";
-import { MAILER, Mailer } from "@/modules/auth/domain/mailer";
+import { MAILER, Mailer, sendCodeQuietly } from "@/modules/auth/domain/mailer";
 import { ARGON2_OPTIONS, unusedPasswordWork, hashPassword } from "@/modules/auth/domain/password";
 import { RateLimit } from "@/modules/auth/domain/rate-limit";
 import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.repository";
@@ -33,7 +33,12 @@ export class RegisterUser {
     const existing = await this.users.findByEmail(input.email);
     if (existing) {
       await unusedPasswordWork(input.password, this.argon2);
-      unusedCodeWork(generateEmailCode());
+      if (existing.verifiedAt) {
+        unusedCodeWork(generateEmailCode());
+        return;
+      }
+      // Signing up again before verifying sends a fresh code, so a retry after a typo or a lost email works.
+      await this.issueCode(input.email, new Date());
       return;
     }
     const now = new Date();
@@ -48,10 +53,14 @@ export class RegisterUser {
     if (inserted === "duplicate") {
       return;
     }
+    await this.issueCode(input.email, now);
+  }
+
+  private async issueCode(email: string, now: Date): Promise<void> {
     const code = generateEmailCode();
     await this.codes.replaceActive({
       _id: newId(),
-      email: input.email,
+      email,
       purpose: "verify",
       codeHash: hashEmailCode(code),
       expiresAt: new Date(now.getTime() + VERIFY_CODE_TTL_MS),
@@ -59,6 +68,6 @@ export class RegisterUser {
       usedAt: null,
       createdAt: now,
     });
-    await this.mailer.sendCode({ email: input.email, purpose: "verify", code });
+    await sendCodeQuietly(this.mailer, { email, purpose: "verify", code });
   }
 }

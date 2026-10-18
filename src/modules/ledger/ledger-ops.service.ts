@@ -3,21 +3,24 @@ import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { Db } from "mongodb";
 import { isId, newId } from "@/common/ids";
 import { formatMoney, money, parseMoney } from "@/common/money/money";
+import { nairaOrNull } from "@/common/money/naira-or-null";
 import { MONGO_DB } from "@/database/mongo/mongo.constants";
 import { AccountsRepository } from "@/modules/accounts/repositories/accounts.repository";
 import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 import { CreateTransaction } from "@/modules/transactions/application/create-transaction";
-import { periodTotals } from "@/modules/transactions/application/totals";
+import { netSpend, periodTotals, spendLines } from "@/modules/transactions/application/totals";
 import { TransactionsRepository } from "@/modules/transactions/repositories/transactions.repository";
 import { UsersRepository } from "@/modules/users/repositories/users.repository";
 import { requireCapability } from "@/modules/workspaces/domain/capabilities";
 import { ResolveMembership } from "@/modules/workspaces/policies/resolve-membership";
 import { MembershipsRepository } from "@/modules/workspaces/repositories/memberships.repository";
 import { WorkspacesRepository } from "@/modules/workspaces/repositories/workspaces.repository";
+import { csvCell } from "@/modules/imports-exports/csv-cell";
 import { LedgerFailure } from "@/modules/transactions/domain/ledger-failure";
 import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
-import { clampDay, weekBounds } from "@/modules/calendar/period";
+import { clampDay, weekBounds, zonedInstant } from "@/modules/calendar/period";
 
+/** Plan lists return amounts as decimal strings; a row stored without one returns null, never "0.00". */
 const WIPE = [
   "users",
   "sessions",
@@ -38,6 +41,7 @@ const WIPE = [
   "debts",
   "imports",
   "import_rows",
+  "reconciliation_events",
 ] as const;
 
 function figure(value: string, basis: string, currency = "NGN") {
@@ -104,14 +108,13 @@ export class LedgerOpsService implements OnModuleInit {
       const at = row.occurredAt ?? row.createdAt;
       return at >= start && at <= end;
     });
-    const totals = periodTotals(inRange);
+    const totals = periodTotals(inRange, "NGN", posted);
+    const lines = spendLines(inRange, posted);
     const nw = await this.netWorth(userId, workspaceId);
     const budgets = await this.docs("budgets").find({ workspaceId }).toArray();
     let remaining = 0n;
     for (const budget of budgets) {
-      const spent = inRange
-        .filter((row) => row.type === "expense" && row.accountId === String(budget.accountId))
-        .reduce((sum, row) => sum + row.amountMinor, 0n);
+      const spent = netSpend(lines.filter((line) => line.accountId === String(budget.accountId)));
       remaining += BigInt(budget.amountMinor as bigint | number | string) - spent;
     }
     let netCash = 0n;
@@ -122,8 +125,8 @@ export class LedgerOpsService implements OnModuleInit {
       status: "ok" as const,
       data: {
         income: figure(totals.income, "Posted income in this range. Transfers excluded."),
-        expense: figure(totals.expense, "Posted expenses in this range. Transfers excluded."),
-        refund: figure(totals.refund ?? "0.00", "Posted refunds. Expense total is not reduced."),
+        expense: figure(totals.expense, "Posted expenses less their refunds in this range. Transfers excluded."),
+        refund: figure(totals.refund ?? "0.00", "Posted refunds, already taken off the expense total."),
         netCash: figure(formatMoney(money(netCash, "NGN")), "Posted effects in this range, including refunds."),
         netWorth: figure(nw.data.netWorth, nw.data.basis),
         budgetRemaining: figure(formatMoney(money(remaining, "NGN")), "Primary period remaining across account budgets."),
@@ -162,20 +165,16 @@ export class LedgerOpsService implements OnModuleInit {
     const workspace = await this.workspaces.findById(workspaceId);
     const weekStartsOn = workspace?.weekStartsOn ?? "monday";
     const timezone = workspace?.timezone ?? "Africa/Lagos";
-    const zone = (at: Date) => (timezone === "Africa/Lagos" ? new Date(at.getTime() + 3_600_000) : at);
-    const posted = (await this.txns.listPosted(workspaceId)).filter((row) => row.type === "expense" && row.accountId === String(budget.accountId));
-    const seen = new Set<string>();
-    const spend = (from: Date, to: Date) => {
-      let total = 0n;
-      for (const row of posted) {
-        const at = zone(row.occurredAt ?? row.createdAt);
-        if (at < from || at > to) continue;
-        if (seen.has(`${row._id}:${from.toISOString()}`)) continue;
-        seen.add(`${row._id}:${from.toISOString()}`);
-        total += row.amountMinor;
-      }
-      return total;
-    };
+    const zone = (at: Date) => zonedInstant(at, timezone);
+    const all = await this.txns.listPosted(workspaceId);
+    const lines = spendLines(all).filter((line) => line.accountId === String(budget.accountId));
+    const spend = (from: Date, to: Date) =>
+      netSpend(
+        lines.filter((line) => {
+          const at = zone(line.at);
+          return at >= from && at <= to;
+        }),
+      );
     const local = zone(now);
     const dayFrom = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()));
     const dayTo = new Date(dayFrom.getTime() + 86400000 - 1);
@@ -184,7 +183,7 @@ export class LedgerOpsService implements OnModuleInit {
     const monthTo = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 1) - 1);
     const yearFrom = new Date(Date.UTC(local.getUTCFullYear(), 0, 1));
     const yearTo = new Date(Date.UTC(local.getUTCFullYear() + 1, 0, 1) - 1);
-    const basis = "Posted expenses in this range. Transfers excluded.";
+    const basis = "Posted expenses less their refunds in this range. Transfers excluded.";
     const views = {
       day: figure(formatMoney(money(spend(dayFrom, dayTo), "NGN")), basis),
       week: figure(formatMoney(money(spend(week.from, week.to), "NGN")), basis),
@@ -223,7 +222,29 @@ export class LedgerOpsService implements OnModuleInit {
   async listBills(userId: string, workspaceId: string) {
     await this.member(userId, workspaceId, false);
     const rows = await this.docs("bills").find({ workspaceId }).toArray();
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name, cadence: row.cadence })), error: null };
+    const now = new Date();
+    return {
+      status: "ok" as const,
+      data: rows.map((row) => ({
+        id: row._id,
+        name: row.name,
+        cadence: row.cadence,
+        amount: nairaOrNull(row.amountMinor),
+        nextDue: this.nextDue(
+          { cadence: String(row.cadence ?? "monthly"), anchorDay: Number(row.anchorDay ?? 1) || 1, weekday: Number(row.weekday ?? 1) || 0 },
+          now,
+        ),
+      })),
+      error: null,
+    };
+  }
+
+  /** The next due date on or after today (YYYY-MM-DD). Reminders are scheduled from this. */
+  nextDue(bill: { cadence: string; anchorDay: number; weekday: number }, now: Date): string {
+    const today = now.toISOString().slice(0, 10);
+    const due = this.dueFor(bill, now);
+    if (bill.cadence === "weekly" || due >= today) return due;
+    return clampDay(now.getUTCFullYear(), now.getUTCMonth() + 1, bill.anchorDay).toISOString().slice(0, 10);
   }
 
   dueFor(bill: { cadence: string; anchorDay: number; weekday: number }, now: Date): string {
@@ -295,7 +316,7 @@ export class LedgerOpsService implements OnModuleInit {
   async listStreams(userId: string, workspaceId: string) {
     await this.member(userId, workspaceId, false);
     const rows = await this.docs("income_streams").find({ workspaceId }).toArray();
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name, taxClass: row.taxClass })), error: null };
+    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name, taxClass: row.taxClass, cadence: row.cadence, expected: nairaOrNull(row.expectedMinor) })), error: null };
   }
 
   async matchIncome(userId: string, workspaceId: string, streamId: string, transactionId: string) {
@@ -331,7 +352,7 @@ export class LedgerOpsService implements OnModuleInit {
   async listGoals(userId: string, workspaceId: string) {
     await this.member(userId, workspaceId, false);
     const rows = await this.docs("goals").find({ workspaceId }).toArray();
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name })), error: null };
+    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name, target: nairaOrNull(row.targetMinor) })), error: null };
   }
 
   async scheduleGoal(userId: string, workspaceId: string, goalId: string, body: Record<string, unknown>) {
@@ -400,7 +421,7 @@ export class LedgerOpsService implements OnModuleInit {
   async listDebts(userId: string, workspaceId: string) {
     await this.member(userId, workspaceId, false);
     const rows = await this.docs("debts").find({ workspaceId }).toArray();
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, direction: row.direction, counterparty: row.counterparty })), error: null };
+    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, direction: row.direction, counterparty: row.counterparty, principal: nairaOrNull(row.principalRemainingMinor) })), error: null };
   }
 
   async debtMove(
@@ -509,12 +530,21 @@ export class LedgerOpsService implements OnModuleInit {
     if (!account) throw new LedgerFailure("not_found", "not found");
     if (typeof body.externalBalance !== "string") throw new LedgerFailure("bad_request", "externalBalance required.");
     const external = parseMoney(body.externalBalance, "NGN");
+    const at = body.asOf ? new Date(String(body.asOf)) : new Date();
     await this.docs("accounts").updateOne(
       { _id: accountId, workspaceId },
-      { $set: { externalBalanceMinor: external.amountMinor, reconciledAsOf: body.asOf ? new Date(String(body.asOf)) : new Date() } },
+      { $set: { externalBalanceMinor: external.amountMinor, reconciledAsOf: at } },
     );
     const calculated = account.balanceMinor;
     const difference = calculated - external.amountMinor;
+    await this.docs("reconciliation_events").insertOne({
+      _id: newId(),
+      workspaceId,
+      accountId,
+      externalMinor: external.amountMinor,
+      calculatedMinor: calculated,
+      at,
+    });
     return {
       status: "ok" as const,
       data: {
@@ -527,7 +557,13 @@ export class LedgerOpsService implements OnModuleInit {
     };
   }
 
-  async previewImport(userId: string, workspaceId: string, text: string, mapping?: Record<string, string>) {
+  async previewImport(
+    userId: string,
+    workspaceId: string,
+    text: string,
+    mapping?: Record<string, string>,
+    accountId?: string,
+  ) {
     await this.member(userId, workspaceId, true);
     const lines = text.trim().split(/\r?\n/);
     const header = lines[0]?.split(",").map((h) => h.trim().toLowerCase()) ?? [];
@@ -558,7 +594,14 @@ export class LedgerOpsService implements OnModuleInit {
       accepted.push({ row: i + 1, description: rec[alias.description] ?? "" });
     }
     const importId = newId();
-    await this.docs("imports").insertOne({ _id: importId, workspaceId, accepted, rejected, text });
+    await this.docs("imports").insertOne({
+      _id: importId,
+      workspaceId,
+      accepted,
+      rejected,
+      text,
+      accountId: accountId || undefined,
+    });
     return { status: "ok" as const, data: { importId, accepted, rejected }, error: null };
   }
 
@@ -566,6 +609,8 @@ export class LedgerOpsService implements OnModuleInit {
     await this.member(userId, workspaceId, true);
     const job = await this.docs("imports").findOne({ _id: importId, workspaceId });
     if (!job) throw new LedgerFailure("not_found", "not found");
+    const target = accountId && accountId !== "undefined" ? accountId : String(job.accountId ?? "");
+    if (!target) throw new LedgerFailure("bad_request", "Need an account for this import.");
     const ids: string[] = [];
     for (const row of job.accepted as { row: number; description: string }[]) {
       const rowHash = createHash("sha256").update(`${importId}:${row.row}`).digest("hex");
@@ -578,7 +623,7 @@ export class LedgerOpsService implements OnModuleInit {
         operationId: newId(),
         type: "expense",
         amount: "1.00",
-        accountId,
+        accountId: target,
         description: row.description || "import",
       });
       const txnId = (created.data as { transaction: { id: string } }).transaction.id;
@@ -589,20 +634,17 @@ export class LedgerOpsService implements OnModuleInit {
   }
 
   async exportCsv(userId: string, workspaceId: string) {
-    await this.member(userId, workspaceId, false);
+    const membership = await this.member(userId, workspaceId, false);
+    requireCapability(membership.role, "export_all");
     const rows = await this.txns.listAll(workspaceId);
-    const escape = (value: string) => {
-      const raw = /^[=+\-@]/.test(value) ? `'${value}` : value;
-      return `"${raw.replace(/"/g, '""')}"`;
-    };
     const lines = ["date,description,amount,type"];
     for (const row of rows) {
       lines.push(
         [
-          escape((row.occurredAt ?? row.createdAt).toISOString()),
-          escape(row.description),
-          escape(formatMoney(money(row.amountMinor, row.currency))),
-          escape(row.type),
+          csvCell((row.occurredAt ?? row.createdAt).toISOString()),
+          csvCell(row.description),
+          csvCell(formatMoney(money(row.amountMinor, row.currency))),
+          csvCell(row.type),
         ].join(","),
       );
     }
@@ -616,10 +658,17 @@ export class LedgerOpsService implements OnModuleInit {
     const hit = (label: string) => label.toLowerCase().includes(needle);
     const transactions = (await this.txns.listAll(workspaceId))
       .filter((row) => hit(row.description))
-      .map((row) => ({ id: row._id, label: row.description, kind: "transaction" }));
+      .map((row) => ({
+        id: row._id,
+        label: row.description,
+        kind: "transaction",
+        type: row.type,
+        amount: formatMoney(money(row.amountMinor, row.currency)),
+      }));
     const accounts = (await this.accounts.list(workspaceId, false))
+      .filter((row) => row.kind !== "liability" && row.kind !== "receivable")
       .filter((row) => hit(row.name))
-      .map((row) => ({ id: row._id, label: row.name, kind: "account" }));
+      .map((row) => ({ id: row._id, label: row.name, kind: "account", accountKind: row.kind }));
     const bills = (await this.docs("bills").find({ workspaceId }).toArray())
       .filter((row) => hit(String(row.name)))
       .map((row) => ({ id: row._id, label: String(row.name), kind: "bill" }));
@@ -634,7 +683,16 @@ export class LedgerOpsService implements OnModuleInit {
 
   async listSessions(userId: string) {
     const rows = await this.sessions.listByUser(userId);
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, createdAt: row.createdAt, current: row.revokedAt == null })), error: null };
+    return {
+      status: "ok" as const,
+      data: rows.map((row) => ({
+        id: row._id,
+        createdAt: row.createdAt,
+        current: row.revokedAt == null,
+        deviceLabel: row.deviceLabel ?? "This device",
+      })),
+      error: null,
+    };
   }
 
   async revokeSession(userId: string, id: string) {

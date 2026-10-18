@@ -79,6 +79,13 @@ export class CreateTransaction {
       if (!input.originalTransactionId) throw new LedgerFailure("bad_request", "Refund needs the original transaction.");
       const original = await this.txns.findById(workspaceId, input.originalTransactionId);
       if (!original) throw new LedgerFailure("bad_request", "Original transaction not found.");
+      if (original.type !== "expense") throw new LedgerFailure("bad_request", "Only an expense can be refunded.");
+      const refunded = (await this.txns.listPosted(workspaceId))
+        .filter((row) => row.type === "refund" && row.originalTransactionId === original._id)
+        .reduce((sum, row) => sum + row.amountMinor, 0n);
+      if (refunded + amount.amountMinor > original.amountMinor) {
+        throw new LedgerFailure("bad_request", "A refund can’t be more than what’s left of the original expense.");
+      }
     }
 
     let merchantId = undefined as string | undefined;

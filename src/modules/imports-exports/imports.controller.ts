@@ -56,7 +56,13 @@ export class ImportsController {
   async preview(@Param("workspaceId") workspaceId: string, @Body() body: unknown, @Req() req: Request) {
     try {
       const r = rec(body);
-      return await this.ops.previewImport(getAuth(req).userId, workspaceId, String(r.text ?? ""), r.mapping as Record<string, string> | undefined);
+      return await this.ops.previewImport(
+        getAuth(req).userId,
+        workspaceId,
+        String(r.text ?? ""),
+        r.mapping as Record<string, string> | undefined,
+        typeof r.accountId === "string" ? r.accountId : undefined,
+      );
     } catch (error) {
       toHttp(error);
     }

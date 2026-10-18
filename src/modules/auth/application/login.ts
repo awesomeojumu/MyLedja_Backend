@@ -23,7 +23,7 @@ export class Login {
     @Inject(ARGON2_OPTIONS) private readonly argon2: HashOptions,
   ) {}
 
-  async execute(input: { email: string; password: string; ip: string }): Promise<{
+  async execute(input: { email: string; password: string; ip: string; deviceLabel?: string }): Promise<{
     accessToken: string;
     refreshToken: string;
     userId: string;
@@ -64,6 +64,7 @@ export class Login {
       refreshTokenHash: refresh.hash,
       ...windows,
       revokedAt: null,
+      deviceLabel: input.deviceLabel ?? "This device",
     });
     const accessToken = await signAccessToken({ userId: user._id, sid }, loadConfig().jwtSecret, now);
     return {

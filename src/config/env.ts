@@ -42,7 +42,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     throw new Error("MONGODB_URI is required in production");
   }
 
-  const accountNumberKey = env.ACCOUNT_NUMBER_KEY ?? "";
+  const accountNumberKey =
+    env.ACCOUNT_NUMBER_KEY ??
+    (rawEnv === "development" || rawEnv === "test" ? "0".repeat(64) : "");
   if ((rawEnv === "production" || rawEnv === "staging") && accountNumberKey.length < 64) {
     throw new Error("ACCOUNT_NUMBER_KEY is required in staging and production");
   }

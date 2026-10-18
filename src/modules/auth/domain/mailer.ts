@@ -14,6 +14,26 @@ export interface Mailer {
   sendCode(message: MailMessage): Promise<void>;
 }
 
+/**
+ * Sends a code without letting a delivery failure change the reply. Register, resend and recovery all answer the
+ * same way whether or not an account exists, so a bounced address must not surface as a 500 (that would reveal the
+ * account, and strand the user). The failure is logged without the code or the address.
+ */
+export async function sendCodeQuietly(
+  mailer: Mailer,
+  message: MailMessage,
+  log: (line: string) => void = (line) => console.warn(line),
+): Promise<boolean> {
+  try {
+    await mailer.sendCode(message);
+    return true;
+  } catch (caught) {
+    const reason = caught instanceof Error ? caught.name : "unknown";
+    log(`[auth] ${message.purpose} code could not be delivered (${reason})`);
+    return false;
+  }
+}
+
 export interface SmtpSettings {
   host: string;
   port: number;
@@ -88,8 +108,13 @@ export class ProductionMailer implements Mailer {
 
 export class CaptureMailer implements Mailer {
   readonly sent: MailMessage[] = [];
+  /** Addresses the fake mail server rejects, like a real SMTP 550. */
+  readonly rejects = new Set<string>();
 
   async sendCode(message: MailMessage): Promise<void> {
+    if (this.rejects.has(message.email)) {
+      throw new Error("550 recipient rejected");
+    }
     this.sent.push(message);
   }
 

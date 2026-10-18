@@ -22,3 +22,14 @@ export interface AccountDoc {
   externalBalanceMinor?: bigint;
   reconciledAsOf?: Date;
 }
+
+export const RECONCILIATION_EVENTS_COLLECTION = "reconciliation_events";
+
+export interface ReconciliationEventDoc {
+  _id: string;
+  workspaceId: string;
+  accountId: string;
+  externalMinor: bigint;
+  calculatedMinor: bigint;
+  at: Date;
+}

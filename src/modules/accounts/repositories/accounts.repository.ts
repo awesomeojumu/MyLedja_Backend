@@ -42,6 +42,18 @@ export class AccountsRepository implements OnModuleInit {
     await this.col.updateOne({ _id: id, workspaceId }, { $set: { openingBalanceMinor, balanceMinor } });
   }
 
+  async setKind(workspaceId: string, id: string, kind: AccountDoc["kind"]): Promise<void> {
+    await this.col.updateOne({ _id: id, workspaceId }, { $set: { kind } });
+  }
+
+  async rename(workspaceId: string, id: string, name: string): Promise<void> {
+    await this.col.updateOne({ _id: id, workspaceId }, { $set: { name } });
+  }
+
+  async restore(workspaceId: string, id: string): Promise<void> {
+    await this.col.updateOne({ _id: id, workspaceId }, { $set: { archivedAt: null } });
+  }
+
   async addBalance(id: string, delta: bigint, session?: ClientSession): Promise<void> {
     await this.col.updateOne({ _id: id }, { $inc: { balanceMinor: delta } }, session ? { session } : undefined);
   }

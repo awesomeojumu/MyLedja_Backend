@@ -15,5 +15,8 @@ export function publicAccount(doc: AccountDoc) {
     balance: formatMoney(money(doc.balanceMinor, doc.currency)),
     mask: doc.mask ?? null,
     archived: doc.archivedAt != null,
+    externalBalance:
+      doc.externalBalanceMinor != null ? formatMoney(money(doc.externalBalanceMinor, doc.currency)) : null,
+    reconciledAsOf: doc.reconciledAsOf ? doc.reconciledAsOf.toISOString() : null,
   };
 }

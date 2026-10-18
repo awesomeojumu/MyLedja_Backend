@@ -26,8 +26,25 @@ export function weekBounds(now: Date, weekStartsOn: "monday" | "sunday"): { from
   return { from, to };
 }
 
+export function zonedInstant(at: Date, timezone: string): Date {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(at);
+    const read = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+    return new Date(Date.UTC(read("year"), read("month") - 1, read("day"), read("hour"), read("minute"), read("second")));
+  } catch {
+    return at;
+  }
+}
+
 export function inLagosOctober(iso: string): boolean {
-  const utc = new Date(iso);
-  const lagos = new Date(utc.getTime() + 60 * 60 * 1000);
-  return lagos.getUTCMonth() === 9;
+  return zonedInstant(new Date(iso), "Africa/Lagos").getUTCMonth() === 9;
 }

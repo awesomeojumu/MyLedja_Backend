@@ -39,7 +39,7 @@ describe("session lifecycle", () => {
 
     const me = await http(app, "GET", "/v1/auth/me", undefined, tokens.accessToken);
     expect(me.code).toBe(200);
-    expect(me.json).toEqual({ userId: tokens.userId, email });
+    expect(me.json).toEqual({ userId: tokens.userId, email, hideLockScreenAmounts: true });
 
     await http(app, "POST", "/v1/auth/logout", { refreshToken: tokens.refreshToken });
     const after = await http(app, "GET", "/v1/auth/me", undefined, tokens.accessToken);

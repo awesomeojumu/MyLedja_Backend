@@ -249,6 +249,11 @@ describe("ledger H–S G U N Q", () => {
     );
     expect(expense.code).toBe(201);
     const expId = (expense.json as { data: { transaction: { id: string } } }).data.transaction.id;
+    const spentOf = async () => {
+      const res = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard?from=2026-10-01T00:00:00.000Z&to=2099-01-01T00:00:00.000Z`, undefined, token);
+      return Number.parseFloat((res.json as { data: { expense: { value: string } } }).data.expense.value);
+    };
+    const spentBefore = await spentOf();
     const refund = await http(
       app,
       "POST",
@@ -266,6 +271,16 @@ describe("ledger H–S G U N Q", () => {
     expect(refund.code).toBe(201);
     const offset = await http(app, "GET", `/v1/workspaces/${workspaceId}/transactions/${expId}/offset`, undefined, token);
     expect((offset.json as { data: { remaining: string } }).data.remaining).toBe("8.00");
+    // TC-07: the refund comes off the expense total, and can't exceed what's left of the original.
+    expect(await spentOf()).toBeCloseTo(spentBefore - 4, 2);
+    const tooMuch = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      { operationId: testId(), type: "refund", amount: "8.01", accountId: cashId, originalTransactionId: expId, description: "Too much" },
+      token,
+    );
+    expect(tooMuch.code).toBe(400);
 
     const parent = await http(
       app,
@@ -304,6 +319,81 @@ describe("ledger H–S G U N Q", () => {
     expect(typeof (rec.json as { data: { difference: string } }).data.difference).toBe("string");
   });
 
+  it("plan lists return amounts, never a silent zero", async () => {
+    const post = (path: string, body: Record<string, unknown>) =>
+      http(app, "POST", `/v1/workspaces/${workspaceId}/${path}`, body, token);
+    const list = async (path: string) =>
+      ((await http(app, "GET", `/v1/workspaces/${workspaceId}/${path}`, undefined, token)).json as {
+        data: Record<string, unknown>[];
+      }).data;
+    expect((await post("bills", { name: "Gym plan", amount: "5000.00", cadence: "monthly", accountId: cashId })).code).toBe(201);
+    expect((await post("goals", { name: "Laptop fund", target: "7500.50" })).code).toBe(201);
+    expect((await post("debts", { direction: "i_owe", counterparty: "Bisi", principal: "1200.00" })).code).toBe(201);
+    expect((await post("income-streams", { name: "Side gig", expected: "30000.00", taxClass: "business" })).code).toBe(201);
+    expect((await list("bills")).find((row) => row.name === "Gym plan")?.amount).toBe("5000.00");
+    expect((await list("goals")).find((row) => row.name === "Laptop fund")?.target).toBe("7500.50");
+    expect((await list("debts")).find((row) => row.counterparty === "Bisi")?.principal).toBe("1200.00");
+    expect((await list("income-streams")).find((row) => row.name === "Side gig")?.expected).toBe("30000.00");
+    const { MONGO_DB } = await import("@/database/mongo/mongo.constants");
+    const db = app.get(MONGO_DB);
+    await db.collection("bills").insertOne({
+      _id: "bill-long",
+      workspaceId,
+      name: "DSTV Long",
+      cadence: "monthly",
+      amountMinor: { low: 500000, high: 0 },
+    });
+    expect((await list("bills")).find((row) => row.name === "DSTV Long")?.amount).toBe("5000.00");
+    const today = new Date().toISOString().slice(0, 10);
+    for (const bill of await list("bills")) {
+      expect(String(bill.nextDue)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(String(bill.nextDue) >= today).toBe(true);
+    }
+  });
+
+  it("the lock-screen setting round-trips through /auth/me", async () => {
+    const me = async () => ((await http(app, "GET", "/v1/auth/me", undefined, token)).json as { hideLockScreenAmounts: boolean }).hideLockScreenAmounts;
+    expect(await me()).toBe(true);
+    expect((await http(app, "PATCH", "/v1/me/settings", { hideLockScreenAmounts: false }, token)).code).toBe(200);
+    expect(await me()).toBe(false);
+    await http(app, "PATCH", "/v1/me/settings", { hideLockScreenAmounts: true }, token);
+    expect(await me()).toBe(true);
+  });
+
+  it("budget views use workspace timezone not Lagos", async () => {
+    await http(app, "PATCH", `/v1/workspaces/${workspaceId}/setup`, { timezone: "America/New_York" }, token);
+    const budget = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/budgets`,
+      { accountId: cashId, amount: "8000.00", primaryPeriod: "day" },
+      token,
+    );
+    const budgetId = (budget.json as { data: { id: string } }).data.id;
+    await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      {
+        operationId: testId(),
+        type: "expense",
+        amount: "250.00",
+        accountId: cashId,
+        description: "NY day",
+        occurredAt: "2026-10-18T03:30:00.000Z",
+      },
+      token,
+    );
+    const ops = harness.app.get(LedgerOpsService);
+    const now = new Date("2026-10-17T20:00:00.000Z");
+    const ny = await ops.budgetViews(userId, workspaceId, budgetId, now);
+    expect(ny.data.views.day.value).toBe("250.00");
+    await http(app, "PATCH", `/v1/workspaces/${workspaceId}/setup`, { timezone: "Africa/Lagos" }, token);
+    const lagos = await ops.budgetViews(userId, workspaceId, budgetId, now);
+    expect(lagos.data.views.day.value).toBe("0.00");
+    await http(app, "PATCH", `/v1/workspaces/${workspaceId}/setup`, { timezone: "Africa/Lagos" }, token);
+  });
+
   it("M1 dashboard figures + S1 search min 2", async () => {
     const dash = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
     expect(dash.code).toBe(200);
@@ -316,6 +406,12 @@ describe("ledger H–S G U N Q", () => {
     expect(found.code).toBe(200);
     const bills = (found.json as { data: { bills: { label: string }[] } }).data.bills;
     expect(bills.some((row) => row.label === "DSTV")).toBe(true);
+    const txSearch = await http(app, "GET", `/v1/workspaces/${workspaceId}/search?q=${encodeURIComponent("an")}`, undefined, token);
+    const txHits = (txSearch.json as { data: { transactions: { amount?: string; type?: string }[] } }).data.transactions;
+    for (const hit of txHits) {
+      expect(hit.amount).toMatch(/^-?\d+\.\d{2}$/);
+      expect(typeof hit.type).toBe("string");
+    }
   });
 
   it("O1–O3 CSV preview commit export formula escape", async () => {
@@ -357,6 +453,26 @@ not-a-date,Bad,1.00,expense
     const text = await res.text();
     expect(res.headers.get("content-type")).toContain("text/csv");
     expect(text).toContain("'=HYPERLINK");
+
+    await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      { operationId: testId(), type: "expense", amount: "1.00", accountId: cashId, description: "\t=cmd" },
+      token,
+    );
+    await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      { operationId: testId(), type: "expense", amount: "1.00", accountId: cashId, description: "\r=cmd" },
+      token,
+    );
+    const guarded = await fetch(`${await app.getUrl()}/v1/workspaces/${workspaceId}/exports/transactions.csv`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const guardedText = await guarded.text();
+    expect(guardedText).toContain("'=cmd");
   });
 
   it("Q1 hide amounts sessions deletion wipe order", async () => {
@@ -364,7 +480,9 @@ not-a-date,Bad,1.00,expense
     expect(hide.code).toBe(200);
     const sessions = await http(app, "GET", "/v1/me/sessions", undefined, token);
     expect(sessions.code).toBe(200);
-    expect((sessions.json as { data: { id: string }[] }).data.length).toBeGreaterThan(0);
+    const sessionRows = (sessions.json as { data: { id: string; deviceLabel?: string }[] }).data;
+    expect(sessionRows.length).toBeGreaterThan(0);
+    expect(sessionRows[0].deviceLabel).toBeTruthy();
     const start = await http(app, "POST", "/v1/me/deletion", {}, token);
     expect(start.code).toBe(201);
     const ops = harness.app.get(LedgerOpsService);
@@ -388,6 +506,7 @@ not-a-date,Bad,1.00,expense
       "debts",
       "imports",
       "import_rows",
+      "reconciliation_events",
     ]);
   });
 
@@ -414,6 +533,10 @@ not-a-date,Bad,1.00,expense
       guestToken,
     );
     expect(write.code).toBe(403);
+    const exported = await fetch(`${await app.getUrl()}/v1/workspaces/${workspaceId}/exports/transactions.csv`, {
+      headers: { authorization: `Bearer ${guestToken}` },
+    });
+    expect(exported.status).toBe(403);
   });
 
   it("Q1 resume cursor then Q2 revoke rejects that token", async () => {
