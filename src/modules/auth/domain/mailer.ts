@@ -82,6 +82,64 @@ export class SmtpMailer implements Mailer {
   }
 }
 
+export interface ResendSettings {
+  apiKey: string;
+  from: string;
+}
+
+export interface ResendPostInit {
+  headers: { authorization: string; "content-type": string };
+  body: string;
+}
+
+export type ResendPost = (
+  url: string,
+  init: ResendPostInit,
+) => Promise<{ ok: boolean; status: number }>;
+
+export function resendFromEnv(env: NodeJS.ProcessEnv = process.env): ResendSettings | undefined {
+  const apiKey = env.RESEND_API_KEY ?? "";
+  const from = env.RESEND_FROM ?? env.SMTP_FROM ?? "";
+  if (!apiKey || !from) {
+    return undefined;
+  }
+  return { apiKey, from };
+}
+
+export class ResendMailer implements Mailer {
+  constructor(
+    private readonly post: ResendPost,
+    private readonly settings: ResendSettings,
+  ) {}
+
+  async sendCode(message: MailMessage): Promise<void> {
+    const subject =
+      message.purpose === "verify" ? "Your MyLedja verification code" : "Your MyLedja password reset code";
+    const res = await this.post("https://api.resend.com/emails", {
+      headers: {
+        authorization: `Bearer ${this.settings.apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: this.settings.from,
+        to: [message.email],
+        subject,
+        text: `Your MyLedja code is ${message.code}. It expires in a few minutes. If you did not request this, ignore this email.`,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Resend ${res.status}`);
+    }
+  }
+}
+
+export function createResendMailer(settings: ResendSettings): ResendMailer {
+  return new ResendMailer(async (url, init) => {
+    const res = await fetch(url, { method: "POST", headers: init.headers, body: init.body });
+    return { ok: res.ok, status: res.status };
+  }, settings);
+}
+
 export function createSmtpMailer(settings: SmtpSettings): SmtpMailer {
   const transporter = nodemailer.createTransport({
     host: settings.host,

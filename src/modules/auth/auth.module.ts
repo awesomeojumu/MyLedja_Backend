@@ -17,11 +17,13 @@ import { MeSecurityController } from "@/modules/auth/controllers/me-security.con
 import { MfaAndPasskeys } from "@/modules/auth/application/mfa-passkeys";
 import {
   CaptureMailer,
+  createResendMailer,
   createSmtpMailer,
   DevMailer,
   MAILER,
   Mailer,
   ProductionMailer,
+  resendFromEnv,
   smtpFromEnv,
 } from "@/modules/auth/domain/mailer";
 import { ARGON2_OPTIONS, ARGON2_PRODUCTION, ARGON2_TEST } from "@/modules/auth/domain/password";
@@ -31,10 +33,14 @@ import { EmailCodesRepository } from "@/modules/auth/repositories/email-codes.re
 import { SecurityEventsRepository } from "@/modules/auth/repositories/security-events.repository";
 import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
 
-/** Tests capture codes. SMTP sends when configured. Development without SMTP still prints the code. */
+/** Tests capture codes. Resend wins over SMTP. Development without either still prints the code. */
 function mailerFor(env: string): Mailer {
   if (env === "test") {
     return new CaptureMailer();
+  }
+  const resend = resendFromEnv();
+  if (resend) {
+    return createResendMailer(resend);
   }
   const smtp = smtpFromEnv();
   if (smtp) {
