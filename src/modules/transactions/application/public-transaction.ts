@@ -14,5 +14,6 @@ export function publicTransaction(doc: TransactionDoc) {
     categoryId: doc.categoryId ?? null,
     merchantId: doc.merchantId ?? null,
     tagIds: doc.tagIds,
+    occurredAt: doc.occurredAt ? new Date(doc.occurredAt).toISOString() : new Date(doc.createdAt).toISOString(),
   };
 }

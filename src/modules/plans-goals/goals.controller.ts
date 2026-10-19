@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
 import { LedgerOpsService } from "@/modules/ledger/ledger-ops.service";
@@ -22,6 +22,29 @@ export class GoalsController {
   async list(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
     try {
       return await this.ops.listGoals(getAuth(req).userId, workspaceId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Get("workspaces/:workspaceId/goals/:goalId")
+  async one(@Param("workspaceId") workspaceId: string, @Param("goalId") goalId: string, @Req() req: Request) {
+    try {
+      return await this.ops.getGoal(getAuth(req).userId, workspaceId, goalId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch("workspaces/:workspaceId/goals/:goalId")
+  async patch(
+    @Param("workspaceId") workspaceId: string,
+    @Param("goalId") goalId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    try {
+      return await this.ops.updateGoal(getAuth(req).userId, workspaceId, goalId, rec(body));
     } catch (error) {
       toHttp(error);
     }

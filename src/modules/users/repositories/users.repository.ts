@@ -48,4 +48,26 @@ export class UsersRepository implements OnModuleInit {
   async setHideAmounts(id: string, hideLockScreenAmounts: boolean): Promise<void> {
     await this.col.updateOne({ _id: id }, { $set: { hideLockScreenAmounts } });
   }
+
+  async setTotpPending(id: string, totpPendingEnc: string): Promise<void> {
+    await this.col.updateOne({ _id: id }, { $set: { totpPendingEnc, totpEnabled: false } });
+  }
+
+  async confirmTotp(id: string, totpSecretEnc: string, backupCodeHashes: string[]): Promise<void> {
+    await this.col.updateOne(
+      { _id: id },
+      { $set: { totpSecretEnc, backupCodeHashes, totpEnabled: true, totpPendingEnc: null } },
+    );
+  }
+
+  async disableTotp(id: string): Promise<void> {
+    await this.col.updateOne(
+      { _id: id },
+      { $set: { totpEnabled: false, totpSecretEnc: null, totpPendingEnc: null, backupCodeHashes: [] } },
+    );
+  }
+
+  async setBackupHashes(id: string, backupCodeHashes: string[]): Promise<void> {
+    await this.col.updateOne({ _id: id }, { $set: { backupCodeHashes } });
+  }
 }

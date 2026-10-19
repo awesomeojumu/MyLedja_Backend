@@ -33,13 +33,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
 
   const jwtSecret = env.JWT_SECRET ?? "";
-  if (rawEnv === "production" && jwtSecret.length < 32) {
-    throw new Error("JWT_SECRET is required in production");
+  if ((rawEnv === "production" || rawEnv === "staging") && jwtSecret.length < 32) {
+    throw new Error("JWT_SECRET is required in staging and production");
   }
 
   const mongodbUri = env.MONGODB_URI ?? "";
-  if (rawEnv === "production" && !mongodbUri) {
-    throw new Error("MONGODB_URI is required in production");
+  if ((rawEnv === "production" || rawEnv === "staging") && !mongodbUri) {
+    throw new Error("MONGODB_URI is required in staging and production");
   }
 
   const accountNumberKey =
@@ -57,7 +57,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     appEnv: rawEnv,
     port,
-    appUrl: env.APP_URL ?? "http://localhost:4000",
+    appUrl: env.APP_URL ?? env.RENDER_EXTERNAL_URL ?? "http://localhost:4000",
     jwtSecret,
     mongodbUri,
     mongodbDb: env.MONGODB_DB ?? "MyLedja",

@@ -16,6 +16,9 @@ const TYPES: LedgerType[] = [
   "loan_in",
   "loan_out",
   "principal_collect",
+  "investment_buy",
+  "investment_sell",
+  "investment_write_down",
 ];
 const STATUSES: LedgerStatus[] = ["pending", "posted", "reversed", "voided"];
 

@@ -39,4 +39,6 @@ export const DEFAULT_CATEGORIES: { name: string; kind: "income" | "expense" }[] 
   { name: "Subscriptions (DSTV, Netflix)", kind: "expense" },
   { name: "Rent", kind: "expense" },
   { name: "Salary", kind: "income" },
+  { name: "Loan repayments", kind: "expense" },
+  { name: "Repayment received", kind: "income" },
 ];

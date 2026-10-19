@@ -9,7 +9,10 @@ export type LedgerType =
   | "allocation"
   | "loan_in"
   | "loan_out"
-  | "principal_collect";
+  | "principal_collect"
+  | "investment_buy"
+  | "investment_sell"
+  | "investment_write_down";
 export type LedgerStatus = "pending" | "posted" | "reversed" | "voided";
 
 export interface Effect {

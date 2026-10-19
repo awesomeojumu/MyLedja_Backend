@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpException, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpException, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { isId } from "@/common/ids";
 import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
@@ -57,6 +57,38 @@ export class CatalogController {
     }
   }
 
+  @Get("categories/:categoryId")
+  async oneCategory(
+    @Param("workspaceId") workspaceId: string,
+    @Param("categoryId") categoryId: string,
+    @Req() req: Request,
+  ) {
+    try {
+      return await this.categories.get(getAuth(req).userId, workspace(workspaceId), categoryId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch("categories/:categoryId")
+  async patchCategory(
+    @Param("workspaceId") workspaceId: string,
+    @Param("categoryId") categoryId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    try {
+      const r = body as Record<string, unknown>;
+      return await this.categories.update(getAuth(req).userId, workspace(workspaceId), categoryId, {
+        name: typeof r?.name === "string" ? r.name : undefined,
+        parentId: typeof r?.parentId === "string" ? r.parentId : r?.parentId === null ? null : undefined,
+        kind: typeof r?.kind === "string" ? r.kind : undefined,
+      });
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
   @Get("merchants")
   async listMerchants(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
     try {
@@ -74,6 +106,38 @@ export class CatalogController {
         name: String(r?.name ?? ""),
         categoryId: String(r?.categoryId ?? ""),
         aliases: Array.isArray(r?.aliases) ? r.aliases.map(String) : [],
+      });
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Get("merchants/:merchantId")
+  async oneMerchant(
+    @Param("workspaceId") workspaceId: string,
+    @Param("merchantId") merchantId: string,
+    @Req() req: Request,
+  ) {
+    try {
+      return await this.merchantsAndTags.getMerchant(getAuth(req).userId, workspace(workspaceId), merchantId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch("merchants/:merchantId")
+  async patchMerchant(
+    @Param("workspaceId") workspaceId: string,
+    @Param("merchantId") merchantId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    try {
+      const r = body as Record<string, unknown>;
+      return await this.merchantsAndTags.updateMerchant(getAuth(req).userId, workspace(workspaceId), merchantId, {
+        name: typeof r?.name === "string" ? r.name : undefined,
+        categoryId: typeof r?.categoryId === "string" ? r.categoryId : undefined,
+        aliases: Array.isArray(r?.aliases) ? r.aliases.map(String) : undefined,
       });
     } catch (error) {
       toHttp(error);

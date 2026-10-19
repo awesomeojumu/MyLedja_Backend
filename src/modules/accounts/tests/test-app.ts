@@ -20,6 +20,7 @@ import { DebtsModule } from "@/modules/debts/debts.module";
 import { ImportsExportsModule } from "@/modules/imports-exports/imports-exports.module";
 import { IncomeModule } from "@/modules/income/income.module";
 import { PlansGoalsModule } from "@/modules/plans-goals/plans-goals.module";
+import { SavingsInvestmentsModule } from "@/modules/savings-investments/savings-investments.module";
 import { SettingsPrivacyModule } from "@/modules/settings-privacy/settings-privacy.module";
 import { randomFillSync } from "node:crypto";
 
@@ -73,6 +74,7 @@ export async function startLedgerApp(): Promise<TestApp> {
       BillsModule,
       IncomeModule,
       PlansGoalsModule,
+      SavingsInvestmentsModule,
       DebtsModule,
       SettingsPrivacyModule,
       ImportsExportsModule,

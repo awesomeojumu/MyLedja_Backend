@@ -2,6 +2,7 @@ import { INestApplication } from "@nestjs/common";
 import { http, registerAndVerify, startLedgerApp, TEST_PASSWORD, testId } from "@/modules/accounts/tests/test-app";
 import { CaptureMailer } from "@/modules/auth/domain/mailer";
 import { TestApp } from "@/modules/auth/tests/test-app";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
 import { LedgerOpsService } from "@/modules/ledger/ledger-ops.service";
 
 jest.setTimeout(120_000);
@@ -60,6 +61,10 @@ describe("ledger H–S G U N Q", () => {
     const body = got.json as { timezone: string; weekStartsOn: string };
     expect(body.timezone).toBe("Africa/Lagos");
     expect(body.weekStartsOn).toBe("sunday");
+    const renamed = await http(app, "PATCH", `/v1/workspaces/${workspaceId}`, { name: "Ada home" }, token);
+    expect(renamed.code).toBe(200);
+    const again = await http(app, "GET", `/v1/workspaces/${workspaceId}`, undefined, token);
+    expect((again.json as { name: string }).name).toBe("Ada home");
   });
 
   it("H1–H4 budget per account four views", async () => {
@@ -113,6 +118,146 @@ describe("ledger H–S G U N Q", () => {
       token,
     );
     expect(paid.code).toBe(201);
+    const one = await http(app, "GET", `/v1/workspaces/${workspaceId}/bills/${billId}`, undefined, token);
+    expect(one.code).toBe(200);
+    expect((one.json as { data: { lastPaidAt: string | null } }).data.lastPaidAt).toBeTruthy();
+    const renamed = await http(app, "PATCH", `/v1/workspaces/${workspaceId}/bills/${billId}`, { amount: "55.00" }, token);
+    expect(renamed.code).toBe(200);
+    expect((renamed.json as { data: { amount: string; name: string } }).data.name).toBe("DSTV");
+    expect((renamed.json as { data: { amount: string } }).data.amount).toBe("55.00");
+    const count = await harness.db.collection("bills").countDocuments({ workspaceId, name: "DSTV" });
+    expect(count).toBe(1);
+    const reminders = await http(app, "GET", `/v1/workspaces/${workspaceId}/bills/${billId}/reminders`, undefined, token);
+    expect(reminders.code).toBe(200);
+    const weekday = new Date().getUTCDay() === 0 ? 1 : 0;
+    const weekly = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/bills`,
+      { name: "Weekly rent", amount: "10.00", cadence: "weekly", weekday, accountId: cashId },
+      token,
+    );
+    const weeklyId = (weekly.json as { data: { id: string } }).data.id;
+    const weeklyRow = await http(app, "GET", `/v1/workspaces/${workspaceId}/bills/${weeklyId}`, undefined, token);
+    const due = (weeklyRow.json as { data: { dueFor: string; nextDue: string } }).data;
+    expect(due.dueFor <= new Date().toISOString().slice(0, 10)).toBe(true);
+    expect(due.nextDue >= new Date().toISOString().slice(0, 10)).toBe(true);
+    const unpaid = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/bills`,
+      { name: "Unpaid fail", amount: "12.00", cadence: "monthly", accountId: cashId },
+      token,
+    );
+    const unpaidId = (unpaid.json as { data: { id: string } }).data.id;
+    const failPay = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/bills/${unpaidId}/paid`,
+      { accountId: testId(), operationId: testId() },
+      token,
+    );
+    expect(failPay.code).toBeGreaterThanOrEqual(400);
+    const stillUnpaid = await http(app, "GET", `/v1/workspaces/${workspaceId}/bills/${unpaidId}`, undefined, token);
+    expect((stillUnpaid.json as { data: { lastPaidAt: string | null } }).data.lastPaidAt).toBeNull();
+  });
+
+  it("category rename does not insert a second category; budget lines persist", async () => {
+    const created = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/categories`,
+      { name: "Feeding", kind: "expense" },
+      token,
+    );
+    const categoryId = (created.json as { data: { id: string } }).data.id;
+    const before = ((await http(app, "GET", `/v1/workspaces/${workspaceId}/categories`, undefined, token)).json as { data: unknown[] }).data.length;
+    await http(app, "PATCH", `/v1/workspaces/${workspaceId}/categories/${categoryId}`, { name: "Food" }, token);
+    const after = ((await http(app, "GET", `/v1/workspaces/${workspaceId}/categories`, undefined, token)).json as { data: unknown[] }).data.length;
+    expect(after).toBe(before);
+    const got = await http(app, "GET", `/v1/workspaces/${workspaceId}/categories/${categoryId}`, undefined, token);
+    expect((got.json as { data: { name: string } }).data.name).toBe("Food");
+    const plan = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/budgets`,
+      { name: "October", primaryPeriod: "month", lines: [{ categoryId, amount: "40000.00" }], fundingAccountIds: [cashId] },
+      token,
+    );
+    expect(plan.code).toBe(201);
+    const budgetId = (plan.json as { data: { id: string } }).data.id;
+    const countBefore = await harness.db.collection("budgets").countDocuments({ workspaceId });
+    await http(app, "PATCH", `/v1/workspaces/${workspaceId}/budgets/${budgetId}`, { name: "October plan", lines: [{ categoryId, amount: "45000.00" }] }, token);
+    const countAfter = await harness.db.collection("budgets").countDocuments({ workspaceId });
+    expect(countAfter).toBe(countBefore);
+    const emptyLines = await http(app, "POST", `/v1/workspaces/${workspaceId}/budgets`, { name: "Bad", lines: [] }, token);
+    expect(emptyLines.code).toBe(400);
+    const view = await http(app, "GET", `/v1/workspaces/${workspaceId}/budgets/${budgetId}`, undefined, token);
+    expect((view.json as { data: { planned: string; gap: string; lines: { remaining: string }[] } }).data.planned).toBe("45000.00");
+    expect((view.json as { data: { lines: unknown[] } }).data.lines).toHaveLength(1);
+    const missing = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/budgets`,
+      { name: "Ghost", lines: [{ categoryId: testId(), amount: "10.00" }] },
+      token,
+    );
+    expect(missing.code).toBe(400);
+    await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      {
+        operationId: testId(),
+        type: "expense",
+        amount: "2000.00",
+        accountId: cashId,
+        categoryId,
+        description: "Food spend",
+      },
+      token,
+    );
+    const afterSpend = await http(app, "GET", `/v1/workspaces/${workspaceId}/budgets/${budgetId}`, undefined, token);
+    expect((afterSpend.json as { data: { spent: string; remaining: string } }).data.spent).toBe("2000.00");
+    expect((afterSpend.json as { data: { remaining: string } }).data.remaining).toBe("43000.00");
+    const oneCat = await http(app, "GET", `/v1/workspaces/${workspaceId}/categories/${categoryId}`, undefined, token);
+    expect((oneCat.json as { data: { spent: string; remaining: string; budgetId: string } }).data.spent).toBe("2000.00");
+    expect((oneCat.json as { data: { remaining: string } }).data.remaining).toBe("43000.00");
+    expect((oneCat.json as { data: { budgetId: string } }).data.budgetId).toBe(budgetId);
+    expect((oneCat.json as { data: { periodFrom: string; periodTo: string } }).data.periodFrom).toMatch(/^\d{4}-/);
+    expect((oneCat.json as { data: { periodTo: string } }).data.periodTo).toMatch(/^\d{4}-/);
+    const kindChange = await http(app, "PATCH", `/v1/workspaces/${workspaceId}/categories/${categoryId}`, { kind: "income" }, token);
+    expect(kindChange.code).toBe(400);
+    const income = await http(app, "POST", `/v1/workspaces/${workspaceId}/categories`, { name: "Salary env", kind: "income" }, token);
+    const incomeId = (income.json as { data: { id: string } }).data.id;
+    const incomeLine = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/budgets`,
+      { name: "Bad income", lines: [{ categoryId: incomeId, amount: "10.00" }] },
+      token,
+    );
+    expect(incomeLine.code).toBe(400);
+    const zeroLine = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/budgets`,
+      { name: "Zero", lines: [{ categoryId, amount: "0.00" }] },
+      token,
+    );
+    expect(zeroLine.code).toBe(400);
+    const weekPlan = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/budgets`,
+      { name: "This week", primaryPeriod: "week", lines: [{ categoryId, amount: "10.00" }] },
+      token,
+    );
+    expect(weekPlan.code).toBe(201);
+    const weekId = (weekPlan.json as { data: { id: string } }).data.id;
+    const weekView = await http(app, "GET", `/v1/workspaces/${workspaceId}/budgets/${weekId}`, undefined, token);
+    expect((weekView.json as { data: { expected: string; periodFrom: string } }).data.expected).toBe("0.00");
+    expect((weekView.json as { data: { periodFrom: string } }).data.periodFrom).toMatch(/^\d{4}-/);
   });
 
   it("J1–J3 income stream match amount", async () => {
@@ -149,6 +294,44 @@ describe("ledger H–S G U N Q", () => {
       token,
     );
     expect(again.code).toBe(422);
+    const one = await http(app, "GET", `/v1/workspaces/${workspaceId}/income-streams/${streamId}`, undefined, token);
+    expect(one.code).toBe(200);
+    expect((one.json as { data: { received: string } }).data.received).toBe("100.00");
+    const patched = await http(
+      app,
+      "PATCH",
+      `/v1/workspaces/${workspaceId}/income-streams/${streamId}`,
+      { name: "Salary home" },
+      token,
+    );
+    expect(patched.code).toBe(200);
+    const listed = await http(app, "GET", `/v1/workspaces/${workspaceId}/income-streams`, undefined, token);
+    const rows = (listed.json as { data: { id: string }[] }).data.filter((row) => row.id === streamId);
+    expect(rows).toHaveLength(1);
+    const period = await http(app, "GET", `/v1/workspaces/${workspaceId}/income-streams/${streamId}/period`, undefined, token);
+    expect((period.json as { data: { expected: string; received: string } }).data.expected).toBe("100.00");
+    expect((period.json as { data: { received: string } }).data.received).toBe("100.00");
+    const listedRow = (listed.json as { data: { id: string; taxClass?: string; cadence?: string }[] }).data.find((row) => row.id === streamId);
+    expect(listedRow?.taxClass).toBe("paye");
+    expect(listedRow?.cadence).toBe("monthly");
+    const noTax = await http(app, "POST", `/v1/workspaces/${workspaceId}/income-streams`, { name: "Gig", expected: "10.00" }, token);
+    expect(noTax.code).toBe(400);
+    const wrongAmt = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/transactions`,
+      { operationId: testId(), type: "income", amount: "50.00", accountId: cashId, description: "Short pay" },
+      token,
+    );
+    const wrongId = (wrongAmt.json as { data: { transaction: { id: string } } }).data.transaction.id;
+    const refuse = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/income-streams/${streamId}/match`,
+      { transactionId: wrongId },
+      token,
+    );
+    expect(refuse.code).toBe(422);
   });
 
   it("K1–K3 goals allocate schedule", async () => {
@@ -177,6 +360,79 @@ describe("ledger H–S G U N Q", () => {
       token,
     );
     expect([200, 201]).toContain(schedule.code);
+    const listed = await http(app, "GET", `/v1/workspaces/${workspaceId}/goals`, undefined, token);
+    const row = ((listed.json as { data: { id: string; target: string; saved: string; completed: boolean }[] }).data).find((item) => item.id === goalId);
+    expect(row?.target).toBe("10000.00");
+    expect(row?.saved).toBe("200.00");
+    expect(row?.completed).toBe(false);
+    const patched = await http(app, "PATCH", `/v1/workspaces/${workspaceId}/goals/${goalId}`, { name: "Rainy day" }, token);
+    expect(patched.code).toBe(200);
+    const one = await http(app, "GET", `/v1/workspaces/${workspaceId}/goals/${goalId}`, undefined, token);
+    expect((one.json as { data: { name: string; schedules: unknown[] } }).data.name).toBe("Rainy day");
+    expect((one.json as { data: { schedules: unknown[] } }).data.schedules).toHaveLength(1);
+    await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/goals/${goalId}/allocate`,
+      { fromAccountId: cashId, amount: "9800.00", operationId: testId() },
+      token,
+    );
+    const done = await http(app, "GET", `/v1/workspaces/${workspaceId}/goals/${goalId}`, undefined, token);
+    expect((done.json as { data: { completed: boolean; saved: string } }).data.completed).toBe(true);
+    expect((done.json as { data: { saved: string } }).data.saved).toBe("10000.00");
+  });
+
+  it("holdings buy is not expense and sell is not income", async () => {
+    const before = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
+    const created = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings`,
+      { name: "GTCO", accountId: savingsId, quantity: "0", cost: "0.00", price: "12.00", maturesAt: "2027-06-01" },
+      token,
+    );
+    expect(created.code).toBe(201);
+    const holdingId = (created.json as { data: { id: string } }).data.id;
+    const buy = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings/${holdingId}/buy`,
+      { fromAccountId: cashId, quantity: "2", amount: "20.00", operationId: testId() },
+      token,
+    );
+    expect([200, 201]).toContain(buy.code);
+    const afterBuy = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
+    expect((afterBuy.json as { data: { expense: { value: string } } }).data.expense.value).toBe(
+      (before.json as { data: { expense: { value: string } } }).data.expense.value,
+    );
+    const one = await http(app, "GET", `/v1/workspaces/${workspaceId}/holdings/${holdingId}`, undefined, token);
+    const holding = one.json as { data: { quantity: string; lots: unknown[]; capital: string; value: string; price: string; maturesAt: string } };
+    expect(holding.data.quantity).toBe("2");
+    expect(holding.data.lots).toHaveLength(1);
+    expect(holding.data.capital).toBe("20.00");
+    expect(holding.data.price).toBe("12.00");
+    expect(holding.data.value).toBe("24.00");
+    expect(holding.data.maturesAt.startsWith("2027-06-01")).toBe(true);
+    const sell = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings/${holdingId}/sell`,
+      { toAccountId: cashId, quantity: "1", amount: "12.00", operationId: testId() },
+      token,
+    );
+    expect([200, 201]).toContain(sell.code);
+    const afterSell = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
+    const beforeIncome = Number.parseFloat((before.json as { data: { income: { value: string } } }).data.income.value);
+    const afterIncome = Number.parseFloat((afterSell.json as { data: { income: { value: string } } }).data.income.value);
+    expect(afterIncome - beforeIncome).toBeCloseTo(2, 2);
+    const over = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings/${holdingId}/sell`,
+      { toAccountId: cashId, quantity: "9", amount: "1.00", operationId: testId() },
+      token,
+    );
+    expect(over.code).toBe(422);
   });
 
   it("L1–L4 debts borrow repay lend collect", async () => {
@@ -230,6 +486,23 @@ describe("ledger H–S G U N Q", () => {
       token,
     );
     expect(collect.code).toBe(201);
+    const blank = await http(app, "POST", `/v1/workspaces/${workspaceId}/debts`, { direction: "i_owe", principal: "10.00" }, token);
+    expect(blank.code).toBe(400);
+    const afterBorrow = await http(app, "GET", `/v1/workspaces/${workspaceId}/debts/${debtId}`, undefined, token);
+    expect((afterBorrow.json as { data: { principal: string } }).data.principal).toBe("490.00");
+    const afterLend = await http(app, "GET", `/v1/workspaces/${workspaceId}/debts/${lendId}`, undefined, token);
+    expect((afterLend.json as { data: { principal: string } }).data.principal).toBe("60.00");
+    const scheduled = await http(
+      app,
+      "PATCH",
+      `/v1/workspaces/${workspaceId}/debts/${debtId}`,
+      { cadence: "monthly", anchorDay: 27 },
+      token,
+    );
+    expect(scheduled.code).toBe(200);
+    expect((scheduled.json as { data: { nextDue: string } }).data.nextDue).toBeTruthy();
+    const debtCount = await app.get(MONGO_DB).collection("debts").countDocuments({ workspaceId, _id: debtId });
+    expect(debtCount).toBe(1);
   });
 
   it("N1–N4 U4 refund occurredAt receivable reconcile split", async () => {
@@ -497,6 +770,7 @@ not-a-date,Bad,1.00,expense
       "categories",
       "merchants",
       "budgets",
+      "budget_lines",
       "bills",
       "reminder_occurrences",
       "income_streams",

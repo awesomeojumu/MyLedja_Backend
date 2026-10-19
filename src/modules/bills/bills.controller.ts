@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
 import { LedgerOpsService } from "@/modules/ledger/ledger-ops.service";
@@ -22,6 +22,38 @@ export class BillsController {
   async list(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
     try {
       return await this.ops.listBills(getAuth(req).userId, workspaceId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Get("workspaces/:workspaceId/bills/:billId")
+  async one(@Param("workspaceId") workspaceId: string, @Param("billId") billId: string, @Req() req: Request) {
+    try {
+      return await this.ops.getBill(getAuth(req).userId, workspaceId, billId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch("workspaces/:workspaceId/bills/:billId")
+  async patch(
+    @Param("workspaceId") workspaceId: string,
+    @Param("billId") billId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    try {
+      return await this.ops.updateBill(getAuth(req).userId, workspaceId, billId, rec(body));
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Get("workspaces/:workspaceId/bills/:billId/reminders")
+  async reminders(@Param("workspaceId") workspaceId: string, @Param("billId") billId: string, @Req() req: Request) {
+    try {
+      return await this.ops.listReminders(getAuth(req).userId, workspaceId, billId);
     } catch (error) {
       toHttp(error);
     }

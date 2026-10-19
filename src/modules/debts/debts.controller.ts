@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
 import { LedgerOpsService } from "@/modules/ledger/ledger-ops.service";
@@ -22,6 +22,29 @@ export class DebtsController {
   async list(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
     try {
       return await this.ops.listDebts(getAuth(req).userId, workspaceId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Get("workspaces/:workspaceId/debts/:debtId")
+  async one(@Param("workspaceId") workspaceId: string, @Param("debtId") debtId: string, @Req() req: Request) {
+    try {
+      return await this.ops.getDebt(getAuth(req).userId, workspaceId, debtId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch("workspaces/:workspaceId/debts/:debtId")
+  async patch(
+    @Param("workspaceId") workspaceId: string,
+    @Param("debtId") debtId: string,
+    @Body() body: unknown,
+    @Req() req: Request,
+  ) {
+    try {
+      return await this.ops.patchDebt(getAuth(req).userId, workspaceId, debtId, rec(body));
     } catch (error) {
       toHttp(error);
     }

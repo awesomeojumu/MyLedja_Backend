@@ -13,6 +13,8 @@ describe("loadConfig", () => {
       APP_ENV: "staging",
       PORT: "4100",
       APP_URL: "https://staging.example.com",
+      JWT_SECRET: "a".repeat(32),
+      MONGODB_URI: "mongodb://localhost:27017",
       ACCOUNT_NUMBER_KEY: "ab".repeat(32),
     });
     expect(config.appEnv).toBe("staging");
@@ -20,9 +22,27 @@ describe("loadConfig", () => {
     expect(config.appUrl).toBe("https://staging.example.com");
   });
 
+  it("uses RENDER_EXTERNAL_URL when APP_URL is unset", () => {
+    const config = loadConfig({ RENDER_EXTERNAL_URL: "https://myledja-api-staging.onrender.com" });
+    expect(config.appUrl).toBe("https://myledja-api-staging.onrender.com");
+  });
+
+  it("refuses staging without JWT_SECRET or MONGODB_URI", () => {
+    expect(() =>
+      loadConfig({ APP_ENV: "staging", ACCOUNT_NUMBER_KEY: "ab".repeat(32) }),
+    ).toThrow("JWT_SECRET is required in staging and production");
+    expect(() =>
+      loadConfig({
+        APP_ENV: "staging",
+        JWT_SECRET: "a".repeat(32),
+        ACCOUNT_NUMBER_KEY: "ab".repeat(32),
+      }),
+    ).toThrow("MONGODB_URI is required in staging and production");
+  });
+
   it("refuses production without JWT_SECRET", () => {
     expect(() => loadConfig({ APP_ENV: "production", MONGODB_URI: "mongodb://localhost:27017" })).toThrow(
-      "JWT_SECRET is required in production",
+      "JWT_SECRET is required in staging and production",
     );
   });
 
@@ -46,7 +66,7 @@ describe("loadConfig database settings", () => {
 
   it("refuses production without MONGODB_URI", () => {
     expect(() => loadConfig({ APP_ENV: "production", JWT_SECRET: "a".repeat(32) })).toThrow(
-      "MONGODB_URI is required in production",
+      "MONGODB_URI is required in staging and production",
     );
   });
 });
@@ -72,7 +92,13 @@ describe("loadConfig Mono settings", () => {
 
 describe("loadConfig account number key", () => {
   it("refuses staging without ACCOUNT_NUMBER_KEY", () => {
-    expect(() => loadConfig({ APP_ENV: "staging" })).toThrow("ACCOUNT_NUMBER_KEY is required");
+    expect(() =>
+      loadConfig({
+        APP_ENV: "staging",
+        JWT_SECRET: "a".repeat(32),
+        MONGODB_URI: "mongodb://localhost:27017",
+      }),
+    ).toThrow("ACCOUNT_NUMBER_KEY is required");
   });
 
   it("accepts a 64-character hex key", () => {

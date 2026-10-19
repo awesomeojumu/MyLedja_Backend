@@ -94,7 +94,7 @@ export class CreateTransaction {
     if (matched) merchantId = matched._id;
 
     let categoryId = input.categoryId ?? matched?.categoryId;
-    if (input.type === "transfer" || input.type === "allocation" || input.type === "loan_in" || input.type === "loan_out" || input.type === "principal_collect") {
+    if (input.type === "transfer" || input.type === "allocation" || input.type === "investment_buy" || input.type === "investment_sell" || input.type === "investment_write_down" || input.type === "loan_in" || input.type === "loan_out" || input.type === "principal_collect") {
       categoryId = undefined;
     } else if (categoryId) {
       const category = await this.catalog.categories.findOne({ _id: categoryId, workspaceId });
@@ -108,7 +108,7 @@ export class CreateTransaction {
     }
 
     const effects: Effect[] = [];
-    if (input.type === "transfer" || input.type === "allocation") {
+    if (input.type === "transfer" || input.type === "allocation" || input.type === "investment_buy" || input.type === "investment_sell") {
       if (!input.toAccountId || input.toAccountId === input.accountId) {
         throw new LedgerFailure("bad_request", "Pick two different accounts.");
       }
@@ -142,7 +142,7 @@ export class CreateTransaction {
         { accountId: from._id, amountMinor: amount.amountMinor, currency },
         { accountId: recv._id, amountMinor: -amount.amountMinor, currency },
       );
-    } else if (input.type === "expense") {
+    } else if (input.type === "expense" || input.type === "investment_write_down") {
       effects.push({ accountId: from._id, amountMinor: -amount.amountMinor, currency });
     } else {
       effects.push({ accountId: from._id, amountMinor: amount.amountMinor, currency });

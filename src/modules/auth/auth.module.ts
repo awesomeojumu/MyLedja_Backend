@@ -13,6 +13,8 @@ import { RequestRecovery } from "@/modules/auth/application/request-recovery";
 import { ResendVerification } from "@/modules/auth/application/resend-verification";
 import { VerifyEmail } from "@/modules/auth/application/verify-email";
 import { AuthController } from "@/modules/auth/controllers/auth.controller";
+import { MeSecurityController } from "@/modules/auth/controllers/me-security.controller";
+import { MfaAndPasskeys } from "@/modules/auth/application/mfa-passkeys";
 import {
   CaptureMailer,
   createSmtpMailer,
@@ -46,8 +48,9 @@ function mailerFor(env: string): Mailer {
 
 @Module({
   imports: [UsersModule, WorkspacesModule],
-  controllers: [AuthController],
+  controllers: [AuthController, MeSecurityController],
   providers: [
+    MfaAndPasskeys,
     RegisterUser,
     VerifyEmail,
     Login,

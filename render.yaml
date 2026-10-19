@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: myledja-api-staging
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: staging
+    healthCheckPath: /health
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node dist/main.js
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: MONGODB_DB
+        value: MyLedja
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ACCOUNT_NUMBER_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://myledja-web.vercel.app
+      - key: MONO_SEC_KEY
+        sync: false
+      - key: MONO_PUBLIC_KEY
+        sync: false
+      - key: MONO_APP_ID
+        sync: false

@@ -20,10 +20,21 @@ async function bootstrap(): Promise<void> {
   }
   const origins = (process.env.CORS_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean);
   if (origins.length > 0) {
-    app.enableCors({ origin: origins });
+    app.enableCors({
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        const allowed =
+          origins.includes(origin) || /^https:\/\/myledja-web([a-z0-9-]+)?\.vercel\.app$/.test(origin);
+        callback(null, allowed);
+      },
+      credentials: true,
+    });
   }
   configureApp(app);
-  await app.listen(config.port);
+  await app.listen(config.port, "0.0.0.0");
 }
 
 void bootstrap();

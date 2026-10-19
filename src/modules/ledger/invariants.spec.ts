@@ -288,14 +288,23 @@ describe("Appendix A INV-01–24", () => {
       token,
     );
     const destId = (dest.json as { data: { id: string } }).data.id;
-    const before = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
-    await http(
+    const holding = await http(
       app,
       "POST",
-      `/v1/workspaces/${workspaceId}/transactions`,
-      { operationId: testId(), type: "allocation", amount: "7.00", accountId: cashId, toAccountId: destId, description: "Buy stock" },
+      `/v1/workspaces/${workspaceId}/holdings`,
+      { name: "MTN", accountId: destId, quantity: "0", cost: "0.00" },
       token,
     );
+    const holdingId = (holding.json as { data: { id: string } }).data.id;
+    const before = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
+    const buy = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings/${holdingId}/buy`,
+      { fromAccountId: cashId, quantity: "1", amount: "7.00", operationId: testId() },
+      token,
+    );
+    expect([200, 201]).toContain(buy.code);
     const after = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
     expect((after.json as { data: { expense: { value: string } } }).data.expense.value).toBe(
       (before.json as { data: { expense: { value: string } } }).data.expense.value,
@@ -307,18 +316,34 @@ describe("Appendix A INV-01–24", () => {
       app,
       "POST",
       `/v1/workspaces/${workspaceId}/accounts`,
-      { name: "Broker sell", kind: "savings", opening: "8.00" },
+      { name: "Broker sell", kind: "savings", opening: "0.00" },
       token,
     );
     const destId = (dest.json as { data: { id: string } }).data.id;
-    const before = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
+    const holding = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings`,
+      { name: "MTN sell", accountId: destId, quantity: "0", cost: "0.00" },
+      token,
+    );
+    const holdingId = (holding.json as { data: { id: string } }).data.id;
     await http(
       app,
       "POST",
-      `/v1/workspaces/${workspaceId}/transactions`,
-      { operationId: testId(), type: "allocation", amount: "2.00", accountId: destId, toAccountId: cashId, description: "Sell stock" },
+      `/v1/workspaces/${workspaceId}/holdings/${holdingId}/buy`,
+      { fromAccountId: cashId, quantity: "1", amount: "8.00", operationId: testId() },
       token,
     );
+    const before = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
+    const sell = await http(
+      app,
+      "POST",
+      `/v1/workspaces/${workspaceId}/holdings/${holdingId}/sell`,
+      { toAccountId: cashId, quantity: "1", amount: "8.00", operationId: testId() },
+      token,
+    );
+    expect([200, 201]).toContain(sell.code);
     const after = await http(app, "GET", `/v1/workspaces/${workspaceId}/dashboard`, undefined, token);
     expect((after.json as { data: { income: { value: string } } }).data.income.value).toBe(
       (before.json as { data: { income: { value: string } } }).data.income.value,

@@ -7,4 +7,8 @@ export interface UserDoc {
   verifiedAt: Date | null;
   createdAt: Date;
   hideLockScreenAmounts?: boolean;
+  totpEnabled?: boolean;
+  totpSecretEnc?: string | null;
+  totpPendingEnc?: string | null;
+  backupCodeHashes?: string[];
 }

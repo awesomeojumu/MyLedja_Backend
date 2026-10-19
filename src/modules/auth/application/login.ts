@@ -12,7 +12,10 @@ import {
   newFamilyId,
   refreshWindows,
 } from "@/modules/auth/domain/refresh-token";
+import { MfaRequired } from "@/modules/auth/domain/mfa-required";
 import { SessionsRepository } from "@/modules/auth/repositories/sessions.repository";
+import { Db } from "mongodb";
+import { MONGO_DB } from "@/database/mongo/mongo.constants";
 
 @Injectable()
 export class Login {
@@ -21,6 +24,7 @@ export class Login {
     private readonly sessions: SessionsRepository,
     private readonly rateLimit: RateLimit,
     @Inject(ARGON2_OPTIONS) private readonly argon2: HashOptions,
+    @Inject(MONGO_DB) private readonly db: Db,
   ) {}
 
   async execute(input: { email: string; password: string; ip: string; deviceLabel?: string }): Promise<{
@@ -52,6 +56,15 @@ export class Login {
     }
     this.rateLimit.reset(emailKey);
     this.rateLimit.reset(ipKey);
+    if (user.totpEnabled) {
+      const challengeId = newId();
+      await this.db.collection<{ _id: string; userId: string; expiresAt: Date }>("mfa_challenges").insertOne({
+        _id: challengeId,
+        userId: user._id,
+        expiresAt: new Date(Date.now() + 120_000),
+      });
+      throw new MfaRequired(challengeId);
+    }
     const now = new Date();
     const sid = newId();
     const familyId = newFamilyId();

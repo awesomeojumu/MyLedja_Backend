@@ -10,6 +10,8 @@ import { RequestRecovery } from "@/modules/auth/application/request-recovery";
 import { ResendVerification } from "@/modules/auth/application/resend-verification";
 import { VerifyEmail } from "@/modules/auth/application/verify-email";
 import { AuthFailure, AuthFailureStatus } from "@/modules/auth/domain/auth-failure";
+import { MfaRequired } from "@/modules/auth/domain/mfa-required";
+import { MfaAndPasskeys } from "@/modules/auth/application/mfa-passkeys";
 import { parseLogin } from "@/modules/auth/dto/login.dto";
 import { parseLogout } from "@/modules/auth/dto/logout.dto";
 import { parseRecoveryConfirm, parseRecoveryRequest } from "@/modules/auth/dto/recovery.dto";
@@ -36,6 +38,9 @@ function clientIp(req: Request): string {
 }
 
 function toHttp(error: unknown): never {
+  if (error instanceof MfaRequired) {
+    throw new HttpException({ status: "mfa_required", data: { challengeId: error.challengeId }, error: error.message }, 403);
+  }
   if (error instanceof AuthFailure) {
     throw new HttpException({ status: "error", error: error.message }, STATUS_CODE[error.status]);
   }
@@ -54,6 +59,7 @@ export class AuthController {
     private readonly confirmRecovery: ConfirmRecovery,
     private readonly resendVerification: ResendVerification,
     private readonly getMe: GetMe,
+    private readonly mfa: MfaAndPasskeys,
   ) {}
 
   @Post("register")
@@ -94,7 +100,12 @@ export class AuthController {
 
   @Get("me")
   @UseGuards(RequireAccessToken)
-  async me(@Req() req: Request): Promise<{ userId: string; email: string; hideLockScreenAmounts: boolean }> {
+  async me(@Req() req: Request): Promise<{
+    userId: string;
+    email: string;
+    hideLockScreenAmounts: boolean;
+    totpEnabled: boolean;
+  }> {
     try {
       return await this.getMe.execute(getAuth(req).userId);
     } catch (error) {
@@ -142,6 +153,22 @@ export class AuthController {
     try {
       await this.logout.execute(parseLogout(body).refreshToken);
       return { status: "ok" };
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Post("mfa")
+  @HttpCode(200)
+  async mfaComplete(@Body() body: unknown, @Req() req: Request) {
+    try {
+      const rec = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+      return await this.mfa.completeMfa({
+        challengeId: String(rec.challengeId ?? ""),
+        code: typeof rec.code === "string" ? rec.code : undefined,
+        backupCode: typeof rec.backupCode === "string" ? rec.backupCode : undefined,
+        ip: clientIp(req),
+      });
     } catch (error) {
       toHttp(error);
     }
