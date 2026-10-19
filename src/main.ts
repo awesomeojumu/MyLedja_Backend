@@ -4,6 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "@/app.module";
 import { configureApp } from "@/app.setup";
+import { isAllowedCorsOrigin } from "@/config/cors-origins";
 import { loadConfig, loadEnvFile } from "@/config/env";
 
 async function bootstrap(): Promise<void> {
@@ -26,9 +27,7 @@ async function bootstrap(): Promise<void> {
           callback(null, true);
           return;
         }
-        const allowed =
-          origins.includes(origin) || /^https:\/\/myledja-web([a-z0-9-]+)?\.vercel\.app$/.test(origin);
-        callback(null, allowed);
+        callback(null, isAllowedCorsOrigin(origin, origins));
       },
       credentials: true,
     });
