@@ -22,8 +22,10 @@ export class CreatePersonalWorkspace {
         ownerId: userId,
         createdAt: now,
         defaultCurrency: "NGN",
+        locale: "en-NG",
         timezone: "Africa/Lagos",
         weekStartsOn: "monday",
+        reminders: { bills: true, budget: true, summary: false },
         setupProgress: {
           currency: false,
           firstAccount: false,

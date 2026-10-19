@@ -16,6 +16,7 @@ import { ChangeRole } from "@/modules/workspaces/application/change-role";
 import { GetWorkspace } from "@/modules/workspaces/application/get-workspace";
 import { ListWorkspaces } from "@/modules/workspaces/application/list-workspaces";
 import { PatchSetup } from "@/modules/workspaces/application/patch-setup";
+import { readSetupPatch } from "@/modules/workspaces/application/read-setup-patch";
 import { UpdateWorkspace } from "@/modules/workspaces/application/update-workspace";
 import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
 import { parseAddMember } from "@/modules/workspaces/dto/add-member.dto";
@@ -85,16 +86,7 @@ export class WorkspacesController {
   @Patch(":workspaceId/setup")
   async setup(@Param("workspaceId") workspaceId: string, @Body() body: unknown, @Req() req: Request) {
     try {
-      const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
-      return await this.patchSetup.execute(getAuth(req).userId, workspaceId, {
-        defaultCurrency: typeof record.defaultCurrency === "string" ? record.defaultCurrency : undefined,
-        timezone: typeof record.timezone === "string" ? record.timezone : undefined,
-        weekStartsOn: record.weekStartsOn === "sunday" || record.weekStartsOn === "monday" ? record.weekStartsOn : undefined,
-        setupProgress:
-          record.setupProgress && typeof record.setupProgress === "object"
-            ? (record.setupProgress as Record<string, boolean>)
-            : undefined,
-      });
+      return await this.patchSetup.execute(getAuth(req).userId, workspaceId, readSetupPatch(body));
     } catch (error) {
       toHttp(error);
     }

@@ -16,6 +16,18 @@ export const EMPTY_SETUP: SetupProgress = {
   firstTransaction: false,
 };
 
+export interface ReminderPrefs {
+  bills: boolean;
+  budget: boolean;
+  summary: boolean;
+}
+
+export const DEFAULT_REMINDERS: ReminderPrefs = {
+  bills: true,
+  budget: true,
+  summary: false,
+};
+
 export interface WorkspaceDoc {
   _id: string;
   name: string;
@@ -23,7 +35,9 @@ export interface WorkspaceDoc {
   ownerId: string;
   createdAt: Date;
   defaultCurrency?: string;
+  locale?: string;
   setupProgress?: SetupProgress;
   timezone?: string;
   weekStartsOn?: "monday" | "sunday";
+  reminders?: ReminderPrefs;
 }

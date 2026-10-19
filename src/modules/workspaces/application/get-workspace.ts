@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { requireCapability } from "@/modules/workspaces/domain/capabilities";
+import { DEFAULT_REMINDERS } from "@/modules/workspaces/schemas/workspace";
 import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
 import { ResolveMembership } from "@/modules/workspaces/policies/resolve-membership";
 import { WorkspacesRepository } from "@/modules/workspaces/repositories/workspaces.repository";
@@ -26,8 +27,10 @@ export class GetWorkspace {
       name: workspace.name,
       role: membership.role,
       defaultCurrency: workspace.defaultCurrency ?? "NGN",
+      locale: workspace.locale ?? "en-NG",
       timezone: workspace.timezone ?? "Africa/Lagos",
       weekStartsOn: workspace.weekStartsOn ?? "monday",
+      reminders: workspace.reminders ?? DEFAULT_REMINDERS,
       setupProgress: workspace.setupProgress,
     };
   }

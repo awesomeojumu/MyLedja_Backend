@@ -53,14 +53,26 @@ describe("ledger H–S G U N Q", () => {
       app,
       "PATCH",
       `/v1/workspaces/${workspaceId}/setup`,
-      { timezone: "Africa/Lagos", weekStartsOn: "sunday" },
+      {
+        timezone: "Africa/Lagos",
+        weekStartsOn: "sunday",
+        locale: "en-NG",
+        reminders: { bills: false, budget: true, summary: true },
+      },
       token,
     );
     expect(patched.code).toBe(200);
     const got = await http(app, "GET", `/v1/workspaces/${workspaceId}`, undefined, token);
-    const body = got.json as { timezone: string; weekStartsOn: string };
+    const body = got.json as {
+      timezone: string;
+      weekStartsOn: string;
+      locale: string;
+      reminders: { bills: boolean; budget: boolean; summary: boolean };
+    };
     expect(body.timezone).toBe("Africa/Lagos");
     expect(body.weekStartsOn).toBe("sunday");
+    expect(body.locale).toBe("en-NG");
+    expect(body.reminders).toEqual({ bills: false, budget: true, summary: true });
     const renamed = await http(app, "PATCH", `/v1/workspaces/${workspaceId}`, { name: "Ada home" }, token);
     expect(renamed.code).toBe(200);
     const again = await http(app, "GET", `/v1/workspaces/${workspaceId}`, undefined, token);
