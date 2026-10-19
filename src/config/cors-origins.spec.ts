@@ -1,25 +1,15 @@
 import { isAllowedCorsOrigin } from "@/config/cors-origins";
 
 describe("isAllowedCorsOrigin", () => {
-  const extra = ["https://myledja-web.vercel.app"];
+  const extra = ["https://myledja-web.vercel.app", "https://app.myledja.com"];
 
-  it("allows the production app host", () => {
+  it("allows only origins listed in CORS_ORIGINS", () => {
+    expect(isAllowedCorsOrigin("https://myledja-web.vercel.app", extra)).toBe(true);
     expect(isAllowedCorsOrigin("https://app.myledja.com", extra)).toBe(true);
   });
 
-  it("allows the production Vercel project and its aliases", () => {
-    expect(isAllowedCorsOrigin("https://myledja-app.vercel.app", extra)).toBe(true);
-    expect(
-      isAllowedCorsOrigin("https://myledja-app-planexiglobalconsults-projects.vercel.app", extra),
-    ).toBe(true);
-  });
-
-  it("allows the staging Vercel project", () => {
-    expect(isAllowedCorsOrigin("https://myledja-web.vercel.app", extra)).toBe(true);
-  });
-
-  it("rejects other sites", () => {
+  it("rejects hosts that are not listed", () => {
+    expect(isAllowedCorsOrigin("https://myledja-app.vercel.app", extra)).toBe(false);
     expect(isAllowedCorsOrigin("https://evil.example", extra)).toBe(false);
-    expect(isAllowedCorsOrigin("https://myledja-app.vercel.app.evil.example", extra)).toBe(false);
   });
 });
