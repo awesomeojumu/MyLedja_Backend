@@ -19,6 +19,17 @@ import { csvCell } from "@/modules/imports-exports/csv-cell";
 import { LedgerFailure } from "@/modules/transactions/domain/ledger-failure";
 import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
 import { clampDay, weekBounds, zonedInstant } from "@/modules/calendar/period";
+import {
+  billSetAside,
+  debtSetAside,
+  expectedIncome,
+  goalSetAside,
+  monthKey,
+  parseMonth,
+  yearlyDue,
+  type BillInput,
+  type SetAside,
+} from "@/modules/ledger/month-plan";
 
 /** Plan lists return amounts as decimal strings; a row stored without one returns null, never "0.00". */
 const WIPE = [
@@ -39,7 +50,9 @@ const WIPE = [
   "income_matches",
   "goals",
   "goal_schedules",
+  "goal_allocations",
   "debts",
+  "month_budgets",
   "imports",
   "import_rows",
   "reconciliation_events",
@@ -69,6 +82,7 @@ export class LedgerOpsService implements OnModuleInit {
     await this.docs("reminder_occurrences").createIndex({ workspaceId: 1, billId: 1, dueDate: 1 }, { unique: true });
     await this.docs("income_matches").createIndex({ streamId: 1, transactionId: 1 }, { unique: true });
     await this.docs("import_rows").createIndex({ workspaceId: 1, importId: 1, rowHash: 1 }, { unique: true });
+    await this.docs("month_budgets").createIndex({ workspaceId: 1, month: 1 }, { unique: true });
   }
 
   private docs(name: string) {
@@ -134,6 +148,319 @@ export class LedgerOpsService implements OnModuleInit {
       },
       error: null,
     };
+  }
+
+  // ==========================================================================================================
+  // Monthly budget: this month's income, what has to be set aside for bills, goals and debts by their deadlines,
+  // and what's planned for everyday spending by category. One record per workspace per month.
+  // ==========================================================================================================
+
+  private minorOf(value: unknown): bigint {
+    return parseMoney(nairaOrNull(value as never) ?? "0.00", "NGN").amountMinor;
+  }
+
+  private naira(minor: bigint): string {
+    return formatMoney(money(minor, "NGN"));
+  }
+
+  /** The month (YYYY-MM) a moment falls in, in the workspace's own time zone. */
+  private monthIn(at: Date, timezone: string): string {
+    const z = zonedInstant(at, timezone);
+    return monthKey(z.getUTCFullYear(), z.getUTCMonth());
+  }
+
+  /**
+   * Set-asides for a month, worked out from where things stood when the month began: this month's own goal savings,
+   * debt repayments and bill payments are progress against the target, so they mustn't shrink it. Yearly bills
+   * also subtract what earlier months' budgets already set aside this cycle.
+   */
+  private async computeSetAsides(workspaceId: string, month: string, timezone: string): Promise<SetAside[]> {
+    const [bills, goals, debts, earlierRecords, allocations, posted] = await Promise.all([
+      this.docs("bills").find({ workspaceId }).toArray(),
+      this.docs("goals").find({ workspaceId }).toArray(),
+      this.docs("debts").find({ workspaceId, direction: "i_owe" }).toArray(),
+      this.docs("month_budgets").find({ workspaceId, month: { $lt: month } }).toArray(),
+      this.docs("goal_allocations").find({ workspaceId }).toArray(),
+      this.txns.listPosted(workspaceId),
+    ]);
+    const thisMonth = (at: unknown) => at instanceof Date && this.monthIn(at, timezone) === month;
+    const savedThisMonth = new Map<string, bigint>();
+    for (const a of allocations) {
+      if (thisMonth(a.at)) savedThisMonth.set(String(a.goalId), (savedThisMonth.get(String(a.goalId)) ?? 0n) + this.minorOf(a.amountMinor));
+    }
+    // A repayment transfer carries principal + interest; the interest is also booked as "Interest · <name>".
+    const repaidThisMonth = new Map<string, bigint>();
+    const interestThisMonth = new Map<string, bigint>();
+    for (const t of posted) {
+      if (!thisMonth(t.occurredAt ?? t.createdAt)) continue;
+      const debtId = (t as unknown as { debtId?: string }).debtId;
+      if (debtId && t.type === "transfer") repaidThisMonth.set(String(debtId), (repaidThisMonth.get(String(debtId)) ?? 0n) + this.minorOf(t.amountMinor));
+      if (t.type === "expense" && t.description.startsWith("Interest · ")) {
+        const who = t.description.slice("Interest · ".length);
+        interestThisMonth.set(who, (interestThisMonth.get(who) ?? 0n) + this.minorOf(t.amountMinor));
+      }
+    }
+    const out: SetAside[] = [];
+    const parsed = parseMonth(month)!;
+    for (const b of bills) {
+      const bill: BillInput = {
+        id: String(b._id),
+        name: String(b.name ?? "Bill"),
+        amountMinor: this.minorOf(b.amountMinor),
+        cadence: String(b.cadence ?? "monthly"),
+        anchorDay: Number(b.anchorDay ?? 1) || 1,
+        anchorMonth: Number(b.anchorMonth) || null,
+        weekday: Number(b.weekday ?? 1) || 0,
+        // Paid this month is progress on this month's set-aside, not a reason to move it to next year yet.
+        lastPaidAt: b.lastPaidAt instanceof Date && !thisMonth(b.lastPaidAt) ? b.lastPaidAt : null,
+      };
+      const earlier = new Map<string, bigint>();
+      if (bill.cadence === "yearly") {
+        const due = yearlyDue(bill, parsed);
+        const cycleStart = monthKey(due.getUTCFullYear(), due.getUTCMonth() - 11);
+        const paidMonth = bill.lastPaidAt ? this.monthIn(bill.lastPaidAt, timezone) : "";
+        let sum = 0n;
+        for (const r of earlierRecords) {
+          const key = String(r.month);
+          if (key < cycleStart || key <= paidMonth) continue;
+          for (const line of (r.setAsides ?? []) as { kind?: string; refId?: string; amountMinor?: unknown }[]) {
+            if (line.kind === "bill" && line.refId === bill.id) sum += this.minorOf(line.amountMinor);
+          }
+        }
+        earlier.set(bill.id, sum);
+      }
+      out.push(billSetAside(bill, month, earlier));
+    }
+    for (const g of goals) {
+      const pub = await this.publicGoal(workspaceId, g as never);
+      const targetMinor = parseMoney(String(pub.target ?? "0.00"), "NGN").amountMinor;
+      const savedAtStart = parseMoney(String(pub.saved ?? "0.00"), "NGN").amountMinor - (savedThisMonth.get(String(g._id)) ?? 0n);
+      if (pub.completed && savedAtStart >= targetMinor) continue;
+      out.push(
+        goalSetAside(
+          {
+            id: String(g._id),
+            name: String(g.name ?? "Goal"),
+            targetMinor,
+            savedMinor: savedAtStart,
+            dueAt: g.dueAt instanceof Date ? g.dueAt : null,
+          },
+          month,
+        ),
+      );
+    }
+    for (const d of debts) {
+      const name = String(d.counterparty ?? "Debt");
+      const principalRepaid = (repaidThisMonth.get(String(d._id)) ?? 0n) - (interestThisMonth.get(name) ?? 0n);
+      const remaining = this.minorOf(d.principalRemainingMinor) + (principalRepaid > 0n ? principalRepaid : 0n);
+      if (remaining <= 0n) continue;
+      out.push(debtSetAside({ id: String(d._id), name: String(d.counterparty ?? "Debt"), remainingMinor: remaining, payoffBy: d.payoffBy instanceof Date ? d.payoffBy : null }, month));
+    }
+    return out;
+  }
+
+  /** Spending lines for a new month: last month's plan if there is one, otherwise the old budgets' category lines. */
+  private async seedLines(workspaceId: string, month: string): Promise<{ categoryId: string; amountMinor: bigint }[]> {
+    const prior = await this.docs("month_budgets").find({ workspaceId, month: { $lt: month } }).sort({ month: -1 }).limit(1).toArray();
+    if (prior[0]) {
+      return ((prior[0].lines ?? []) as { categoryId?: string; amountMinor?: unknown }[])
+        .filter((l) => l.categoryId)
+        .map((l) => ({ categoryId: String(l.categoryId), amountMinor: this.minorOf(l.amountMinor) }));
+    }
+    const legacy = await this.docs("budget_lines").find({ workspaceId }).toArray();
+    const byCat = new Map<string, bigint>();
+    for (const l of legacy) byCat.set(String(l.categoryId), (byCat.get(String(l.categoryId)) ?? 0n) + this.minorOf(l.amountMinor));
+    return [...byCat.entries()].map(([categoryId, amountMinor]) => ({ categoryId, amountMinor }));
+  }
+
+  /**
+   * The month's budget with live tracking. The record is created on first open. For this month and later ones the
+   * set-asides are refreshed on every read (new goals, paid bills); past months keep what they were.
+   */
+  async monthBudget(userId: string, workspaceId: string, month: string, now = new Date()) {
+    await this.member(userId, workspaceId, false);
+    const parsed = parseMonth(month);
+    if (!parsed) throw new LedgerFailure("bad_request", "month must look like 2027-01.");
+    const workspace = await this.workspaces.findById(workspaceId);
+    const timezone = workspace?.timezone ?? "Africa/Lagos";
+    const current = this.monthIn(now, timezone);
+
+    let record = await this.docs("month_budgets").findOne({ workspaceId, month });
+    if (!record || month >= current) {
+      const setAsides = month >= current || !record ? await this.computeSetAsides(workspaceId, month, timezone) : record.setAsides;
+      if (!record) {
+        const doc = { _id: newId(), workspaceId, month, lines: await this.seedLines(workspaceId, month), setAsides, createdAt: now, updatedAt: now };
+        try {
+          await this.docs("month_budgets").insertOne(doc);
+        } catch {
+          // Opened twice at once: the other request created it.
+        }
+      } else {
+        await this.docs("month_budgets").updateOne({ _id: record._id }, { $set: { setAsides, updatedAt: now } });
+      }
+      record = await this.docs("month_budgets").findOne({ workspaceId, month });
+    }
+    if (!record) throw new LedgerFailure("not_found", "not found");
+
+    const [streams, accounts, categories, posted, bills, allocations] = await Promise.all([
+      this.docs("income_streams").find({ workspaceId }).toArray(),
+      this.accounts.list(workspaceId, false),
+      this.docs("categories").find({ workspaceId }).toArray(),
+      this.txns.listPosted(workspaceId),
+      this.docs("bills").find({ workspaceId }).toArray(),
+      this.docs("goal_allocations").find({ workspaceId }).toArray(),
+    ]);
+    const accountName = new Map(accounts.map((a) => [String(a._id), String(a.name)]));
+    const categoryName = new Map(categories.map((c) => [String(c._id), String(c.name)]));
+
+    const expected = expectedIncome(
+      streams.map((s) => ({ expectedMinor: this.minorOf(s.expectedMinor), cadence: String(s.cadence ?? "monthly"), payDay: Number(s.payDay) || null })),
+      month,
+    );
+    const inMonth = posted.filter((t) => this.monthIn(t.occurredAt ?? t.createdAt, timezone) === month);
+    let received = 0n;
+    for (const t of inMonth) if (t.type === "income") received += this.minorOf(t.amountMinor);
+
+    // Bill payments and debt interest are expenses too, but they're covered by set-asides, not the spending plan.
+    const billNames = new Set(bills.map((b) => String(b.name)));
+    const spentBy = new Map<string, bigint>();
+    let spent = 0n;
+    for (const t of inMonth) {
+      if (t.type !== "expense" && t.type !== "refund") continue;
+      if (t.type === "expense" && (billNames.has(t.description) || t.description.startsWith("Interest · "))) continue;
+      const sign = t.type === "refund" ? -1n : 1n;
+      const amount = this.minorOf(t.amountMinor) * sign;
+      const key = t.categoryId ? String(t.categoryId) : "";
+      spentBy.set(key, (spentBy.get(key) ?? 0n) + amount);
+      spent += amount;
+    }
+    if (spent < 0n) spent = 0n;
+
+    // Money moved toward each set-aside this month.
+    const moved = new Map<string, bigint>();
+    const setAsides = ((record.setAsides ?? []) as SetAside[]).map((s) => ({ ...s, amountMinor: this.minorOf(s.amountMinor), totalMinor: this.minorOf(s.totalMinor) }));
+    for (const s of setAsides) {
+      if (s.kind === "bill") {
+        const bill = bills.find((b) => String(b._id) === s.refId);
+        const paidAt = bill?.lastPaidAt instanceof Date ? bill.lastPaidAt : null;
+        if (paidAt && this.monthIn(paidAt, timezone) === month) moved.set(s.refId, s.amountMinor);
+      }
+    }
+    for (const a of allocations) {
+      if (!(a.at instanceof Date) || this.monthIn(a.at, timezone) !== month) continue;
+      const id = String(a.goalId);
+      moved.set(id, (moved.get(id) ?? 0n) + this.minorOf(a.amountMinor));
+    }
+    for (const t of inMonth) {
+      const debtId = (t as unknown as { debtId?: string }).debtId;
+      if (!debtId) continue;
+      moved.set(String(debtId), (moved.get(String(debtId)) ?? 0n) + this.minorOf(t.amountMinor));
+    }
+
+    const groups = (["bill", "goal", "debt"] as const).map((kind) => {
+      const items = setAsides.filter((s) => s.kind === kind);
+      let total = 0n;
+      let done = 0n;
+      const rows = items.map((s) => {
+        const m = moved.get(s.refId) ?? 0n;
+        const counted = m > s.amountMinor ? s.amountMinor : m;
+        total += s.amountMinor;
+        done += counted;
+        return {
+          refId: s.refId,
+          name: s.name,
+          amount: this.naira(s.amountMinor),
+          total: this.naira(s.totalMinor),
+          moved: this.naira(m),
+          due: s.due,
+          monthsLeft: s.monthsLeft,
+          noDeadline: s.due == null,
+        };
+      });
+      const soon = items.filter((s) => s.due && (moved.get(s.refId) ?? 0n) < s.amountMinor && Date.parse(`${s.due}T00:00:00.000Z`) - now.getTime() <= 7 * 86400000 && Date.parse(`${s.due}T00:00:00.000Z`) >= now.getTime() - 86400000).length;
+      return {
+        kind,
+        count: items.length,
+        amount: this.naira(total),
+        moved: this.naira(done),
+        dueSoon: soon,
+        noDeadline: rows.filter((r) => r.noDeadline).length,
+        items: rows,
+      };
+    });
+    const setAsideTotal = setAsides.reduce((sum, s) => sum + s.amountMinor, 0n);
+
+    const lines = ((record.lines ?? []) as { categoryId: string; amountMinor: unknown }[]).map((l) => ({
+      categoryId: String(l.categoryId),
+      name: categoryName.get(String(l.categoryId)) ?? "Category",
+      planned: this.naira(this.minorOf(l.amountMinor)),
+      spent: this.naira((spentBy.get(String(l.categoryId)) ?? 0n) > 0n ? spentBy.get(String(l.categoryId))! : 0n),
+    }));
+    const plannedIds = new Set(lines.map((l) => l.categoryId));
+    let unplanned = 0n;
+    for (const [key, value] of spentBy) if (!plannedIds.has(key)) unplanned += value;
+    const planned = ((record.lines ?? []) as { amountMinor: unknown }[]).reduce((sum, l) => sum + this.minorOf(l.amountMinor), 0n);
+    const safe = expected - setAsideTotal;
+
+    const days = new Date(Date.UTC(parsed.year, parsed.month + 1, 0)).getUTCDate();
+    const z = zonedInstant(now, timezone);
+    const today = month === current ? z.getUTCDate() : month < current ? days : 0;
+
+    return {
+      status: "ok" as const,
+      data: {
+        month,
+        daysInMonth: days,
+        today,
+        income: {
+          expected: this.naira(expected),
+          received: this.naira(received),
+          streams: streams.map((s) => ({
+            id: s._id,
+            name: s.name,
+            expected: nairaOrNull(s.expectedMinor),
+            cadence: s.cadence ?? "monthly",
+            payDay: typeof s.payDay === "number" ? s.payDay : null,
+            account: s.accountId ? accountName.get(String(s.accountId)) ?? null : null,
+          })),
+        },
+        setAside: { amount: this.naira(setAsideTotal), groups },
+        spending: {
+          planned: this.naira(planned),
+          spent: this.naira(spent),
+          unplannedSpent: this.naira(unplanned > 0n ? unplanned : 0n),
+          lines,
+        },
+        safeToSpend: this.naira(safe),
+        safeLeft: this.naira(safe - spent),
+        free: this.naira(safe - planned),
+      },
+      error: null,
+    };
+  }
+
+  /** Replace a month's spending plan. Every category must belong to the workspace; amounts can't be negative. */
+  async setMonthLines(userId: string, workspaceId: string, month: string, body: Record<string, unknown>) {
+    await this.member(userId, workspaceId, true);
+    if (!parseMonth(month)) throw new LedgerFailure("bad_request", "month must look like 2027-01.");
+    if (!Array.isArray(body.lines)) throw new LedgerFailure("bad_request", "lines required.");
+    const lines: { categoryId: string; amountMinor: bigint }[] = [];
+    const seen = new Set<string>();
+    for (const raw of body.lines as Record<string, unknown>[]) {
+      if (typeof raw?.categoryId !== "string" || typeof raw.amount !== "string") throw new LedgerFailure("bad_request", "Each line needs a categoryId and an amount.");
+      if (seen.has(raw.categoryId)) throw new LedgerFailure("bad_request", "Each category can only have one line.");
+      seen.add(raw.categoryId);
+      const amount = parseMoney(raw.amount, "NGN").amountMinor;
+      if (amount < 0n) throw new LedgerFailure("bad_request", "Amounts can't be negative.");
+      lines.push({ categoryId: raw.categoryId, amountMinor: amount });
+    }
+    const ids = [...seen];
+    const found = ids.length ? await this.docs("categories").countDocuments({ workspaceId, _id: { $in: ids } }) : 0;
+    if (found !== ids.length) throw new LedgerFailure("bad_request", "Unknown category.");
+    // Make sure the month exists (and has its set-asides) before writing its lines.
+    await this.monthBudget(userId, workspaceId, month);
+    await this.docs("month_budgets").updateOne({ workspaceId, month }, { $set: { lines, updatedAt: new Date() } });
+    return this.monthBudget(userId, workspaceId, month);
   }
 
   async createBudget(userId: string, workspaceId: string, body: Record<string, unknown>) {
@@ -443,6 +770,7 @@ export class LedgerOpsService implements OnModuleInit {
       cadence,
       anchorDay: typeof body.anchorDay === "number" ? body.anchorDay : 1,
       weekday: typeof body.weekday === "number" ? body.weekday : 1,
+      anchorMonth: this.monthOf(body.anchorMonth),
       accountId: typeof body.accountId === "string" ? body.accountId : null,
     };
     await this.docs("bills").insertOne(doc);
@@ -460,13 +788,14 @@ export class LedgerOpsService implements OnModuleInit {
         name: row.name,
         cadence: row.cadence,
         amount: nairaOrNull(row.amountMinor),
+        anchorMonth: row.anchorMonth ?? null,
         lastPaidAt: row.lastPaidAt ? new Date(row.lastPaidAt as Date).toISOString() : null,
         dueFor: this.dueFor(
-          { cadence: String(row.cadence ?? "monthly"), anchorDay: Number(row.anchorDay ?? 1) || 1, weekday: Number(row.weekday ?? 1) || 0 },
+          { cadence: String(row.cadence ?? "monthly"), anchorDay: Number(row.anchorDay ?? 1) || 1, weekday: Number(row.weekday ?? 1) || 0, anchorMonth: Number(row.anchorMonth) || null },
           now,
         ),
         nextDue: this.nextDue(
-          { cadence: String(row.cadence ?? "monthly"), anchorDay: Number(row.anchorDay ?? 1) || 1, weekday: Number(row.weekday ?? 1) || 0 },
+          { cadence: String(row.cadence ?? "monthly"), anchorDay: Number(row.anchorDay ?? 1) || 1, weekday: Number(row.weekday ?? 1) || 0, anchorMonth: Number(row.anchorMonth) || null },
           now,
         ),
       })),
@@ -475,10 +804,13 @@ export class LedgerOpsService implements OnModuleInit {
   }
 
   /** The next due date on or after today (YYYY-MM-DD). Reminders are scheduled from this. */
-  nextDue(bill: { cadence: string; anchorDay: number; weekday: number }, now: Date): string {
+  nextDue(bill: { cadence: string; anchorDay: number; weekday: number; anchorMonth?: number | null }, now: Date): string {
     const today = now.toISOString().slice(0, 10);
     const due = this.dueFor(bill, now);
     if (due >= today) return due;
+    if (bill.cadence === "yearly" && bill.anchorMonth) {
+      return clampDay(now.getUTCFullYear() + 1, bill.anchorMonth - 1, bill.anchorDay).toISOString().slice(0, 10);
+    }
     if (bill.cadence === "weekly") {
       const next = new Date(`${due}T00:00:00.000Z`);
       next.setUTCDate(next.getUTCDate() + 7);
@@ -487,7 +819,10 @@ export class LedgerOpsService implements OnModuleInit {
     return clampDay(now.getUTCFullYear(), now.getUTCMonth() + 1, bill.anchorDay).toISOString().slice(0, 10);
   }
 
-  dueFor(bill: { cadence: string; anchorDay: number; weekday: number }, now: Date): string {
+  dueFor(bill: { cadence: string; anchorDay: number; weekday: number; anchorMonth?: number | null }, now: Date): string {
+    if (bill.cadence === "yearly" && bill.anchorMonth) {
+      return clampDay(now.getUTCFullYear(), bill.anchorMonth - 1, bill.anchorDay).toISOString().slice(0, 10);
+    }
     if (bill.cadence === "weekly") {
       const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
       while (d.getUTCDay() !== bill.weekday) d.setUTCDate(d.getUTCDate() - 1);
@@ -503,7 +838,7 @@ export class LedgerOpsService implements OnModuleInit {
     const bills = await this.docs("bills").find({}).toArray();
     let wrote = 0;
     for (const bill of bills) {
-      const dueDate = this.dueFor(bill as unknown as { cadence: string; anchorDay: number; weekday: number }, now);
+      const dueDate = this.dueFor(bill as unknown as { cadence: string; anchorDay: number; weekday: number; anchorMonth?: number | null }, now);
       try {
         await this.docs("reminder_occurrences").insertOne({
           _id: newId(),
@@ -546,6 +881,7 @@ export class LedgerOpsService implements OnModuleInit {
       cadence: String(row.cadence ?? "monthly"),
       anchorDay: Number(row.anchorDay ?? 1) || 1,
       weekday: Number(row.weekday ?? 1) || 0,
+      anchorMonth: Number(row.anchorMonth) || null,
     };
     return {
       status: "ok" as const,
@@ -555,6 +891,7 @@ export class LedgerOpsService implements OnModuleInit {
         amount: nairaOrNull(row.amountMinor),
         cadence: row.cadence,
         anchorDay: row.anchorDay,
+        anchorMonth: row.anchorMonth ?? null,
         weekday: row.weekday,
         accountId: row.accountId,
         lastPaidAt: row.lastPaidAt ? new Date(row.lastPaidAt as Date).toISOString() : null,
@@ -575,6 +912,7 @@ export class LedgerOpsService implements OnModuleInit {
     if (body.cadence === "weekly" || body.cadence === "monthly" || body.cadence === "yearly") set.cadence = body.cadence;
     if (typeof body.anchorDay === "number") set.anchorDay = body.anchorDay;
     if (typeof body.weekday === "number") set.weekday = body.weekday;
+    if (body.anchorMonth !== undefined) set.anchorMonth = this.monthOf(body.anchorMonth);
     if (Object.keys(set).length) await this.docs("bills").updateOne({ _id: billId, workspaceId }, { $set: set });
     return this.getBill(userId, workspaceId, billId);
   }
@@ -664,6 +1002,21 @@ export class LedgerOpsService implements OnModuleInit {
     }
     if (Object.keys(set).length) await this.docs("income_streams").updateOne({ _id: streamId, workspaceId }, { $set: set });
     return this.getStream(userId, workspaceId, streamId);
+  }
+
+  /** A month of the year (1–12) for yearly bills; null clears it. */
+  private monthOf(value: unknown): number | null {
+    if (value === undefined || value === null || value === "") return null;
+    const month = Number(value);
+    if (!Number.isInteger(month) || month < 1 || month > 12) throw new LedgerFailure("bad_request", "anchorMonth must be a month from 1 to 12.");
+    return month;
+  }
+
+  /** A YYYY-MM-DD (or ISO) date; null clears it. */
+  private dateOf(value: unknown): Date | null {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value !== "string" || Number.isNaN(Date.parse(value))) throw new LedgerFailure("bad_request", "Use a date like 2027-05-31.");
+    return new Date(value.length === 10 ? `${value}T00:00:00.000Z` : value);
   }
 
   /** A pay day is a day of the month (1–31); null clears it. Anything else is refused. */
@@ -856,6 +1209,7 @@ export class LedgerOpsService implements OnModuleInit {
         goalId,
         operationId: String(body.operationId),
         amountMinor: amount.amountMinor,
+        at: typeof body.occurredAt === "string" && !Number.isNaN(Date.parse(body.occurredAt)) ? new Date(body.occurredAt) : new Date(),
       });
     }
     return posted;
@@ -896,6 +1250,7 @@ export class LedgerOpsService implements OnModuleInit {
       principalRemainingMinor: parseMoney(opening, "NGN").amountMinor,
       currency: "NGN",
       linkedAccountId: linkedId,
+      payoffBy: this.dateOf(body.payoffBy),
     };
     await this.docs("debts").insertOne(doc);
     return { status: "ok" as const, data: { id: doc._id, linkedAccountId: doc.linkedAccountId }, error: null };
@@ -922,6 +1277,7 @@ export class LedgerOpsService implements OnModuleInit {
     if (typeof body.cadence === "string") set.cadence = body.cadence;
     if (typeof body.anchorDay === "number") set.anchorDay = body.anchorDay;
     if (typeof body.weekday === "number") set.weekday = body.weekday;
+    if (body.payoffBy !== undefined) set.payoffBy = this.dateOf(body.payoffBy);
     if (Object.keys(set).length) await this.docs("debts").updateOne({ _id: debtId, workspaceId }, { $set: set });
     return this.getDebt(userId, workspaceId, debtId);
   }
@@ -937,6 +1293,7 @@ export class LedgerOpsService implements OnModuleInit {
       direction: row.direction,
       counterparty: row.counterparty,
       principal: nairaOrNull(row.principalRemainingMinor),
+      payoffBy: row.payoffBy instanceof Date ? row.payoffBy.toISOString().slice(0, 10) : null,
       cadence: shape.cadence,
       anchorDay: shape.anchorDay,
       weekday: shape.weekday,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
 import { LedgerOpsService } from "@/modules/ledger/ledger-ops.service";
@@ -22,6 +22,25 @@ export class BudgetsController {
   async list(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
     try {
       return await this.ops.listBudgets(getAuth(req).userId, workspaceId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  /** A month's budget (YYYY-MM): income, set-asides from bills/goals/debts, the spending plan and live tracking. */
+  @Get("workspaces/:workspaceId/month-budgets/:month")
+  async month(@Param("workspaceId") workspaceId: string, @Param("month") month: string, @Req() req: Request) {
+    try {
+      return await this.ops.monthBudget(getAuth(req).userId, workspaceId, month);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Put("workspaces/:workspaceId/month-budgets/:month/lines")
+  async monthLines(@Param("workspaceId") workspaceId: string, @Param("month") month: string, @Body() body: unknown, @Req() req: Request) {
+    try {
+      return await this.ops.setMonthLines(getAuth(req).userId, workspaceId, month, rec(body));
     } catch (error) {
       toHttp(error);
     }
