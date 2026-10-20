@@ -105,6 +105,11 @@ describe("ledger H–S G U N Q", () => {
     expect(data.views.year).toBeDefined();
     expect(data.spent).toBe("1000.00");
     expect(data.remaining).toBe("4000.00");
+    // An amount-only budget has no category lines; the list (what Home reads) must still count the account spend.
+    const list = await http(app, "GET", `/v1/workspaces/${workspaceId}/budgets`, undefined, token);
+    const listed = (list.json as { data: { id: string; spent: string; remaining: string }[] }).data.find((row) => row.id === id);
+    expect(listed?.spent).toBe("1000.00");
+    expect(listed?.remaining).toBe("4000.00");
   });
 
   it("I1–I4 bills cadence tick unique paid", async () => {
@@ -270,6 +275,24 @@ describe("ledger H–S G U N Q", () => {
     const weekView = await http(app, "GET", `/v1/workspaces/${workspaceId}/budgets/${weekId}`, undefined, token);
     expect((weekView.json as { data: { expected: string; periodFrom: string } }).data.expected).toBe("0.00");
     expect((weekView.json as { data: { periodFrom: string } }).data.periodFrom).toMatch(/^\d{4}-/);
+  });
+
+  it("income stream pay day: set, read with next payday, change, clear, reject bad days", async () => {
+    const made = await http(app, "POST", `/v1/workspaces/${workspaceId}/income-streams`, { name: "Payday test", expected: "350000.00", taxClass: "paye", payDay: 25 }, token);
+    expect(made.code).toBe(201);
+    const id = (made.json as { data: { id: string } }).data.id;
+    type Stream = { id: string; payDay: number | null; nextPayday: string | null };
+    const listed = (await http(app, "GET", `/v1/workspaces/${workspaceId}/income-streams`, undefined, token)).json as { data: Stream[] };
+    const row = listed.data.find((s) => s.id === id);
+    expect(row?.payDay).toBe(25);
+    expect(row?.nextPayday).toMatch(/^\d{4}-\d{2}-25$/);
+    expect((row?.nextPayday ?? "") >= new Date().toISOString().slice(0, 10)).toBe(true);
+    const moved = await http(app, "PATCH", `/v1/workspaces/${workspaceId}/income-streams/${id}`, { payDay: 1 }, token);
+    expect((moved.json as { data: Stream }).data.payDay).toBe(1);
+    const cleared = await http(app, "PATCH", `/v1/workspaces/${workspaceId}/income-streams/${id}`, { payDay: null }, token);
+    expect((cleared.json as { data: Stream }).data).toMatchObject({ payDay: null, nextPayday: null });
+    const bad = await http(app, "PATCH", `/v1/workspaces/${workspaceId}/income-streams/${id}`, { payDay: 32 }, token);
+    expect(bad.code).toBe(400);
   });
 
   it("J1–J3 income stream match amount", async () => {

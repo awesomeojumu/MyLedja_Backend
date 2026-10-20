@@ -110,18 +110,13 @@ export class LedgerOpsService implements OnModuleInit {
       return at >= start && at <= end;
     });
     const totals = periodTotals(inRange, "NGN", posted);
-    const lines = spendLines(inRange, posted);
     const nw = await this.netWorth(userId, workspaceId);
     const budgets = await this.docs("budgets").find({ workspaceId }).toArray();
     let remaining = 0n;
+    // Same figure the budget screens show, so Home and Plan can never disagree.
     for (const budget of budgets) {
-      if (budget.amountMinor == null) {
-        const mix = await this.budgetRead(workspaceId, budget, new Date());
-        remaining += parseMoney(mix.remaining, "NGN").amountMinor;
-        continue;
-      }
-      const spent = netSpend(lines.filter((line) => line.accountId === String(budget.accountId)));
-      remaining += parseMoney(nairaOrNull(budget.amountMinor) ?? "0.00", "NGN").amountMinor - spent;
+      const mix = await this.budgetRead(workspaceId, budget, new Date());
+      remaining += parseMoney(mix.remaining, "NGN").amountMinor;
     }
     let netCash = 0n;
     for (const row of inRange) {
@@ -135,7 +130,7 @@ export class LedgerOpsService implements OnModuleInit {
         refund: figure(totals.refund ?? "0.00", "Posted refunds, already taken off the expense total."),
         netCash: figure(formatMoney(money(netCash, "NGN")), "Posted effects in this range, including refunds."),
         netWorth: figure(nw.data.netWorth, nw.data.basis),
-        budgetRemaining: figure(formatMoney(money(remaining, "NGN")), "Unspent on category lines this period."),
+        budgetRemaining: figure(formatMoney(money(remaining, "NGN")), "Unspent across budgets this period."),
       },
       error: null,
     };
@@ -374,7 +369,19 @@ export class LedgerOpsService implements OnModuleInit {
       .filter((s) => this.cadenceMatchesPeriod(s.cadence, period))
       .reduce((sum, s) => sum + parseMoney(nairaOrNull(s.expectedMinor) ?? "0.00", "NGN").amountMinor, 0n);
     const gapMinor = plannedMinor - onHandMinor - expectedMinor;
-    const spentMinor = lineRows.reduce((sum, line) => sum + parseMoney(line.spent, "NGN").amountMinor, 0n);
+    // A budget with category lines counts those categories. An amount-only budget has no lines, so it counts what its
+    // funding accounts spent this period; otherwise it would always read as nothing spent.
+    const funders = new Set(funderIds.map(String));
+    const spentMinor =
+      lines.length > 0
+        ? lineRows.reduce((sum, line) => sum + parseMoney(line.spent, "NGN").amountMinor, 0n)
+        : netSpend(
+            spendLines(posted).filter((line) => {
+              if (!funders.has(String(line.accountId))) return false;
+              const at = zonedInstant(line.at, timezone);
+              return at >= bounds.from && at <= bounds.to;
+            }),
+          );
     const remainingMinor = plannedMinor - spentMinor;
     return {
       id: budget._id,
@@ -596,6 +603,7 @@ export class LedgerOpsService implements OnModuleInit {
     if (!cadence) throw new LedgerFailure("bad_request", "cadence must be monthly, weekly, or yearly.");
     const expected = parseMoney(typeof body.expected === "string" ? body.expected : "0.00", "NGN");
     if (expected.amountMinor <= 0n) throw new LedgerFailure("bad_request", "Expected must be greater than zero.");
+    const payDay = this.payDayOf(body.payDay);
     const doc = {
       _id: newId(),
       workspaceId,
@@ -604,6 +612,7 @@ export class LedgerOpsService implements OnModuleInit {
       currency: "NGN",
       cadence,
       taxClass: body.taxClass,
+      ...(payDay != null ? { payDay } : {}),
     };
     await this.docs("income_streams").insertOne(doc);
     return { status: "ok" as const, data: { id: doc._id }, error: null };
@@ -612,7 +621,18 @@ export class LedgerOpsService implements OnModuleInit {
   async listStreams(userId: string, workspaceId: string) {
     await this.member(userId, workspaceId, false);
     const rows = await this.docs("income_streams").find({ workspaceId }).toArray();
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name, taxClass: row.taxClass, cadence: row.cadence, expected: nairaOrNull(row.expectedMinor) })), error: null };
+    return {
+      status: "ok" as const,
+      data: rows.map((row) => ({
+        id: row._id,
+        name: row.name,
+        taxClass: row.taxClass,
+        cadence: row.cadence,
+        expected: nairaOrNull(row.expectedMinor),
+        ...this.paydayFields(row),
+      })),
+      error: null,
+    };
   }
 
   async getStream(userId: string, workspaceId: string, streamId: string) {
@@ -620,7 +640,11 @@ export class LedgerOpsService implements OnModuleInit {
     const row = await this.docs("income_streams").findOne({ _id: streamId, workspaceId });
     if (!row) throw new LedgerFailure("not_found", "not found");
     const extra = await this.streamReceived(workspaceId, streamId);
-    return { status: "ok" as const, data: { id: row._id, name: row.name, expected: nairaOrNull(row.expectedMinor), cadence: row.cadence, taxClass: row.taxClass, ...extra }, error: null };
+    return {
+      status: "ok" as const,
+      data: { id: row._id, name: row.name, expected: nairaOrNull(row.expectedMinor), cadence: row.cadence, taxClass: row.taxClass, ...this.paydayFields(row), ...extra },
+      error: null,
+    };
   }
 
   async patchStream(userId: string, workspaceId: string, streamId: string, body: Record<string, unknown>) {
@@ -631,6 +655,7 @@ export class LedgerOpsService implements OnModuleInit {
     if (typeof body.name === "string") set.name = body.name;
     if (typeof body.expected === "string") set.expectedMinor = parseMoney(body.expected, "NGN").amountMinor;
     if (typeof body.cadence === "string") set.cadence = body.cadence;
+    if (body.payDay !== undefined) set.payDay = this.payDayOf(body.payDay);
     if (body.taxClass !== undefined) {
       if (body.taxClass !== "paye" && body.taxClass !== "business" && body.taxClass !== "other") {
         throw new LedgerFailure("bad_request", "taxClass required.");
@@ -639,6 +664,21 @@ export class LedgerOpsService implements OnModuleInit {
     }
     if (Object.keys(set).length) await this.docs("income_streams").updateOne({ _id: streamId, workspaceId }, { $set: set });
     return this.getStream(userId, workspaceId, streamId);
+  }
+
+  /** A pay day is a day of the month (1–31); null clears it. Anything else is refused. */
+  private payDayOf(value: unknown): number | null {
+    if (value === undefined || value === null || value === "") return null;
+    const day = Number(value);
+    if (!Number.isInteger(day) || day < 1 || day > 31) throw new LedgerFailure("bad_request", "payDay must be a day of the month from 1 to 31.");
+    return day;
+  }
+
+  /** payDay and the next date it falls on (YYYY-MM-DD). Only monthly income has a pay day. */
+  private paydayFields(row: Record<string, unknown>): { payDay: number | null; nextPayday: string | null } {
+    const payDay = typeof row.payDay === "number" ? row.payDay : null;
+    if (payDay == null || String(row.cadence ?? "monthly") !== "monthly") return { payDay, nextPayday: null };
+    return { payDay, nextPayday: this.nextDue({ cadence: "monthly", anchorDay: payDay, weekday: 0 }, new Date()) };
   }
 
   async streamPeriod(userId: string, workspaceId: string, streamId: string) {
