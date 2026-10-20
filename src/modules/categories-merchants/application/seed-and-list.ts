@@ -32,6 +32,7 @@ export class SeedAndListCategories {
         name: row.name,
         kind: row.kind,
         parentId: null as string | null,
+        monthlyBudgetMinor: null as bigint | null,
       }));
       if (docs.length) await this.catalog.categories.insertMany(docs);
       rows = docs;
@@ -46,13 +47,23 @@ export class SeedAndListCategories {
         },
       });
     }
-    return { status: "ok" as const, data: rows.map((row) => ({ id: row._id, name: row.name, kind: row.kind, parentId: row.parentId })), error: null };
+    return {
+      status: "ok" as const,
+      data: rows.map((row) => ({
+        id: row._id,
+        name: row.name,
+        kind: row.kind,
+        parentId: row.parentId,
+        monthlyBudget: nairaOrNull(row.monthlyBudgetMinor),
+      })),
+      error: null,
+    };
   }
 
   async create(
     userId: string,
     workspaceId: string,
-    input: { name: string; kind: "income" | "expense"; parentId?: string | null },
+    input: { name: string; kind: "income" | "expense"; parentId?: string | null; monthlyBudget?: string | null },
   ) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "write_records");
@@ -63,10 +74,21 @@ export class SeedAndListCategories {
       if (parent.parentId) throw new CatalogFailure("bad_request", "Subcategories cannot have children.");
       if (parent.kind !== input.kind) throw new CatalogFailure("bad_request", "Subcategory type must match its parent.");
     }
-    const doc = { _id: newId(), workspaceId, name: input.name.trim(), kind: input.kind, parentId };
+    const monthlyBudgetMinor = input.monthlyBudget && input.monthlyBudget.trim() ? parseMoney(input.monthlyBudget, "NGN").amountMinor : null;
+    const doc = { _id: newId(), workspaceId, name: input.name.trim(), kind: input.kind, parentId, monthlyBudgetMinor };
     if (!doc.name) throw new CatalogFailure("bad_request", "Name this category.");
     await this.catalog.categories.insertOne(doc);
-    return { status: "ok" as const, data: { id: doc._id, name: doc.name, kind: doc.kind, parentId: doc.parentId }, error: null };
+    return {
+      status: "ok" as const,
+      data: {
+        id: doc._id,
+        name: doc.name,
+        kind: doc.kind,
+        parentId: doc.parentId,
+        monthlyBudget: nairaOrNull(doc.monthlyBudgetMinor),
+      },
+      error: null,
+    };
   }
 
   async get(userId: string, workspaceId: string, categoryId: string) {
@@ -93,10 +115,12 @@ export class SeedAndListCategories {
     const open = budgets.filter((budget) => String(budget.primaryPeriod ?? "month") === String(period));
     const openIds = new Set(open.map((budget) => String(budget._id)));
     const plannedLines = openIds.size ? lines.filter((line) => openIds.has(String(line.budgetId))) : lines;
-    const plannedMinor = plannedLines.reduce(
+    const fromBudgetLines = plannedLines.reduce(
       (sum, line) => sum + parseMoney(nairaOrNull(line.amountMinor) ?? "0.00", "NGN").amountMinor,
       0n,
     );
+    const plannedMinor = row.monthlyBudgetMinor != null && row.monthlyBudgetMinor > 0n ? row.monthlyBudgetMinor : fromBudgetLines;
+
     const bounds = this.periodWindow(String(period), zonedInstant(now, timezone), weekStartsOn);
     const txns = await this.db.collection("transactions").find({ workspaceId, categoryId, status: "posted" }).toArray();
     let spentMinor = 0n;
@@ -121,6 +145,7 @@ export class SeedAndListCategories {
         planned: formatMoney(money(plannedMinor, "NGN")),
         spent: formatMoney(money(spentMinor, "NGN")),
         remaining: formatMoney(money(remainingMinor, "NGN")),
+        monthlyBudget: nairaOrNull(row.monthlyBudgetMinor),
       },
       error: null,
     };
@@ -142,7 +167,12 @@ export class SeedAndListCategories {
     };
   }
 
-  async update(userId: string, workspaceId: string, categoryId: string, input: { name?: string; parentId?: string | null; kind?: string }) {
+  async update(
+    userId: string,
+    workspaceId: string,
+    categoryId: string,
+    input: { name?: string; parentId?: string | null; kind?: string; monthlyBudget?: string | null },
+  ) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "write_records");
     const row = await this.catalog.categories.findOne({ _id: categoryId, workspaceId });
@@ -162,12 +192,26 @@ export class SeedAndListCategories {
     } else {
       parentId = null;
     }
-    const next = {
+    const next: Record<string, unknown> = {
       name: typeof input.name === "string" && input.name.trim() ? input.name.trim() : row.name,
       parentId: parentId ?? null,
       kind,
     };
+    if (input.monthlyBudget !== undefined) {
+      next.monthlyBudgetMinor = input.monthlyBudget && input.monthlyBudget.trim() ? parseMoney(input.monthlyBudget, "NGN").amountMinor : null;
+    }
     await this.catalog.categories.updateOne({ _id: categoryId, workspaceId }, { $set: next });
-    return { status: "ok" as const, data: { id: categoryId, ...next }, error: null };
+    const updated = await this.catalog.categories.findOne({ _id: categoryId, workspaceId });
+    return {
+      status: "ok" as const,
+      data: {
+        id: categoryId,
+        name: updated?.name,
+        kind: updated?.kind,
+        parentId: updated?.parentId,
+        monthlyBudget: nairaOrNull(updated?.monthlyBudgetMinor),
+      },
+      error: null,
+    };
   }
 }

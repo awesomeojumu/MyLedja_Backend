@@ -9,6 +9,7 @@ export interface CategoryDoc {
   name: string;
   kind: "income" | "expense";
   parentId: string | null;
+  monthlyBudgetMinor?: bigint | null;
 }
 
 export interface TagDoc {

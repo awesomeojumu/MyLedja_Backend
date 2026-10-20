@@ -51,6 +51,7 @@ export class CatalogController {
         name: String(r?.name ?? ""),
         kind: r?.kind === "income" ? "income" : "expense",
         parentId: typeof r?.parentId === "string" ? r.parentId : null,
+        monthlyBudget: typeof r?.monthlyBudget === "string" ? r.monthlyBudget : null,
       });
     } catch (error) {
       toHttp(error);
@@ -83,6 +84,7 @@ export class CatalogController {
         name: typeof r?.name === "string" ? r.name : undefined,
         parentId: typeof r?.parentId === "string" ? r.parentId : r?.parentId === null ? null : undefined,
         kind: typeof r?.kind === "string" ? r.kind : undefined,
+        monthlyBudget: typeof r?.monthlyBudget === "string" || r?.monthlyBudget === null ? (r.monthlyBudget as string | null) : undefined,
       });
     } catch (error) {
       toHttp(error);

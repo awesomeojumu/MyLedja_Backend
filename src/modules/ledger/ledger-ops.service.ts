@@ -261,12 +261,19 @@ export class LedgerOpsService implements OnModuleInit {
 
   /** Spending lines for a new month: last month's plan if there is one, otherwise the old budgets' category lines. */
   private async seedLines(workspaceId: string, month: string): Promise<{ categoryId: string; amountMinor: bigint }[]> {
+    const categories = await this.docs("categories").find({ workspaceId, kind: "expense" }).toArray();
+    const fromCats = categories
+      .filter((cat) => cat.monthlyBudgetMinor != null && this.minorOf(cat.monthlyBudgetMinor) > 0n)
+      .map((cat) => ({ categoryId: String(cat._id), amountMinor: this.minorOf(cat.monthlyBudgetMinor) }));
+
     const prior = await this.docs("month_budgets").find({ workspaceId, month: { $lt: month } }).sort({ month: -1 }).limit(1).toArray();
-    if (prior[0]) {
+    if (prior[0] && Array.isArray(prior[0].lines) && prior[0].lines.length) {
       return ((prior[0].lines ?? []) as { categoryId?: string; amountMinor?: unknown }[])
         .filter((l) => l.categoryId)
         .map((l) => ({ categoryId: String(l.categoryId), amountMinor: this.minorOf(l.amountMinor) }));
     }
+    if (fromCats.length > 0) return fromCats;
+
     const legacy = await this.docs("budget_lines").find({ workspaceId }).toArray();
     const byCat = new Map<string, bigint>();
     for (const l of legacy) byCat.set(String(l.categoryId), (byCat.get(String(l.categoryId)) ?? 0n) + this.minorOf(l.amountMinor));
@@ -390,7 +397,14 @@ export class LedgerOpsService implements OnModuleInit {
     });
     const setAsideTotal = setAsides.reduce((sum, s) => sum + s.amountMinor, 0n);
 
-    const lines = ((record.lines ?? []) as { categoryId: string; amountMinor: unknown }[]).map((l) => ({
+    let rawLines = ((record.lines ?? []) as { categoryId: string; amountMinor: unknown }[]);
+    if (rawLines.length === 0) {
+      const fromCats = categories
+        .filter((cat) => cat.kind === "expense" && cat.monthlyBudgetMinor != null && this.minorOf(cat.monthlyBudgetMinor) > 0n)
+        .map((cat) => ({ categoryId: String(cat._id), amountMinor: this.minorOf(cat.monthlyBudgetMinor) }));
+      if (fromCats.length > 0) rawLines = fromCats;
+    }
+    const lines = rawLines.map((l) => ({
       categoryId: String(l.categoryId),
       name: categoryName.get(String(l.categoryId)) ?? "Category",
       planned: this.naira(this.minorOf(l.amountMinor)),
@@ -399,7 +413,7 @@ export class LedgerOpsService implements OnModuleInit {
     const plannedIds = new Set(lines.map((l) => l.categoryId));
     let unplanned = 0n;
     for (const [key, value] of spentBy) if (!plannedIds.has(key)) unplanned += value;
-    const planned = ((record.lines ?? []) as { amountMinor: unknown }[]).reduce((sum, l) => sum + this.minorOf(l.amountMinor), 0n);
+    const planned = rawLines.reduce((sum, l) => sum + this.minorOf(l.amountMinor), 0n);
     const safe = expected - setAsideTotal;
 
     const days = new Date(Date.UTC(parsed.year, parsed.month + 1, 0)).getUTCDate();
@@ -460,6 +474,9 @@ export class LedgerOpsService implements OnModuleInit {
     // Make sure the month exists (and has its set-asides) before writing its lines.
     await this.monthBudget(userId, workspaceId, month);
     await this.docs("month_budgets").updateOne({ workspaceId, month }, { $set: { lines, updatedAt: new Date() } });
+    for (const line of lines) {
+      await this.docs("categories").updateOne({ _id: line.categoryId, workspaceId }, { $set: { monthlyBudgetMinor: line.amountMinor } });
+    }
     return this.monthBudget(userId, workspaceId, month);
   }
 
