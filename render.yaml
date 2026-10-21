@@ -33,3 +33,8 @@ services:
         sync: false
       - key: MONO_APP_ID
         sync: false
+      # Email (verification and password reset codes). Without these the API sends nothing.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: MyLedja <app@myledja.com>

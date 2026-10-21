@@ -3,6 +3,7 @@ export type AuthFailureStatus =
   | "unauthorized"
   | "forbidden"
   | "unverified"
+  | "not_found"
   | "rate_limited";
 
 export class AuthFailure extends Error {

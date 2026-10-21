@@ -73,7 +73,7 @@ describe("register → verify → login → refresh → logout", () => {
     expect(reused.code).toBe(401);
   });
 
-  it("keeps sign-up and recovery neutral when the mail server rejects the address", async () => {
+  it("keeps sign-up and recovery accepted when the mail server rejects the address", async () => {
     const email = "bounce@example.com";
     mailer.rejects.add(email);
     const bounced = await http(app, "POST", "/v1/auth/register", { email, password: TEST_PASSWORD });
@@ -91,9 +91,8 @@ describe("register → verify → login → refresh → logout", () => {
 
     mailer.rejects.add(email);
     const recovery = await http(app, "POST", "/v1/auth/recovery", { email });
-    const unknown = await http(app, "POST", "/v1/auth/recovery", { email: "never-registered@example.com" });
     expect(recovery.code).toBe(202);
-    expect(recovery.json).toEqual(unknown.json);
+    expect(recovery.json).toEqual({ status: "accepted" });
     mailer.rejects.delete(email);
   });
 });

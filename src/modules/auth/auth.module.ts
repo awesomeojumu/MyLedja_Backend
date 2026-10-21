@@ -18,6 +18,7 @@ import { MfaAndPasskeys } from "@/modules/auth/application/mfa-passkeys";
 import {
   CaptureMailer,
   createResendMailer,
+  describeMailer,
   createSmtpMailer,
   DevMailer,
   MAILER,
@@ -73,7 +74,12 @@ function mailerFor(env: string): Mailer {
     RequireAccessToken,
     {
       provide: MAILER,
-      useFactory: (): Mailer => mailerFor(loadConfig().appEnv),
+      useFactory: (): Mailer => {
+        const env = loadConfig().appEnv;
+        const line = `[auth] ${describeMailer(env)}`;
+        if (env !== "test") (line.includes("NOT configured") ? console.error : console.info)(line);
+        return mailerFor(env);
+      },
     },
     {
       provide: ARGON2_OPTIONS,

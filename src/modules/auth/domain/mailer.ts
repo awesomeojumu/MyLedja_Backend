@@ -28,10 +28,19 @@ export async function sendCodeQuietly(
     await mailer.sendCode(message);
     return true;
   } catch (caught) {
-    const reason = caught instanceof Error ? caught.name : "unknown";
-    log(`[auth] ${message.purpose} code could not be delivered (${reason})`);
+    log(`[auth] ${message.purpose} code could not be delivered (${deliveryReason(caught)})`);
     return false;
   }
+}
+
+/**
+ * Why a send failed, safe to log: the provider's reason ("Resend 403: The myledja.com domain is not verified"),
+ * with any email address removed. Never the code, never the recipient.
+ */
+export function deliveryReason(caught: unknown): string {
+  if (!(caught instanceof Error)) return "unknown";
+  const text = caught.message ? `${caught.name}: ${caught.message}` : caught.name;
+  return text.replace(/[^\s<>()"']+@[^\s<>()"']+/g, "<address>").slice(0, 300);
 }
 
 export interface SmtpSettings {
@@ -95,7 +104,7 @@ export interface ResendPostInit {
 export type ResendPost = (
   url: string,
   init: ResendPostInit,
-) => Promise<{ ok: boolean; status: number }>;
+) => Promise<{ ok: boolean; status: number; detail?: string }>;
 
 export function resendFromEnv(env: NodeJS.ProcessEnv = process.env): ResendSettings | undefined {
   const apiKey = env.RESEND_API_KEY ?? "";
@@ -128,7 +137,9 @@ export class ResendMailer implements Mailer {
       }),
     });
     if (!res.ok) {
-      throw new Error(`Resend ${res.status}`);
+      const error = new Error(`Resend ${res.status}${res.detail ? `: ${res.detail}` : ""}`);
+      error.name = "ResendError";
+      throw error;
     }
   }
 }
@@ -136,7 +147,16 @@ export class ResendMailer implements Mailer {
 export function createResendMailer(settings: ResendSettings): ResendMailer {
   return new ResendMailer(async (url, init) => {
     const res = await fetch(url, { method: "POST", headers: init.headers, body: init.body });
-    return { ok: res.ok, status: res.status };
+    if (res.ok) return { ok: true, status: res.status };
+    // Resend explains refusals in the body ({ "message": "The myledja.com domain is not verified..." }).
+    let detail: string | undefined;
+    try {
+      const body = (await res.json()) as { message?: unknown; name?: unknown };
+      detail = typeof body.message === "string" ? body.message : typeof body.name === "string" ? body.name : undefined;
+    } catch {
+      detail = undefined;
+    }
+    return { ok: false, status: res.status, detail };
   }, settings);
 }
 
@@ -150,6 +170,17 @@ export function createSmtpMailer(settings: SmtpSettings): SmtpMailer {
   return new SmtpMailer(async (message) => {
     await transporter.sendMail(message);
   }, settings.from);
+}
+
+/** One line for the startup log: which mailer is live, never the key. */
+export function describeMailer(env: string, vars: NodeJS.ProcessEnv = process.env): string {
+  if (env === "test") return "email captured for tests";
+  const resend = resendFromEnv(vars);
+  if (resend) return `email via Resend from ${resend.from}`;
+  const smtp = smtpFromEnv(vars);
+  if (smtp) return `email via SMTP (${smtp.host}) from ${smtp.from}`;
+  if (env === "development") return "email printed to this console (no RESEND_API_KEY or SMTP set)";
+  return "email NOT configured: set RESEND_API_KEY and RESEND_FROM, or no codes will be sent";
 }
 
 export class DevMailer implements Mailer {

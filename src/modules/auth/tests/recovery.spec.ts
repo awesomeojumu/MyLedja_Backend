@@ -19,14 +19,23 @@ describe("recovery", () => {
     await harness.stop();
   });
 
-  it("returns the same body whether the account exists or not", async () => {
+  it("sends a code to a known account and says when no account matches", async () => {
     const email = "known@example.com";
     await registerAndVerify(app, mailer, email);
-    const missing = await http(app, "POST", "/v1/auth/recovery", { email: "nobody@example.com" });
     const exists = await http(app, "POST", "/v1/auth/recovery", { email });
-    expect(missing.code).toBe(202);
     expect(exists.code).toBe(202);
-    expect(missing.json).toEqual({ status: "accepted" });
-    expect(exists.json).toEqual(missing.json);
+    expect(exists.json).toEqual({ status: "accepted" });
+    expect(mailer.lastCode(email, "recovery")).toMatch(/^\d{6}$/);
+    const missing = await http(app, "POST", "/v1/auth/recovery", { email: "nobody@example.com" });
+    expect(missing.code).toBe(404);
+    expect(missing.json).toEqual({ status: "error", error: "no account" });
+  });
+
+  it("asks an unverified account to finish signing up", async () => {
+    const email = "halfway@example.com";
+    await http(app, "POST", "/v1/auth/register", { email, password: "kola-nut-river-42" });
+    const res = await http(app, "POST", "/v1/auth/recovery", { email });
+    expect(res.code).toBe(403);
+    expect(res.json).toEqual({ status: "error", error: "email not verified" });
   });
 });

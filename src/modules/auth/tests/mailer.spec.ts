@@ -1,4 +1,37 @@
-import { ResendMailer, SmtpMailer, resendFromEnv, smtpFromEnv } from "@/modules/auth/domain/mailer";
+import { ResendMailer, SmtpMailer, deliveryReason, describeMailer, resendFromEnv, sendCodeQuietly, smtpFromEnv } from "@/modules/auth/domain/mailer";
+
+describe("why a send failed", () => {
+  it("keeps Resend's reason and hides addresses and codes", async () => {
+    const mailer = new ResendMailer(async () => ({ ok: false, status: 403, detail: "You can only send testing emails to your own email address (owner@example.com)." }), {
+      apiKey: "re_test",
+      from: "MyLedja <app@example.com>",
+    });
+    const lines: string[] = [];
+    const ok = await sendCodeQuietly(mailer, { email: "ada@example.com", purpose: "verify", code: "123456" }, (l) => lines.push(l));
+    expect(ok).toBe(false);
+    expect(lines[0]).toContain("ResendError: Resend 403: You can only send testing emails");
+    expect(lines[0]).toContain("<address>");
+    expect(lines[0]).not.toContain("owner@example.com");
+    expect(lines[0]).not.toContain("ada@example.com");
+    expect(lines[0]).not.toContain("123456");
+  });
+
+  it("handles errors without a message", () => {
+    expect(deliveryReason("nope")).toBe("unknown");
+    expect(deliveryReason(new Error(""))).toBe("Error");
+  });
+});
+
+describe("describeMailer", () => {
+  it("says which mailer is live, never the key", () => {
+    const line = describeMailer("staging", { RESEND_API_KEY: "re_secret", RESEND_FROM: "MyLedja <app@example.com>" });
+    expect(line).toBe("email via Resend from MyLedja <app@example.com>");
+    expect(line).not.toContain("re_secret");
+    expect(describeMailer("staging", { SMTP_HOST: "mail.example.com", SMTP_USER: "u", SMTP_PASS: "p", SMTP_FROM: "f" })).toContain("SMTP (mail.example.com)");
+    expect(describeMailer("staging", {})).toContain("NOT configured");
+    expect(describeMailer("development", {})).toContain("printed to this console");
+  });
+});
 
 describe("smtpFromEnv", () => {
   it("returns nothing until host, user, pass and from are all set", () => {

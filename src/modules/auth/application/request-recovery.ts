@@ -31,8 +31,12 @@ export class RequestRecovery {
     this.rateLimit.record(emailKey);
     const user = await this.users.findByEmail(input.email);
     unusedCodeWork(generateEmailCode());
-    if (!user || !user.verifiedAt) {
-      return;
+    // Recovery says plainly when no account matches: clearer for people, and the rate limits above keep probing slow.
+    if (!user) {
+      throw new AuthFailure("not_found", "no account");
+    }
+    if (!user.verifiedAt) {
+      throw new AuthFailure("unverified", "email not verified");
     }
     const now = new Date();
     const code = generateEmailCode();

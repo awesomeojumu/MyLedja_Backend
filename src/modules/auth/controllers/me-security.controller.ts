@@ -10,6 +10,7 @@ const STATUS_CODE: Record<AuthFailureStatus, number> = {
   unauthorized: 401,
   forbidden: 403,
   unverified: 403,
+  not_found: 404,
   rate_limited: 429,
 };
 
