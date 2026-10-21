@@ -54,6 +54,7 @@ export class SeedAndListCategories {
         name: row.name,
         kind: row.kind,
         parentId: row.parentId,
+        groupId: row.groupId ?? null,
         monthlyBudget: nairaOrNull(row.monthlyBudgetMinor),
       })),
       error: null,
@@ -63,7 +64,7 @@ export class SeedAndListCategories {
   async create(
     userId: string,
     workspaceId: string,
-    input: { name: string; kind: "income" | "expense"; parentId?: string | null; monthlyBudget?: string | null },
+    input: { name: string; kind: "income" | "expense"; parentId?: string | null; monthlyBudget?: string | null; groupId?: string | null; groupKind?: "income" | "expense" },
   ) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "write_records");
@@ -75,7 +76,7 @@ export class SeedAndListCategories {
       if (parent.kind !== input.kind) throw new CatalogFailure("bad_request", "Subcategory type must match its parent.");
     }
     const monthlyBudgetMinor = input.monthlyBudget && input.monthlyBudget.trim() ? parseMoney(input.monthlyBudget, "NGN").amountMinor : null;
-    const doc = { _id: newId(), workspaceId, name: input.name.trim(), kind: input.kind, parentId, monthlyBudgetMinor };
+    const doc = { _id: newId(), workspaceId, name: input.name.trim(), kind: input.groupKind ?? input.kind, parentId, monthlyBudgetMinor, groupId: input.groupId ?? null };
     if (!doc.name) throw new CatalogFailure("bad_request", "Name this category.");
     await this.catalog.categories.insertOne(doc);
     return {
@@ -85,6 +86,7 @@ export class SeedAndListCategories {
         name: doc.name,
         kind: doc.kind,
         parentId: doc.parentId,
+        groupId: doc.groupId,
         monthlyBudget: nairaOrNull(doc.monthlyBudgetMinor),
       },
       error: null,
@@ -171,12 +173,14 @@ export class SeedAndListCategories {
     userId: string,
     workspaceId: string,
     categoryId: string,
-    input: { name?: string; parentId?: string | null; kind?: string; monthlyBudget?: string | null },
+    input: { name?: string; parentId?: string | null; kind?: string; monthlyBudget?: string | null; groupId?: string | null; groupKind?: "income" | "expense" },
   ) {
     const membership = await this.memberships.execute(userId, workspaceId);
     requireCapability(membership.role, "write_records");
     const row = await this.catalog.categories.findOne({ _id: categoryId, workspaceId });
     if (!row) throw new CatalogFailure("not_found", "not found");
+    // Moving into a group gives the category that group's type.
+    if (input.groupKind) input.kind = input.groupKind;
     if (input.kind && input.kind !== row.kind) {
       const used = await this.db.collection("transactions").findOne({ workspaceId, categoryId, status: "posted" });
       if (used) throw new CatalogFailure("bad_request", "Kind cannot change after posted spend.");
@@ -197,6 +201,7 @@ export class SeedAndListCategories {
       parentId: parentId ?? null,
       kind,
     };
+    if (input.groupId !== undefined) next.groupId = input.groupId;
     if (input.monthlyBudget !== undefined) {
       next.monthlyBudgetMinor = input.monthlyBudget && input.monthlyBudget.trim() ? parseMoney(input.monthlyBudget, "NGN").amountMinor : null;
     }
@@ -209,6 +214,7 @@ export class SeedAndListCategories {
         name: updated?.name,
         kind: updated?.kind,
         parentId: updated?.parentId,
+        groupId: updated?.groupId ?? null,
         monthlyBudget: nairaOrNull(updated?.monthlyBudgetMinor),
       },
       error: null,

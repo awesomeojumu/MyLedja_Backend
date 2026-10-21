@@ -1,10 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpException, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpException, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { Request } from "express";
 import { isId } from "@/common/ids";
 import { getAuth, RequireAccessToken } from "@/modules/auth/policies/require-access-token";
 import { MerchantsAndTags } from "@/modules/categories-merchants/application/merchants-and-tags";
 import { PreviewRule } from "@/modules/categories-merchants/application/preview-rule";
 import { SeedAndListCategories } from "@/modules/categories-merchants/application/seed-and-list";
+import { CategoryGroups } from "@/modules/categories-merchants/application/category-groups";
 import { WorkspaceFailure } from "@/modules/workspaces/domain/roles";
 import { CatalogFailure } from "@/modules/categories-merchants/domain/catalog-failure";
 
@@ -32,12 +33,65 @@ export class CatalogController {
     private readonly categories: SeedAndListCategories,
     private readonly merchantsAndTags: MerchantsAndTags,
     private readonly previewRule: PreviewRule,
+    private readonly groups: CategoryGroups,
   ) {}
+
+  @Get("category-groups")
+  async listGroups(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
+    try {
+      await this.categories.list(getAuth(req).userId, workspace(workspaceId));
+      return await this.groups.list(getAuth(req).userId, workspace(workspaceId));
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Post("category-groups")
+  async createGroup(@Param("workspaceId") workspaceId: string, @Body() body: unknown, @Req() req: Request) {
+    try {
+      return await this.groups.create(getAuth(req).userId, workspace(workspaceId), (body ?? {}) as Record<string, unknown>);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Patch("category-groups/:groupId")
+  async renameGroup(@Param("workspaceId") workspaceId: string, @Param("groupId") groupId: string, @Body() body: unknown, @Req() req: Request) {
+    try {
+      return await this.groups.rename(getAuth(req).userId, workspace(workspaceId), groupId, (body ?? {}) as Record<string, unknown>);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  @Delete("category-groups/:groupId")
+  async deleteGroup(@Param("workspaceId") workspaceId: string, @Param("groupId") groupId: string, @Req() req: Request) {
+    try {
+      return await this.groups.remove(getAuth(req).userId, workspace(workspaceId), groupId);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
+  /** Body: { moveTo } — required when the category is in use. */
+  @Post("categories/:categoryId/delete")
+  @HttpCode(200)
+  async deleteCategory(@Param("workspaceId") workspaceId: string, @Param("categoryId") categoryId: string, @Body() body: unknown, @Req() req: Request) {
+    try {
+      return await this.groups.removeCategory(getAuth(req).userId, workspace(workspaceId), categoryId, (body ?? {}) as Record<string, unknown>);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
 
   @Get("categories")
   async listCategories(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
     try {
-      return await this.categories.list(getAuth(req).userId, workspace(workspaceId));
+      const listed = await this.categories.list(getAuth(req).userId, workspace(workspaceId));
+      // First time only: put income categories into an Income group, then list again so they carry it.
+      const before = listed.data.some((c) => c.groupId);
+      await this.groups.seed(workspace(workspaceId));
+      return before ? listed : await this.categories.list(getAuth(req).userId, workspace(workspaceId));
     } catch (error) {
       toHttp(error);
     }
@@ -47,11 +101,15 @@ export class CatalogController {
   async createCategory(@Param("workspaceId") workspaceId: string, @Body() body: unknown, @Req() req: Request) {
     try {
       const r = body as Record<string, unknown>;
+      const groupId = typeof r?.groupId === "string" && r.groupId ? r.groupId : null;
+      const groupKind = groupId ? await this.groups.kindFor(workspace(workspaceId), groupId) : undefined;
       return await this.categories.create(getAuth(req).userId, workspace(workspaceId), {
         name: String(r?.name ?? ""),
         kind: r?.kind === "income" ? "income" : "expense",
         parentId: typeof r?.parentId === "string" ? r.parentId : null,
         monthlyBudget: typeof r?.monthlyBudget === "string" ? r.monthlyBudget : null,
+        groupId,
+        groupKind,
       });
     } catch (error) {
       toHttp(error);
@@ -80,7 +138,11 @@ export class CatalogController {
   ) {
     try {
       const r = body as Record<string, unknown>;
+      const groupId = typeof r?.groupId === "string" && r.groupId ? r.groupId : r?.groupId === null || r?.groupId === "" ? null : undefined;
+      const groupKind = groupId ? await this.groups.kindFor(workspace(workspaceId), groupId) : undefined;
       return await this.categories.update(getAuth(req).userId, workspace(workspaceId), categoryId, {
+        groupId,
+        groupKind,
         name: typeof r?.name === "string" ? r.name : undefined,
         parentId: typeof r?.parentId === "string" ? r.parentId : r?.parentId === null ? null : undefined,
         kind: typeof r?.kind === "string" ? r.kind : undefined,

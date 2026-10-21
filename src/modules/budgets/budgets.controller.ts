@@ -27,6 +27,16 @@ export class BudgetsController {
     }
   }
 
+  /** Months that have a budget, newest first, with planned vs spent. */
+  @Get("workspaces/:workspaceId/month-budgets")
+  async history(@Param("workspaceId") workspaceId: string, @Req() req: Request) {
+    try {
+      return await this.ops.monthHistory(getAuth(req).userId, workspaceId, Number((req.query as Record<string, string>).limit) || 6);
+    } catch (error) {
+      toHttp(error);
+    }
+  }
+
   /** A month's budget (YYYY-MM): income, set-asides from bills/goals/debts, the spending plan and live tracking. */
   @Get("workspaces/:workspaceId/month-budgets/:month")
   async month(@Param("workspaceId") workspaceId: string, @Param("month") month: string, @Req() req: Request) {

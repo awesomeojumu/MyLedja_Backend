@@ -815,6 +815,7 @@ not-a-date,Bad,1.00,expense
       "goal_allocations",
       "debts",
       "month_budgets",
+      "category_groups",
       "imports",
       "import_rows",
       "reconciliation_events",

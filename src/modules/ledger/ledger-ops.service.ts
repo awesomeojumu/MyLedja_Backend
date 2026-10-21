@@ -53,6 +53,7 @@ const WIPE = [
   "goal_allocations",
   "debts",
   "month_budgets",
+  "category_groups",
   "imports",
   "import_rows",
   "reconciliation_events",
@@ -451,6 +452,31 @@ export class LedgerOpsService implements OnModuleInit {
       },
       error: null,
     };
+  }
+
+  /**
+   * Past and current months that have a budget, newest first: planned vs spent and the categories that went over.
+   * Read-only: it never creates a month.
+   */
+  async monthHistory(userId: string, workspaceId: string, limit = 6, now = new Date()) {
+    await this.member(userId, workspaceId, false);
+    const workspace = await this.workspaces.findById(workspaceId);
+    const current = this.monthIn(now, workspace?.timezone ?? "Africa/Lagos");
+    const records = await this.docs("month_budgets").find({ workspaceId, month: { $lte: current } }).sort({ month: -1 }).limit(Math.min(Math.max(limit, 1), 24)).toArray();
+    const rows = [];
+    for (const r of records) {
+      const v = (await this.monthBudget(userId, workspaceId, String(r.month), now)).data;
+      const planned = parseMoney(v.spending.planned, "NGN").amountMinor;
+      const spent = parseMoney(v.spending.spent, "NGN").amountMinor;
+      const over = v.spending.lines
+        .map((l) => ({ name: l.name, by: parseMoney(l.spent, "NGN").amountMinor - parseMoney(l.planned, "NGN").amountMinor }))
+        .filter((l) => l.by > 0n)
+        .sort((a, b) => (b.by > a.by ? 1 : b.by < a.by ? -1 : 0))
+        .slice(0, 2)
+        .map((l) => l.name);
+      rows.push({ month: v.month, current: v.month === current, today: v.today, daysInMonth: v.daysInMonth, planned: v.spending.planned, spent: v.spending.spent, difference: this.naira(planned - spent), overCategories: over });
+    }
+    return { status: "ok" as const, data: rows, error: null };
   }
 
   /** Replace a month's spending plan. Every category must belong to the workspace; amounts can't be negative. */

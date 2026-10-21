@@ -10,6 +10,15 @@ export interface CategoryDoc {
   kind: "income" | "expense";
   parentId: string | null;
   monthlyBudgetMinor?: bigint | null;
+  /** The group it sits in (category_groups); its kind follows the group. */
+  groupId?: string | null;
+}
+
+export interface CategoryGroupDoc {
+  _id: string;
+  workspaceId: string;
+  name: string;
+  kind: "income" | "expense";
 }
 
 export interface TagDoc {
