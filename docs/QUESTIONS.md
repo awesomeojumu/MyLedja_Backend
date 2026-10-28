@@ -100,3 +100,13 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Recommendation: the lockfile is written with npm 11 (`npx npm@11 install`). CI uses `npm ci`, which is unaffected.
 - Answer:
 - Status: open
+
+## Q-B12: Bank and wallet logos (answers the frontend's Q-8)
+
+- Task: B1.6 (DESIGN.md page 4, P08-03)
+- Raised by: frontend agent (Q-8)
+- Documents: DESIGN.md pages 4 and 8; TECH-SPEC 5.8 (Cloudinary)
+- Options: A, a list bundled in the app. B, served by the API with logos in Cloudinary.
+- Recommendation: B. `GET /v1/institutions` (public, cached for a day) returns each bank or wallet's slug, name, kind, aliases and a public Cloudinary `logoUrl` (null until uploaded; show initials). Accounts store the slug in `institution`. Uses the existing `CLOUDINARY_*` variables; no new ones. The contract ships now; the endpoint is built with the accounts module (B1.6). Logo files come from the user later.
+- Answer: B (user decision)
+- Status: decided
