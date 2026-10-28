@@ -41,6 +41,8 @@ import {
 } from './modules/auth/tokens.js';
 import { type EmailSender, Mailer, pickSender } from './modules/notifications/email/email.js';
 import { TransferDismissalsRepository, TransactionsService } from './modules/transactions/transactions.service.js';
+import { ReconciliationsRepository } from './modules/reconcile/reconcile.repository.js';
+import { ReconcileService } from './modules/reconcile/reconcile.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -108,6 +110,17 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
+  const reconcile = new ReconcileService(
+    database,
+    new ReconciliationsRepository(db),
+    ledger,
+    accounts,
+    transactions,
+    audit,
+    now,
+  );
+  transactions.onUnlock = (ctx, reconciliationId, transactionId, session) =>
+    reconcile.recordUnlock(ctx, reconciliationId, transactionId, session);
   const workspaces = new WorkspacesService(
     database,
     workspacesRepo,
@@ -178,6 +191,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     categories,
     accounts,
     transactions,
+    reconcile,
     balanceCheck,
     auth,
     idempotency,

@@ -191,6 +191,19 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Answer:
 - Status: open
 
+## Q-B18: Reconcile (B1.13)
+
+- Task: B1.13
+- Raised by: backend agent
+- Context and decision:
+  - **One in progress** per account; starting again returns it. Unique partial index on `{ workspaceId, accountId }` where `status: in_progress`.
+  - **Tick** updates `clearedAccountIds` at once and keeps `tickedIds` on the reconciliation.
+  - **Finish at 0** locks ticked events with `reconciliationId`. **Finish with a difference** requires `adjust: true` and posts E9 for exactly `statement − cleared`; that adjustment is cleared and locked too.
+  - **Cancel** leaves ticks cleared but locks nothing.
+  - **Unlock** (transactions) clears the lock and appends to `unlocked[]` on the reconciliation.
+- Answer:
+- Status: open
+
 ## Q-B17: Transactions API (B1.8)
 
 - Task: B1.8
