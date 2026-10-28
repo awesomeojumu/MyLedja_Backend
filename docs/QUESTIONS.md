@@ -258,3 +258,16 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Broken rows** carry an `error` string and are never posted, even if the client ticks them.
 - Answer:
 - Status: open
+
+## Q-B22: Sync push/pull (B1.11)
+
+- Task: B1.11
+- Raised by: backend agent
+- Context and decision:
+  - **No new migration:** `changes` (+ unique `{ workspaceId, seq }`) and `counters` already land in ledger migration `m0002`. Confirmed; SyncService only reads/writes through `ChangesRepository` / `CountersRepository`.
+  - **Push** processes `operations[]` in order. Each op has its own `operationId`. Mapped onto existing module services (`transactions.*`, `accounts.*`, `categories.*` / payees / tags, `budget.assign`). One rejected op does not stop later ops.
+  - **Statuses:** `applied` on success; `duplicate` when the same `operationId` (or device-made id) already produced a result; `conflict` on `already_changed` (409) with `current` from the error; other `AppError`s → `rejected`.
+  - **schemaVersion:** accept `CURRENT_SCHEMA_VERSION` (1) and previous (0); anything else is `rejected`.
+  - **Pull:** page `changes` after `since` (exclusive). `doc` is the matching GET-shaped view when `op=upsert` (null on load failure or tombstone). `reset: true` when `since > 0` and there is a gap before the oldest retained seq (tombstones kept 180 days / purged early rows) — client should re-download from `since=0`.
+- Answer:
+- Status: open

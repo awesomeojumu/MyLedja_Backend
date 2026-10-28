@@ -228,6 +228,9 @@ export type ChangeDoc = {
   at: Date;
 };
 
+/** Tombstones (and change rows) are kept this long; a device further behind gets `reset: true` (TECH-SPEC 5.7). */
+export const CHANGE_RETENTION_DAYS = 180;
+
 /** The sync change feed (TECH-SPEC 5.7). Every accepted change gets the next `seq` of its workspace. */
 export class ChangesRepository extends BaseRepository<ChangeDoc> {
   constructor(db: Db) {
@@ -246,6 +249,21 @@ export class ChangesRepository extends BaseRepository<ChangeDoc> {
       await this.insertOne(ctx, { _id: newId(), seq, ...item, at: now }, o);
       seq += 1n;
     }
+  }
+
+  /** Changes after `since` (exclusive), oldest first, up to `limit`. */
+  since(ctx: WorkspaceContext, since: bigint, limit: number, o: Opts = {}) {
+    return this.find(ctx, { seq: { $gt: since } }, { ...o, sort: { seq: 1 }, limit });
+  }
+
+  async minSeq(ctx: WorkspaceContext, o: Opts = {}): Promise<bigint | null> {
+    const [row] = await this.find(ctx, {}, { ...o, sort: { seq: 1 }, limit: 1 });
+    return row?.seq ?? null;
+  }
+
+  async oldest(ctx: WorkspaceContext, o: Opts = {}): Promise<ChangeDoc | null> {
+    const [row] = await this.find(ctx, {}, { ...o, sort: { seq: 1 }, limit: 1 });
+    return row ?? null;
   }
 }
 
