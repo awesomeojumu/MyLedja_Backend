@@ -20,6 +20,7 @@ import {
   type SignInBody,
   type SignUpBody,
   type Tokens,
+  type TwoFactorRequired,
   type VerifyEmailBody,
 } from './auth.contract.js';
 import type {
@@ -65,7 +66,7 @@ export const AUTH_MESSAGES = {
   clientHeaderMissing: 'Update the app and sign in again.',
 } as const;
 
-type SessionBody = z.input<typeof SessionResponse>;
+type SessionBody = z.input<typeof SessionResponse> | z.input<typeof TwoFactorRequired>;
 export type SessionResult = { body: SessionBody; cookie: string | null };
 export type RefreshResult = { body: z.input<typeof Tokens>; cookie: string | null };
 export type RequestMeta = { ip: string };
@@ -75,7 +76,15 @@ export function waitMessage(seconds: number): string {
   return minutes <= 1 ? 'Wait 1 minute' : `Wait ${minutes} minutes`;
 }
 
+/** Asks for a second step (two-factor) before a session starts; set by the security module. */
+export type SecondStep = (
+  user: UserDoc,
+  body: { staySignedIn: boolean; deviceName?: string | undefined; trustedDeviceToken?: string | undefined },
+) => Promise<z.input<typeof TwoFactorRequired> | null>;
+
 export class AuthService {
+  secondStep: SecondStep | null = null;
+
   constructor(
     private readonly config: AppConfig,
     private readonly database: Database,
@@ -226,6 +235,8 @@ export class AuthService {
     }
 
     const linked = body.googleLinkToken ? await this.applyGoogleLink(user, body.googleLinkToken) : user;
+    const challenge = await this.secondStep?.(linked, body);
+    if (challenge) return { body: challenge, cookie: null };
 
     return this.database.transaction(async (session) => {
       const result = await this.startSession(linked, body.staySignedIn, body.deviceName, session);
@@ -294,7 +305,11 @@ export class AuthService {
     if (!id || !id.emailVerified) throw Errors.unauthorized('google_refused', AUTH_MESSAGES.googleRefused);
 
     const byGoogle = await this.users.byGoogleId(id.googleId);
-    if (byGoogle) return this.withAudit(byGoogle, 'session.signed_in_google', body);
+    if (byGoogle) {
+      const challenge = await this.secondStep?.(byGoogle, body);
+      if (challenge) return { body: challenge, cookie: null };
+      return this.withAudit(byGoogle, 'session.signed_in_google', body);
+    }
 
     const byEmail = await this.users.byEmail(id.email);
     if (byEmail?.emailVerifiedAt && byEmail.passwordHash) {
@@ -343,7 +358,8 @@ export class AuthService {
     });
   }
 
-  private withAudit(user: UserDoc, action: string, body: { staySignedIn: boolean; deviceName?: string | undefined }) {
+  /** Starts a session and records it; the security module uses it after two-factor or a passkey. */
+  withAudit(user: UserDoc, action: string, body: { staySignedIn: boolean; deviceName?: string | undefined }) {
     return this.database.transaction(async (session) => {
       const result = await this.startSession(user, body.staySignedIn, body.deviceName, session);
       const ctx = await this.workspaces.personalContext(user._id, null, session);

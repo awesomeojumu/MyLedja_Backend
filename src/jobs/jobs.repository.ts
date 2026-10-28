@@ -14,6 +14,8 @@ export type JobDoc = {
   leaseUntil: Date | null;
   lastError: string | null;
   repeatEverySeconds: number | null;
+  /** What a one-off job works on, for example { userId } for an account deletion. */
+  payload?: Record<string, string>;
   createdAt: Date;
   updatedAt: Date;
 };

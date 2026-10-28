@@ -66,6 +66,11 @@ import {
   WorkspacesRepository,
 } from './modules/workspaces/workspaces.repository.js';
 import { WorkspacesService } from './modules/workspaces/workspaces.service.js';
+import { SecurityService } from './modules/security/security.service.js';
+import { ExportsRepository } from './modules/exports/exports.repository.js';
+import { ExportsService } from './modules/exports/exports.service.js';
+import { fileStoreFor } from './modules/files/cloudinary.js';
+import { deleteAccountJob, nightlyBackupJob } from './jobs/trust.jobs.js';
 
 export const SERVICES = Symbol('SERVICES');
 export const REFRESH_COOKIE = 'myledja_refresh';
@@ -224,16 +229,18 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const codes = new CodesRepository(db);
   const limits = new RateLimitRepository(db, now);
   const idempotency = new IdempotencyRepository(db);
+  const users = new UsersRepository(db);
+  const hasher = new PasswordHasher(o.hasher ?? DEFAULT_HASHER);
   const auth = new AuthService(
     config,
     database,
-    new UsersRepository(db),
+    users,
     sessions,
     codes,
     limits,
     audit,
     workspaces,
-    new PasswordHasher(o.hasher ?? DEFAULT_HASHER),
+    hasher,
     new TokenService(config.jwtSecret, now),
     crypto,
     mailer,
@@ -267,6 +274,23 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const workspaceIndex = new WorkspaceIndex(db);
   jobs.register(billRemindersJob({ workspaces: workspaceIndex, workspaceDocs: workspacesRepo, schedules, now }));
   jobs.register(recurringDailyJob({ workspaces: workspaceIndex, schedules, now }));
+  const files = fileStoreFor(config);
+  const security = new SecurityService(config, users, sessions, auth, hasher, crypto, limits, audit, workspaces, now);
+  const exports = new ExportsService(
+    database,
+    new ExportsRepository(db),
+    security,
+    ledger,
+    users,
+    sessions,
+    audit,
+    jobs,
+    crypto,
+    files,
+    now,
+  );
+  jobs.register(nightlyBackupJob(exports));
+  jobs.register(deleteAccountJob(exports));
 
   return {
     config,
@@ -291,6 +315,9 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     sync,
     balanceCheck,
     auth,
+    security,
+    exports,
+    files,
     idempotency,
     limits,
     jobs,

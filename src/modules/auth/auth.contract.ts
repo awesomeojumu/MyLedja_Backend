@@ -54,6 +54,16 @@ export const Tokens = z
 
 export const SessionResponse = Tokens.extend({ user: User }).meta({ id: 'SessionResponse' });
 
+/** Sign-in answer when two-factor is on: finish with POST /v1/auth/two-factor (B3.1). */
+export const TwoFactorRequired = z
+  .object({
+    twoFactorRequired: z.literal(true),
+    challengeToken: z.string().meta({ description: 'Valid for 10 minutes. Send it back with the code.' }),
+  })
+  .meta({ id: 'TwoFactorRequired' });
+
+export const SignInResponse = z.union([SessionResponse, TwoFactorRequired]).meta({ id: 'SignInResponse' });
+
 export const CodeSent = z
   .object({
     codeExpiresInSeconds: z.literal(CODE_TTL_SECONDS),
@@ -100,6 +110,9 @@ export const SignInBody = z
     staySignedIn: StaySignedIn,
     deviceName: DeviceName,
     googleLinkToken: z.string().max(4000).optional().meta({ description: 'From a google_link_needed answer.' }),
+    trustedDeviceToken: z.string().max(200).optional().meta({
+      description: 'From a two-factor sign-in with "Trust this device for 30 days"; skips the code on this device.',
+    }),
   })
   .superRefine((v, ctx) => {
     if (v.code !== undefined) {
@@ -119,6 +132,7 @@ export const SignInBody = z
 
 export const GoogleBody = z.object({
   idToken: z.string().min(1).max(4000),
+  trustedDeviceToken: z.string().max(200).optional(),
   staySignedIn: StaySignedIn,
   deviceName: DeviceName,
 });
@@ -186,7 +200,7 @@ export const authRoutes = {
     access: { kind: 'public' },
     body: SignInBody,
     status: 200,
-    response: SessionResponse,
+    response: SignInResponse,
     errors: [400, 401, 403, 429],
   }),
   google: defineRoute({
@@ -200,7 +214,7 @@ export const authRoutes = {
     access: { kind: 'public' },
     body: GoogleBody,
     status: 200,
-    response: SessionResponse,
+    response: SignInResponse,
     errors: [400, 401, 404, 409, 429],
     errorBodies: { 409: GoogleLinkNeeded },
   }),
