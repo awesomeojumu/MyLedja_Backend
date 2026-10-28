@@ -16,6 +16,14 @@ export class ImportsController {
     return this.s.imports.upload(req.ctx!, i.body);
   }
 
+  @Route(r.uploadStatement)
+  uploadStatement(
+    @In() i: Input<typeof r.uploadStatement>,
+    @Req() req: Req,
+  ): Promise<Output<typeof r.uploadStatement>> {
+    return this.s.statements.upload(req.ctx!, i.body);
+  }
+
   @Route(r.get)
   get(@In() i: Input<typeof r.get>, @Req() req: Req): Promise<Output<typeof r.get>> {
     return this.s.imports.get(req.ctx!, i.params.importId);
@@ -29,6 +37,16 @@ export class ImportsController {
   @Route(r.post)
   post(@In() i: Input<typeof r.post>, @Req() req: Req): Promise<Output<typeof r.post>> {
     return this.s.imports.post(req.ctx!, i.params.importId, i.body, req.operationId!);
+  }
+
+  @Route(r.list)
+  list(@In() i: Input<typeof r.list>, @Req() req: Req): Promise<Output<typeof r.list>> {
+    return this.s.imports.list(req.ctx!, i.query);
+  }
+
+  @Route(r.reviewed)
+  reviewed(@In() i: Input<typeof r.reviewed>, @Req() req: Req): Promise<Output<typeof r.reviewed>> {
+    return this.s.imports.markReviewed(req.ctx!, i.params.importId);
   }
 
   @Route(r.undo)

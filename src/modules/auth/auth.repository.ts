@@ -12,9 +12,29 @@ export type UserDoc = {
   emailVerifiedAt: Date | null;
   termsAcceptedAt: Date;
   deletedAt: Date | null;
+  /** Two-factor (B3.1): the secret is encrypted with the "two-factor" key; backup codes and trusted devices are hashes. */
+  twoFactor?: {
+    secret: string;
+    enabledAt: Date;
+    backupHashes: string[];
+    trusted: { hash: string; expiresAt: Date }[];
+  } | null;
+  twoFactorPending?: { secret: string; createdAt: Date } | null;
+  /** Passkeys (B3.2): WebAuthn credentials, public keys only. */
+  passkeys?: PasskeyDoc[];
   createdAt: Date;
   updatedAt: Date;
   version: number;
+};
+
+export type PasskeyDoc = {
+  id: string;
+  publicKey: string;
+  counter: number;
+  transports: string[];
+  name: string;
+  createdAt: Date;
+  lastUsedAt: Date | null;
 };
 
 export class UsersRepository extends GlobalRepository<UserDoc> {
@@ -28,6 +48,24 @@ export class UsersRepository extends GlobalRepository<UserDoc> {
 
   byId(id: string, o: Opts = {}) {
     return this.collection.findOne({ _id: id, deletedAt: null }, o);
+  }
+
+  byPasskeyId(credentialId: string, o: Opts = {}) {
+    return this.collection.findOne({ 'passkeys.id': credentialId, deletedAt: null }, o);
+  }
+
+  /** Sets security fields that `update` doesn't cover (two-factor, passkeys). */
+  async setFields(
+    id: string,
+    set: Partial<Pick<UserDoc, 'twoFactor' | 'twoFactorPending' | 'passkeys' | 'deletedAt' | 'passwordHash'>>,
+    o: Opts = {},
+  ) {
+    await this.collection.updateOne({ _id: id }, { $set: { ...set, updatedAt: new Date() }, $inc: { version: 1 } }, o);
+  }
+
+  /** For the deletion job, which runs after deletedAt is set. */
+  byIdIncludingDeleted(id: string) {
+    return this.collection.findOne({ _id: id });
   }
 
   byGoogleId(googleId: string, o: Opts = {}) {
@@ -59,6 +97,8 @@ export type SessionDoc = {
   absoluteExpiresAt: Date | null;
   revokedAt: Date | null;
   revokedReason: string | null;
+  /** The last time the person confirmed it was them on this device (sensitive actions, DESIGN 10.6). */
+  recheckedAt?: Date | null;
 };
 
 export class SessionsRepository extends GlobalRepository<SessionDoc> {
@@ -85,6 +125,17 @@ export class SessionsRepository extends GlobalRepository<SessionDoc> {
       },
     );
     return res.modifiedCount === 1;
+  }
+
+  listForUser(userId: string, now: Date) {
+    return this.collection
+      .find({ userId, revokedAt: null, expiresAt: { $gt: now } })
+      .sort({ lastUsedAt: -1 })
+      .toArray();
+  }
+
+  async markRechecked(id: string, at: Date) {
+    await this.collection.updateOne({ _id: id }, { $set: { recheckedAt: at } });
   }
 
   async revoke(id: string, reason: string) {

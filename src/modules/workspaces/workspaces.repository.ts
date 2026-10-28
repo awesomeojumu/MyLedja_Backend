@@ -25,10 +25,14 @@ export type WorkspaceDoc = {
   features: string[];
   ownerId: string;
   setupDraft: SetupDraft | null;
+  /** Each AI use is on only after the person agrees (TECH-SPEC 5.8, Settings › AI features). */
+  aiConsent?: AiConsent;
   createdAt: Date;
   updatedAt: Date;
   version: number;
 };
+
+export type AiConsent = { categorize: boolean; statements: boolean; healthAdvice: boolean; updatedAt: Date | null };
 
 export class WorkspacesRepository extends BaseRepository<WorkspaceDoc> {
   constructor(db: Db) {
@@ -37,6 +41,14 @@ export class WorkspacesRepository extends BaseRepository<WorkspaceDoc> {
 
   get(ctx: WorkspaceContext, o: Opts = {}) {
     return this.findOne(ctx, { _id: ctx.workspaceId }, o);
+  }
+
+  async setAiConsent(ctx: WorkspaceContext, consent: AiConsent) {
+    await this.updateOne(
+      ctx,
+      { _id: ctx.workspaceId },
+      { $set: { aiConsent: consent, updatedAt: new Date() }, $inc: { version: 1 } },
+    );
   }
 }
 

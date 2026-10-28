@@ -20,6 +20,11 @@ import { NotificationsController } from './modules/notifications/notifications.c
 import { SyncController } from './modules/sync/sync.controller.js';
 import { TransactionsController } from './modules/transactions/transactions.controller.js';
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
+import { SecurityController } from './modules/security/security.controller.js';
+import { ExportsController } from './modules/exports/exports.controller.js';
+import { AiController } from './modules/ai/ai.controller.js';
+import { RulesController } from './modules/rules/rules.controller.js';
+import { BankingController } from './modules/banking/banking.controller.js';
 
 @Module({})
 export class AppModule {
@@ -47,6 +52,11 @@ export class AppModule {
         IncomeController,
         NotificationsController,
         SyncController,
+        SecurityController,
+        ExportsController,
+        AiController,
+        RulesController,
+        BankingController,
       ],
       providers: [
         { provide: SERVICES, useValue: services },

@@ -42,7 +42,10 @@ export class AuthController {
     @Req() req: AuthedRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ): Promise<Output<typeof r.verifyEmail>> {
-    return this.session(await this.s.auth.verifyEmail(i.body, this.meta(req)), req, reply);
+    // Verifying the email always starts a session; two-factor isn't on yet for a new account.
+    return this.session(await this.s.auth.verifyEmail(i.body, this.meta(req)), req, reply) as Output<
+      typeof r.verifyEmail
+    >;
   }
 
   @Route(r.signIn)

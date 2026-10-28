@@ -11,6 +11,7 @@ import type { AuditRepository } from '../audit/audit.repository.js';
 import type { CategoriesRepository } from '../categories/categories.repository.js';
 import type { EventInput } from '../ledger/ledger.inputs.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
+import type { RulesService } from '../rules/rules.service.js';
 import type { ColumnMapping, Import, ImportRow } from './imports.contract.js';
 import { DATE_FORMATS } from './imports.contract.js';
 import type { ImportDoc, ImportsRepository } from './imports.repository.js';
@@ -54,6 +55,9 @@ const MONTHS: Record<string, number> = {
 
 /** CSV statement import (build plan B1.12, DESIGN.md page 9). */
 export class ImportsService {
+  /** The workspace's rules suggest categories on mapped rows (B4.5); set after construction. */
+  rules: RulesService | null = null;
+
   constructor(
     private readonly database: Database,
     private readonly repos: ImportsRepository,
@@ -67,7 +71,7 @@ export class ImportsService {
 
   async upload(
     ctx: WorkspaceContext,
-    body: { id?: string; accountId: string; fileName: string; content: string },
+    body: { id?: string; accountId: string; fileName: string; content: string; source?: 'file' | 'bank' },
   ): Promise<z.input<typeof Import>> {
     const account = await this.accounts.real(ctx, body.accountId);
     const grid = parseCsv(body.content);
@@ -88,6 +92,7 @@ export class ImportsService {
           accountId: body.accountId,
           fileName: body.fileName,
           content: body.content,
+          source: body.source ?? 'file',
           status: 'uploaded',
           preview,
           mapping: suggested,
@@ -144,6 +149,30 @@ export class ImportsService {
       );
       if (!after) throw ImportErrors.notMappable();
       await this.ledger.feed(ctx, [{ collection: 'imports', docId: id, op: 'upsert' }], session);
+      if (this.rules) {
+        const changes = await this.rules.changeFor(
+          ctx,
+          rows.map((r) => {
+            const amount = r.amount ? BigInt(r.amount) : 0n;
+            return {
+              payeeName: r.payeeName ?? '',
+              description: r.description,
+              amountMinor: amount < 0n ? -amount : amount,
+              accountId: before.accountId,
+              categoryId: r.categoryId ?? '',
+              notes: r.notes ?? '',
+              date: r.date ?? '',
+            };
+          }),
+        );
+        const withRules = rows.map((r, i) =>
+          !r.categoryId && changes[i]?.categoryId ? { ...r, categoryId: changes[i]!.categoryId! } : r,
+        );
+        if (withRules.some((r, i) => r !== rows[i])) {
+          await this.repos.updateOne(ctx, { _id: id }, { $set: { rows: withRules } }, { session });
+          after.rows = withRules;
+        }
+      }
       await this.audit.record(
         ctx,
         {
@@ -156,6 +185,25 @@ export class ImportsService {
       return after;
     });
     return this.view(doc);
+  }
+
+  /** Fills in suggested categories (rules or AI) on rows that have none; the person still reviews them. */
+  async suggestCategories(
+    ctx: WorkspaceContext,
+    id: string,
+    byIndex: Map<number, string>,
+  ): Promise<z.input<typeof Import>> {
+    const before = await this.require(ctx, id);
+    if (before.status !== 'mapped' || byIndex.size === 0) return this.view(before);
+    const rows = before.rows.map((r) =>
+      r.categoryId || !byIndex.has(r.index) ? r : { ...r, categoryId: byIndex.get(r.index)! },
+    );
+    const after = await this.repos.findOneAndUpdate(
+      ctx,
+      { _id: id, version: before.version },
+      { $set: { rows, updatedAt: this.now() }, $inc: { version: 1 } },
+    );
+    return this.view(after ?? before);
   }
 
   async post(
@@ -301,8 +349,35 @@ export class ImportsService {
       rows: doc.rows,
       counts: doc.counts,
       stored: doc.stored,
+      source: doc.source ?? 'file',
       version: doc.version,
     };
+  }
+
+  async list(ctx: WorkspaceContext, q: { status: 'mapped' | 'posted' | 'reviewed'; accountId?: string | undefined }) {
+    const docs = await this.repos.find(
+      ctx,
+      { status: q.status, ...(q.accountId ? { accountId: q.accountId } : {}) },
+      { sort: { createdAt: -1 }, limit: 50 },
+    );
+    return { imports: docs.map((d) => this.view(d)) };
+  }
+
+  async markReviewed(ctx: WorkspaceContext, id: string) {
+    const before = await this.require(ctx, id);
+    if (before.status !== 'mapped') throw ImportErrors.notMappable();
+    const after = await this.database.transaction(async (session) => {
+      const doc = await this.repos.findOneAndUpdate(
+        ctx,
+        { _id: id, version: before.version },
+        { $set: { status: 'reviewed', updatedAt: this.now() }, $inc: { version: 1 } },
+        { session },
+      );
+      if (!doc) throw ImportErrors.notMappable();
+      await this.ledger.feed(ctx, [{ collection: 'imports', docId: id, op: 'upsert' }], session);
+      return doc;
+    });
+    return this.view(after);
   }
 
   /** Existing live movements on the account, for duplicate checks. */

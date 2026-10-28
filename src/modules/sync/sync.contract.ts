@@ -30,6 +30,8 @@ export const OPERATION_TYPES = [
   'debt.write_off',
   'income.stream.create',
   'income.stream.update',
+  'rule.upsert',
+  'rule.delete',
 ] as const;
 
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -46,6 +48,10 @@ export const Operation = z
       description: "The body of the matching route: transaction.create takes createTransaction's body, and so on.",
     }),
     baseVersion: z.number().int().nullable().optional(),
+    transactionIds: z.array(Uuid).max(4).optional().meta({
+      description:
+        'Ids the device made for the transactions this operation posts, in posting order (a correction: reversal, then new).',
+    }),
     createdAt: z.iso.datetime(),
     schemaVersion: z.number().int().meta({ description: 'The current and the previous version are accepted.' }),
   })

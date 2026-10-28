@@ -51,4 +51,12 @@ export class AuditRepository extends BaseRepository<AuditDoc> {
   list(ctx: WorkspaceContext, limit = 50) {
     return this.find(ctx, {}, { sort: { at: -1 }, limit });
   }
+
+  /** Newest first, before a cursor, optionally only actions starting with a prefix ("session."). */
+  page(ctx: WorkspaceContext, q: { before?: Date | undefined; limit: number; actionPrefix?: string | undefined }) {
+    const filter: Record<string, unknown> = {};
+    if (q.before) filter.at = { $lt: q.before };
+    if (q.actionPrefix) filter.action = { $regex: `^${q.actionPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` };
+    return this.find(ctx, filter, { sort: { at: -1 }, limit: q.limit });
+  }
 }

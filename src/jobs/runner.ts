@@ -43,9 +43,10 @@ export class JobRunner {
     }
   }
 
-  async enqueue(name: string, runAt = this.now(), maxAttempts = 5) {
+  async enqueue(name: string, runAt = this.now(), maxAttempts = 5, payload?: Record<string, string>) {
     const now = this.now();
     await this.jobs.enqueue({
+      ...(payload ? { payload } : {}),
       _id: newId(),
       name,
       status: 'queued',

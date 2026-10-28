@@ -180,6 +180,130 @@
         ],
         "additionalProperties": false
       },
+      "ActivityEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "action": {
+            "type": "string",
+            "description": "For example transaction.created, session.signed_in."
+          },
+          "who": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "device": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "collection": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "collection",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "action",
+          "who",
+          "device",
+          "target"
+        ],
+        "additionalProperties": false
+      },
+      "AiSettings": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "object",
+            "properties": {
+              "claude": {
+                "type": "boolean"
+              },
+              "gemini": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "claude",
+              "gemini"
+            ],
+            "additionalProperties": false,
+            "description": "Hidden in the app when both are false."
+          },
+          "consent": {
+            "type": "object",
+            "properties": {
+              "categorize": {
+                "type": "boolean",
+                "description": "Suggest categories. Sends description, amount and date only."
+              },
+              "statements": {
+                "type": "boolean",
+                "description": "Read PDF and Excel statements. Sends redacted transaction lines only."
+              },
+              "healthAdvice": {
+                "type": "boolean",
+                "description": "Reword Health advice. Never sends any number."
+              },
+              "updatedAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "categorize",
+              "statements",
+              "healthAdvice",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "available",
+          "consent"
+        ],
+        "additionalProperties": false
+      },
       "AllocateToGoalBody": {
         "type": "object",
         "properties": {
@@ -229,6 +353,21 @@
         "required": [
           "allocation",
           "goal"
+        ],
+        "additionalProperties": false
+      },
+      "BackupCodes": {
+        "type": "object",
+        "properties": {
+          "backupCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "backupCodes"
         ],
         "additionalProperties": false
       },
@@ -303,6 +442,79 @@
           "date"
         ],
         "description": "E9 and E10. Never income or spending."
+      },
+      "BankLink": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "const": "mono"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "last4": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "needs_reauth",
+              "disconnected"
+            ]
+          },
+          "lastSyncedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "consentExpiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "historyDays": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "provider",
+          "institution",
+          "last4",
+          "status",
+          "lastSyncedAt",
+          "consentExpiresAt",
+          "historyDays"
+        ],
+        "additionalProperties": false
       },
       "BorrowBody": {
         "type": "object",
@@ -2385,6 +2597,46 @@
         ],
         "additionalProperties": false
       },
+      "DeviceSession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deviceName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "staysSignedIn": {
+            "type": "boolean",
+            "description": "A web session with \"Stay signed in\" (labelled in Settings)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "current": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "deviceName",
+          "staysSignedIn",
+          "createdAt",
+          "lastUsedAt",
+          "current"
+        ],
+        "additionalProperties": false
+      },
       "Error": {
         "type": "object",
         "properties": {
@@ -2549,6 +2801,27 @@
           "date"
         ],
         "description": "E2, E3, E5 and E12: spending, counted in the month it happens."
+      },
+      "ExportFile": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "description": "The whole file as text, for the app to save."
+          }
+        },
+        "required": [
+          "filename",
+          "mimeType",
+          "content"
+        ],
+        "additionalProperties": false
       },
       "Goal": {
         "type": "object",
@@ -2947,7 +3220,16 @@
               "uploaded",
               "mapped",
               "posted",
-              "undone"
+              "undone",
+              "reviewed"
+            ],
+            "description": "reviewed: the app reviewed and posted the rows itself, offline-first, so nothing is posted here."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "file",
+              "bank"
             ]
           },
           "preview": {
@@ -3029,6 +3311,7 @@
           "accountId",
           "fileName",
           "status",
+          "source",
           "preview",
           "mapping",
           "rows",
@@ -4734,7 +5017,9 @@
               "debt.payment",
               "debt.write_off",
               "income.stream.create",
-              "income.stream.update"
+              "income.stream.update",
+              "rule.upsert",
+              "rule.delete"
             ]
           },
           "targetId": {
@@ -4769,6 +5054,16 @@
                 "type": "null"
               }
             ]
+          },
+          "transactionIds": {
+            "description": "Ids the device made for the transactions this operation posts, in posting order (a correction: reversal, then new).",
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
           },
           "createdAt": {
             "type": "string",
@@ -4841,6 +5136,62 @@
           "result",
           "current",
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "Passkey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "lastUsedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt",
+          "lastUsedAt"
+        ],
+        "additionalProperties": false
+      },
+      "PasskeyOptions": {
+        "type": "object",
+        "properties": {
+          "challengeToken": {
+            "type": "string"
+          },
+          "options": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "Pass to navigator.credentials or the phone passkey module."
+          }
+        },
+        "required": [
+          "challengeToken",
+          "options"
         ],
         "additionalProperties": false
       },
@@ -5554,6 +5905,214 @@
           "daysBefore"
         ]
       },
+      "Restored": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string"
+          },
+          "workspaceName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceId",
+          "workspaceName"
+        ],
+        "additionalProperties": false,
+        "description": "A backup restores into a new workspace; the current one is never touched (TECH-SPEC 11)."
+      },
+      "RestorePreview": {
+        "type": "object",
+        "properties": {
+          "workspaceName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "accounts": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "transactions": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "firstDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "categories": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "goals": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "debts": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "bills": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "workspaceName",
+          "createdAt",
+          "accounts",
+          "transactions",
+          "firstDate",
+          "lastDate",
+          "categories",
+          "goals",
+          "debts",
+          "bills"
+        ],
+        "additionalProperties": false
+      },
+      "Rule": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "first",
+              "normal",
+              "last"
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "matchMode": {
+            "type": "string",
+            "enum": [
+              "all",
+              "any"
+            ]
+          },
+          "conditions": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "enum": [
+                    "payee",
+                    "description",
+                    "amount",
+                    "account",
+                    "category",
+                    "notes",
+                    "date"
+                  ]
+                },
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "contains",
+                    "equals",
+                    "lessThan",
+                    "greaterThan",
+                    "before",
+                    "after"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              },
+              "required": [
+                "field",
+                "op",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "actions": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "setCategory",
+                    "renamePayee",
+                    "addNote"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              },
+              "required": [
+                "kind",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "matchedCount": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "lastUsedAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "enabled",
+          "stage",
+          "order",
+          "matchMode",
+          "conditions",
+          "actions",
+          "matchedCount",
+          "id",
+          "version"
+        ],
+        "additionalProperties": false
+      },
       "SalaryGrossInput": {
         "type": "object",
         "properties": {
@@ -5858,6 +6417,49 @@
         ],
         "additionalProperties": false
       },
+      "SecurityStatus": {
+        "type": "object",
+        "properties": {
+          "hasPassword": {
+            "type": "boolean"
+          },
+          "twoFactorOn": {
+            "type": "boolean"
+          },
+          "backupCodesLeft": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "passkeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Passkey"
+            }
+          },
+          "recheckedUntil": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sensitive actions work without asking again until then."
+          }
+        },
+        "required": [
+          "hasPassword",
+          "twoFactorOn",
+          "backupCodesLeft",
+          "passkeys",
+          "recheckedUntil"
+        ],
+        "additionalProperties": false
+      },
       "SessionResponse": {
         "type": "object",
         "properties": {
@@ -5937,6 +6539,16 @@
           "startDate"
         ]
       },
+      "SignInResponse": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/SessionResponse"
+          },
+          {
+            "$ref": "#/components/schemas/TwoFactorRequired"
+          }
+        ]
+      },
       "SpendFromGoalBody": {
         "type": "object",
         "properties": {
@@ -6013,6 +6625,142 @@
           "goal",
           "allocation",
           "transactionId"
+        ],
+        "additionalProperties": false
+      },
+      "StatementImport": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploaded",
+              "mapped",
+              "posted",
+              "undone",
+              "reviewed"
+            ],
+            "description": "reviewed: the app reviewed and posted the rows itself, offline-first, so nothing is posted here."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "file",
+              "bank"
+            ]
+          },
+          "preview": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "The first 10 rows as read."
+          },
+          "mapping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColumnMapping"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportRow"
+            }
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "rows": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "new": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "duplicates": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "errors": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "posted": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "rows",
+              "new",
+              "duplicates",
+              "errors",
+              "posted"
+            ],
+            "additionalProperties": false
+          },
+          "stored": {
+            "type": "boolean",
+            "description": "Whether the file was kept in private Cloudinary storage."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "reader": {
+            "type": "string",
+            "enum": [
+              "parser",
+              "ai"
+            ],
+            "description": "Read on the server, or by AI from redacted lines."
+          },
+          "bank": {
+            "description": "gtbank, access, zenith, uba, kuda, premiumtrust or bank78 when recognised.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "fileName",
+          "status",
+          "source",
+          "preview",
+          "mapping",
+          "rows",
+          "counts",
+          "stored",
+          "version",
+          "reader",
+          "bank"
         ],
         "additionalProperties": false
       },
@@ -6371,6 +7119,31 @@
               "null"
             ]
           },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "opening_balances",
+                  "adjustments",
+                  "revaluation",
+                  "fx_clearing",
+                  "interest_earned",
+                  "investment_income",
+                  "investment_gain",
+                  "interest_and_charges",
+                  "fees",
+                  "taxes",
+                  "written_off",
+                  "investment_loss"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the line is on a system account, such as opening_balances."
+          },
           "amount": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
@@ -6384,6 +7157,7 @@
           "ledgerAccountId",
           "accountId",
           "categoryId",
+          "system",
           "amount",
           "currency"
         ],
@@ -6525,6 +7299,85 @@
         },
         "required": [
           "suggestions"
+        ],
+        "additionalProperties": false
+      },
+      "TwoFactorRequired": {
+        "type": "object",
+        "properties": {
+          "twoFactorRequired": {
+            "type": "boolean",
+            "const": true
+          },
+          "challengeToken": {
+            "type": "string",
+            "description": "Valid for 10 minutes. Send it back with the code."
+          }
+        },
+        "required": [
+          "twoFactorRequired",
+          "challengeToken"
+        ],
+        "additionalProperties": false
+      },
+      "TwoFactorSessionResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "accessTokenExpiresIn": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Seconds (900)."
+          },
+          "refreshToken": {
+            "description": "Null when the refresh token was set as a cookie.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "trustedDeviceToken": {
+            "description": "Send as trustedDeviceToken on later sign-ins from this device.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "accessTokenExpiresIn",
+          "refreshToken",
+          "user",
+          "trustedDeviceToken"
+        ],
+        "additionalProperties": false
+      },
+      "TwoFactorSetup": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string",
+            "description": "\"Can't scan? Copy key\"."
+          },
+          "otpauthUrl": {
+            "type": "string"
+          },
+          "qrSvg": {
+            "type": "string",
+            "description": "The QR code as SVG markup."
+          }
+        },
+        "required": [
+          "secret",
+          "otpauthUrl",
+          "qrSvg"
         ],
         "additionalProperties": false
       },
@@ -7239,6 +8092,10 @@
                     "minLength": 1,
                     "maxLength": 4000
                   },
+                  "trustedDeviceToken": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
                   "staySignedIn": {
                     "default": false,
                     "description": "Web only. When true the refresh token is set as an HttpOnly cookie and `refreshToken` comes back null. Phones send false and keep the token in Keychain or Keystore.",
@@ -7263,7 +8120,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SessionResponse"
+                  "$ref": "#/components/schemas/SignInResponse"
                 }
               }
             }
@@ -7386,6 +8243,315 @@
           },
           "429": {
             "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/passkey": {
+      "post": {
+        "operationId": "signInPasskey",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Sign in with a passkey",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "challengeToken": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "response": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "The browser's or phone's WebAuthn response, as JSON."
+                  },
+                  "staySignedIn": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "deviceName": {
+                    "type": "string",
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "challengeToken",
+                  "response"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/passkey/options": {
+      "post": {
+        "operationId": "passkeySignInOptions",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Start \"Use a passkey\"",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/recheck": {
+      "post": {
+        "operationId": "recheck",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Confirm it's you before a sensitive action",
+        "description": "Export, backup, password change, turning off two-factor and deleting the account need this within 15 minutes of signing in (DESIGN.md 10.6).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "challengeToken": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "response": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "The browser's or phone's WebAuthn response, as JSON."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/recheck/passkey-options": {
+      "post": {
+        "operationId": "recheckPasskeyOptions",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Start confirming with a passkey instead of the password",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
             "content": {
               "application/json": {
                 "schema": {
@@ -7686,6 +8852,11 @@
                     "description": "From a google_link_needed answer.",
                     "type": "string",
                     "maxLength": 4000
+                  },
+                  "trustedDeviceToken": {
+                    "description": "From a two-factor sign-in with \"Trust this device for 30 days\"; skips the code on this device.",
+                    "type": "string",
+                    "maxLength": 200
                   }
                 },
                 "required": [
@@ -7701,7 +8872,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SessionResponse"
+                  "$ref": "#/components/schemas/SignInResponse"
                 }
               }
             }
@@ -7939,6 +9110,111 @@
         }
       }
     },
+    "/v1/auth/two-factor": {
+      "post": {
+        "operationId": "signInTwoFactor",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Finish signing in with a two-factor or backup code",
+        "description": "A backup code works once. Five wrong codes: 429, wait 1 minute.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "challengeToken": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  },
+                  "backupCode": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "trustDevice": {
+                    "default": false,
+                    "description": "\"Trust this device for 30 days\".",
+                    "type": "boolean"
+                  },
+                  "staySignedIn": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "deviceName": {
+                    "type": "string",
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "challengeToken"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/verify-email": {
       "post": {
         "operationId": "verifyEmail",
@@ -8026,6 +9302,62 @@
         }
       }
     },
+    "/v1/banking/mono/webhook": {
+      "post": {
+        "operationId": "monoWebhook",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "Mono's webhook; refused unless its secret matches MONO_WEBHOOK_SECRET",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "getHealth",
@@ -8096,6 +9428,948 @@
           },
           "401": {
             "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/delete": {
+      "post": {
+        "operationId": "deleteAccount",
+        "tags": [
+          "Import and export"
+        ],
+        "summary": "Delete my account and everything in it (asks again)",
+        "description": "Signs out everywhere at once. Data is removed by a job, including files; backups age out within 30 days.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deletingWorkspaces": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "deletingWorkspaces"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/passkeys": {
+      "post": {
+        "operationId": "addPasskey",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Save a passkey",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "challengeToken": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "response": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {},
+                    "description": "The browser's or phone's WebAuthn response, as JSON."
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  }
+                },
+                "required": [
+                  "challengeToken",
+                  "response",
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Passkey"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/passkeys/{passkeyId}": {
+      "delete": {
+        "operationId": "removePasskey",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Remove a passkey",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "passkeyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 400
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/passkeys/options": {
+      "post": {
+        "operationId": "passkeyAddOptions",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Start adding a passkey (popup 54)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/password": {
+      "post": {
+        "operationId": "changePassword",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Change the password; other devices are signed out",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/restore": {
+      "post": {
+        "operationId": "restoreBackup",
+        "tags": [
+          "Import and export"
+        ],
+        "summary": "Restore a backup into a new workspace (asks again)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50000000
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Restored"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/restore/preview": {
+      "post": {
+        "operationId": "previewRestore",
+        "tags": [
+          "Import and export"
+        ],
+        "summary": "What's inside a backup, before restoring it",
+        "description": "A damaged or edited file is refused here, before anything is written.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50000000
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestorePreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/security": {
+      "get": {
+        "operationId": "getSecurity",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Two-factor, passkeys and the re-check window",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/sessions": {
+      "get": {
+        "operationId": "listSessions",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Devices and sessions",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DeviceSession"
+                      }
+                    }
+                  },
+                  "required": [
+                    "sessions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/sessions/{sessionId}": {
+      "delete": {
+        "operationId": "signOutSession",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Sign out one device; it is refused at once",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/two-factor": {
+      "delete": {
+        "operationId": "turnOffTwoFactor",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Turn two-factor off (asks again)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/two-factor/backup-codes": {
+      "post": {
+        "operationId": "newBackupCodes",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Replace the backup codes (popup 53)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCodes"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/two-factor/confirm": {
+      "post": {
+        "operationId": "confirmTwoFactor",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Turn two-factor on with the first code; returns 10 backup codes",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCodes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/two-factor/setup": {
+      "post": {
+        "operationId": "setUpTwoFactor",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Start setting up two-factor (popup 52)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorSetup"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/json": {
                 "schema": {
@@ -9395,6 +11669,1160 @@
           },
           "404": {
             "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/activity": {
+      "get": {
+        "operationId": "listActivity",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Activity log: who, which device, what, when (B3.9)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "admin",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Cursor: the `at` of the last event already shown.",
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Prefix filter, for example \"session.\" or \"transaction.\"",
+              "type": "string",
+              "maxLength": 60
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ActivityEvent"
+                      }
+                    },
+                    "nextBefore": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "nextBefore"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/ai": {
+      "get": {
+        "operationId": "getAiSettings",
+        "tags": [
+          "AI"
+        ],
+        "summary": "Which AI features are available and agreed to",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/ai/categorize": {
+      "post": {
+        "operationId": "suggestCategories",
+        "tags": [
+          "AI"
+        ],
+        "summary": "Suggest a category for each transaction (B4.4)",
+        "description": "Only description, amount and date are sent. A null suggestion means nothing fitted.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string",
+                          "maxLength": 300
+                        },
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                          "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                        },
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                          "description": "YYYY-MM-DD in the workspace time zone."
+                        }
+                      },
+                      "required": [
+                        "description",
+                        "amount",
+                        "date"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categoryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "categoryIds"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/ai/consent": {
+      "put": {
+        "operationId": "setAiConsent",
+        "tags": [
+          "AI"
+        ],
+        "summary": "Agree to, or turn off, each AI feature",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "admin",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "categorize": {
+                    "type": "boolean",
+                    "description": "Suggest categories. Sends description, amount and date only."
+                  },
+                  "statements": {
+                    "type": "boolean",
+                    "description": "Read PDF and Excel statements. Sends redacted transaction lines only."
+                  },
+                  "healthAdvice": {
+                    "type": "boolean",
+                    "description": "Reword Health advice. Never sends any number."
+                  }
+                },
+                "required": [
+                  "categorize",
+                  "statements",
+                  "healthAdvice"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/backups": {
+      "post": {
+        "operationId": "createBackup",
+        "tags": [
+          "Import and export"
+        ],
+        "summary": "Download a full backup (asks again)",
+        "description": "One file with a checksum and schema version (TECH-SPEC 11).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "owner",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportFile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/banking/links": {
+      "get": {
+        "operationId": "listBankLinks",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "Bank connections (Settings › Bank connections)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BankLink"
+                      }
+                    },
+                    "available": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "links",
+                    "available"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/banking/links/{linkId}": {
+      "delete": {
+        "operationId": "disconnectBank",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "Disconnect a bank; what was imported stays",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/banking/links/{linkId}/reauth": {
+      "post": {
+        "operationId": "reconnectBank",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "\"Reconnect\": a token to reopen Mono when consent has lapsed",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reauthToken": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "reauthToken"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/banking/links/{linkId}/reconnected": {
+      "post": {
+        "operationId": "bankReconnected",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "Mono reports the reconnection worked; syncing resumes",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankLink"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/banking/links/{linkId}/sync": {
+      "post": {
+        "operationId": "syncBankLink",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "Sync now: new bank transactions land in review, matched against manual ones",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "import": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/StatementImport"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "newTransactions": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "import",
+                    "newTransactions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/banking/mono/link": {
+      "post": {
+        "operationId": "linkBank",
+        "tags": [
+          "Bank connections"
+        ],
+        "summary": "Finish \"Connect bank\" with the code from Mono Connect",
+        "description": "Links the bank to one of your accounts. 404 bank_off when Mono is not set up.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "code": {
+                    "type": "string",
+                    "minLength": 4,
+                    "maxLength": 500
+                  },
+                  "historyDays": {
+                    "default": 90,
+                    "description": "How far back to import on the first sync (P08-08).",
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "const": 30
+                      },
+                      {
+                        "type": "number",
+                        "const": 90
+                      },
+                      {
+                        "type": "number",
+                        "const": 180
+                      },
+                      {
+                        "type": "number",
+                        "const": 365
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "accountId",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankLink"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -12636,6 +16064,86 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/exports/transactions": {
+      "post": {
+        "operationId": "exportTransactionsCsv",
+        "tags": [
+          "Import and export"
+        ],
+        "summary": "Export every transaction as CSV (asks again)",
+        "description": "Cells that start with =, +, - or @ are made safe for spreadsheets.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportFile"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/goals": {
       "get": {
         "operationId": "listGoals",
@@ -13507,6 +17015,100 @@
             }
           }
         }
+      },
+      "get": {
+        "operationId": "listImports",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Imports waiting for review, newest first",
+        "description": "Bank syncs (source bank) land here for the app to review (P15-07, P25-05).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "mapped",
+              "type": "string",
+              "enum": [
+                "mapped",
+                "posted",
+                "reviewed"
+              ]
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imports": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Import"
+                      }
+                    }
+                  },
+                  "required": [
+                    "imports"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/workspaces/{workspaceId}/imports/{importId}": {
@@ -13872,6 +17474,105 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/imports/{importId}/reviewed": {
+      "post": {
+        "operationId": "markImportReviewed",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "The app reviewed these rows and posted the ones kept",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "importId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Import"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/imports/{importId}/undo": {
       "post": {
         "operationId": "undoImport",
@@ -13971,6 +17672,147 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/imports/statement": {
+      "post": {
+        "operationId": "uploadStatement",
+        "tags": [
+          "Imports"
+        ],
+        "summary": "Upload a PDF or Excel statement (B4.2)",
+        "description": "Read on the server where the layout allows. With useAi and consent to AI statement reading, unreadable files are read by AI from redacted transaction lines only. Rows land in review like a CSV.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "fileName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "fileBase64": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 14000000
+                  },
+                  "useAi": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "accountId",
+                  "fileName",
+                  "fileBase64"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatementImport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -16480,6 +20322,77 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/rules": {
+      "get": {
+        "operationId": "listRules",
+        "tags": [
+          "Rules"
+        ],
+        "summary": "Rules in the order they run: first, normal, last",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Rule"
+                      }
+                    }
+                  },
+                  "required": [
+                    "rules"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
             "content": {
               "application/json": {
                 "schema": {

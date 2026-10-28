@@ -45,7 +45,10 @@ export const Import = z
     id: z.string(),
     accountId: z.string(),
     fileName: z.string(),
-    status: z.enum(['uploaded', 'mapped', 'posted', 'undone']),
+    status: z.enum(['uploaded', 'mapped', 'posted', 'undone', 'reviewed']).meta({
+      description: 'reviewed: the app reviewed and posted the rows itself, offline-first, so nothing is posted here.',
+    }),
+    source: z.enum(['file', 'bank']),
     preview: z.array(z.array(z.string())).meta({ description: 'The first 10 rows as read.' }),
     mapping: ColumnMapping.nullable(),
     rows: z.array(ImportRow),
@@ -67,7 +70,36 @@ const tag = 'Imports';
 const base = '/v1/workspaces/:workspaceId/imports';
 const editor = { kind: 'workspace', minRole: 'editor' } as const;
 
+export const StatementImport = Import.extend({
+  reader: z.enum(['parser', 'ai']).meta({ description: 'Read on the server, or by AI from redacted lines.' }),
+  bank: z
+    .string()
+    .nullable()
+    .meta({ description: 'gtbank, access, zenith, uba, kuda, premiumtrust or bank78 when recognised.' }),
+}).meta({ id: 'StatementImport' });
+
 export const importRoutes = {
+  uploadStatement: defineRoute({
+    name: 'uploadStatement',
+    method: 'POST',
+    path: `${base}/statement`,
+    tag,
+    summary: 'Upload a PDF or Excel statement (B4.2)',
+    description:
+      'Read on the server where the layout allows. With useAi and consent to AI statement reading, unreadable files are read by AI from redacted transaction lines only. Rows land in review like a CSV.',
+    access: editor,
+    params: WorkspaceParams,
+    body: z.object({
+      id: Uuid.optional(),
+      accountId: Uuid,
+      fileName: z.string().trim().min(1).max(200),
+      fileBase64: z.string().min(8).max(14_000_000, { error: 'Use a file under 10 MB' }),
+      useAi: z.boolean().default(false),
+    }),
+    status: 201,
+    response: StatementImport,
+    errors: [400, 401, 403, 404, 503],
+  }),
   upload: defineRoute({
     name: 'uploadImport',
     method: 'POST',
@@ -138,6 +170,32 @@ export const importRoutes = {
     status: 200,
     response: Import,
     errors: [400, 401, 403, 404, 409],
+  }),
+  list: defineRoute({
+    name: 'listImports',
+    method: 'GET',
+    path: base,
+    tag,
+    summary: 'Imports waiting for review, newest first',
+    description: 'Bank syncs (source bank) land here for the app to review (P15-07, P25-05).',
+    access: { kind: 'workspace', minRole: 'viewer' },
+    params: WorkspaceParams,
+    query: z.object({ status: z.enum(['mapped', 'posted', 'reviewed']).default('mapped'), accountId: Uuid.optional() }),
+    status: 200,
+    response: z.object({ imports: z.array(Import) }),
+    errors: [401, 404],
+  }),
+  reviewed: defineRoute({
+    name: 'markImportReviewed',
+    method: 'POST',
+    path: `${base}/:importId/reviewed`,
+    tag,
+    summary: 'The app reviewed these rows and posted the ones kept',
+    access: editor,
+    params: ImportParams,
+    status: 200,
+    response: Import,
+    errors: [401, 403, 404, 409],
   }),
   undo: defineRoute({
     name: 'undoImport',

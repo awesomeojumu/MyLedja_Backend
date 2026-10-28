@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { type ClientSession, Decimal128, MongoServerError } from 'mongodb';
 import { AppError } from '../../common/errors/errors.js';
 import { newId } from '../../common/ids/ids.js';
@@ -51,6 +52,25 @@ const isDuplicateKey = (e: unknown) => e instanceof MongoServerError && e.code =
  * balances, period totals, change feed and audit entry in one transaction.
  */
 export class LedgerService {
+  /** Ids the device made for the transactions one sync operation posts (TECH-SPEC 5.4), used in posting order. */
+  private readonly clientIds = new AsyncLocalStorage<{ ids: string[]; given: Map<string, string> }>();
+
+  withClientIds<T>(ids: string[] | undefined, fn: () => Promise<T>): Promise<T> {
+    if (!ids?.length) return fn();
+    return this.clientIds.run({ ids: [...ids], given: new Map() }, fn);
+  }
+
+  /** The device's id for this posting, or a new one. A retried transaction keeps the id it was given. */
+  private idFor(operationId: string): string {
+    const store = this.clientIds.getStore();
+    if (!store) return newId();
+    const seen = store.given.get(operationId);
+    if (seen) return seen;
+    const id = store.ids.shift() ?? newId();
+    store.given.set(operationId, id);
+    return id;
+  }
+
   constructor(
     private readonly database: Database,
     readonly accounts: LedgerAccountsRepository,
@@ -177,7 +197,7 @@ export class LedgerService {
     checkLines(built.type, built.lines, resolver.any);
     const now = this.now();
     const event: Omit<TransactionDoc, 'workspaceId'> = {
-      _id: newId(),
+      _id: this.idFor(opts.operationId),
       operationId: opts.operationId,
       type: built.type,
       status: 'posted',
@@ -274,7 +294,7 @@ export class LedgerService {
       throw LedgerErrors.hasRefunds();
     }
     const now = this.now();
-    const reversalId = newId();
+    const reversalId = this.idFor(opts.operationId);
     const marked = await this.transactions.markReversed(ctx, id, reversalId, original.version, now, { session });
     if (!marked) throw LedgerErrors.alreadyChanged(original);
     const lines = buildReversal(original.lines);
