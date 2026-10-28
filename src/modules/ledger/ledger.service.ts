@@ -334,6 +334,36 @@ export class LedgerService {
     });
   }
 
+  /**
+   * Sets payee or tags on many events in place (payee merge, tag delete), with one feed entry each and
+   * one audit entry. Returns the ids changed.
+   */
+  async patchMany(
+    ctx: WorkspaceContext,
+    filter: { ids?: string[]; payeeIds?: string[]; tagId?: string },
+    change: { payeeId?: string | null; pullTagId?: string },
+    action: string,
+    session: ClientSession,
+  ): Promise<string[]> {
+    const f: Record<string, unknown> = {};
+    if (filter.ids) f._id = { $in: filter.ids };
+    if (filter.payeeIds) f.payeeId = { $in: filter.payeeIds };
+    if (filter.tagId) f.tagIds = filter.tagId;
+    const ids = (await this.transactions.find(ctx, f as never, { session, projection: { _id: 1 } })).map((e) => e._id);
+    if (ids.length === 0) return [];
+    const update: Record<string, unknown> = { $set: { updatedAt: this.now() }, $inc: { version: 1 } };
+    if (change.payeeId !== undefined) (update.$set as Record<string, unknown>).payeeId = change.payeeId;
+    if (change.pullTagId) update.$pull = { tagIds: change.pullTagId };
+    await this.transactions.updateMany(ctx, { _id: { $in: ids } }, update as never, { session });
+    await this.feed(
+      ctx,
+      ids.map((docId) => ({ collection: 'transactions', docId, op: 'upsert' as const })),
+      session,
+    );
+    await this.audit.record(ctx, { action, after: { transactions: ids.length, ...change } }, { session });
+    return ids;
+  }
+
   /** Steps 5 to 8 of `postEvent`: insert, balances, period totals, change feed, audit. */
   private async write(
     ctx: WorkspaceContext,
@@ -377,7 +407,8 @@ export class LedgerService {
     return out;
   }
 
-  private async feed(
+  /** Adds changes to the sync feed in the caller's transaction (TECH-SPEC 5.7). */
+  async feed(
     ctx: WorkspaceContext,
     items: { collection: string; docId: string; op: 'upsert' | 'tombstone' }[],
     session: ClientSession,

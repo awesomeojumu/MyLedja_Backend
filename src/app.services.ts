@@ -17,6 +17,14 @@ import {
 } from './modules/ledger/ledger.repository.js';
 import { LedgerService } from './modules/ledger/ledger.service.js';
 import { BalanceCheck, balanceCheckJob, BalanceChecksRepository } from './modules/ledger/balance-check.js';
+import {
+  CategoriesRepository,
+  GroupsRepository,
+  PayeeMergesRepository,
+  PayeesRepository,
+  TagsRepository,
+} from './modules/categories/categories.repository.js';
+import { CategoriesService } from './modules/categories/categories.service.js';
 import { AuditRepository } from './modules/audit/audit.repository.js';
 import { CodesRepository, SessionsRepository, UsersRepository } from './modules/auth/auth.repository.js';
 import { AuthService, COOKIE_ABSOLUTE_MS } from './modules/auth/auth.service.js';
@@ -69,14 +77,28 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
+  const workspacesRepo = new WorkspacesRepository(db);
+  const categories = new CategoriesService(
+    database,
+    new CategoriesRepository(db),
+    new GroupsRepository(db),
+    new TagsRepository(db),
+    new PayeesRepository(db),
+    new PayeeMergesRepository(db),
+    ledger,
+    audit,
+    async (ctx, session) => (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN',
+    now,
+  );
   const workspaces = new WorkspacesService(
     database,
-    new WorkspacesRepository(db),
+    workspacesRepo,
     new MembershipsRepository(db),
     memberships,
     counters,
     audit,
     ledger,
+    categories,
   );
   const google =
     o.google !== undefined ? o.google : config.google ? new JoseGoogleVerifier(config.google.clientId) : null;
@@ -134,6 +156,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     memberships,
     workspaces,
     ledger,
+    categories,
     balanceCheck,
     auth,
     idempotency,

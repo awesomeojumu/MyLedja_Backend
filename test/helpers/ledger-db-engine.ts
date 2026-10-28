@@ -31,6 +31,13 @@ export async function dbEngine(t: TestApp, file: CasesFile): Promise<Engine & { 
     ledgerIds.set(a.key, doc._id);
   }
   for (const c of file.categories) {
+    if (c.system) {
+      const linked = await ledger.accounts.findOne(ctx, { systemKey: c.system, categoryId: { $ne: null } });
+      if (linked) {
+        categoryIds.set(c.key, linked.categoryId!);
+        continue;
+      }
+    }
     const categoryId = uuidv7();
     categoryIds.set(c.key, categoryId);
     if (c.system) await ledger.linkSystemCategory(ctx, c.system, categoryId);

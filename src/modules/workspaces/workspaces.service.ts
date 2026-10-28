@@ -8,6 +8,7 @@ import type { Database } from '../../db/client.js';
 import type { AuditRepository } from '../audit/audit.repository.js';
 import type { User } from '../auth/auth.contract.js';
 import type { UserDoc } from '../auth/auth.repository.js';
+import type { CategoriesService } from '../categories/categories.service.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
 import type { SetupBody, Workspace } from './workspaces.contract.js';
 import type {
@@ -29,6 +30,7 @@ export class WorkspacesService {
     private readonly counters: CountersRepository,
     private readonly audit: AuditRepository,
     private readonly ledger: LedgerService,
+    private readonly categories: CategoriesService,
   ) {}
 
   /** The Personal workspace made at sign-up (B0.9). Runs inside the caller's transaction. */
@@ -61,6 +63,7 @@ export class WorkspacesService {
     );
     await this.counters.create(ctx, { session });
     await this.ledger.seedSystemAccounts(ctx, doc.currency, session);
+    await this.categories.seedDefaults(ctx, doc.currency, session);
     await this.audit.record(
       ctx,
       { action: 'workspace.created', target: { collection: 'workspaces', id: workspaceId } },
@@ -125,6 +128,7 @@ export class WorkspacesService {
         { session },
       );
       if (!after) throw Errors.notFound();
+      await this.categories.ensureFromSetup(ctx, body.categories, after.currency, session);
       await this.audit.record(
         ctx,
         {

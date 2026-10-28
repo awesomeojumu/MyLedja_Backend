@@ -162,3 +162,17 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Ticking in Reconcile** saves the cleared mark at once; Cancel keeps the ticks but locks nothing.
 - Answer:
 - Status: open
+
+## Q-B15: Categories, tags and payees (B1.7)
+
+- Task: B1.7
+- Raised by: backend agent
+- Context and decision:
+  - **Defaults:** every new workspace gets an Income group (Other income, Interest earned, Investment income, Investment gain) and an Other group (Uncategorized, Interest and charges, Fees, Taxes). The built-in ones are linked to their system ledger accounts, and Uncategorized and Other income can't be deleted.
+  - **No backfill:** migration `0003` adds only validators and indexes. No workspace predates this release, so no defaults need seeding into existing ones.
+  - **Deleting a category** moves each live transaction as a correction (reversal plus a new event), keeping history. The moves run before the category is removed, so a failure part-way can simply be retried. Undo moves the same transactions back.
+  - **Tags and payee merges** change only descriptive fields, so they update transactions in place (with a change-feed entry) and don't need corrections. Undoing a merge returns each transaction to its original payee.
+  - **Welcome setup** makes its categories in the named groups, matched by starter key and then by name. A group named "Income" holds income categories.
+  - **Currency:** default categories use the workspace currency at sign-up (NGN). Changing currency in Welcome before any money is recorded is handled with accounts (B1.6).
+- Answer:
+- Status: open
