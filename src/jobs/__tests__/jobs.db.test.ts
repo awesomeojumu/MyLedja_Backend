@@ -102,4 +102,16 @@ describe('jobs runner (B0.10, TECH-SPEC 5.6)', () => {
     expect(job).toMatchObject({ status: 'queued' });
     expect(job!.runAt.getTime()).toBeGreaterThan(t.clock.now.getTime() + 3500_000);
   });
+
+  it('planning jobs repeat every 15 minutes (B2.2)', async () => {
+    const { jobs } = t.services;
+    await jobs.schedule();
+    expect(await t.db.collection('jobs').countDocuments({ name: 'bill-reminders' })).toBe(1);
+    expect(await t.db.collection('jobs').countDocuments({ name: 'recurring-daily' })).toBe(1);
+    t.clock.advance(1000);
+    expect(await jobs.tick()).toBe(true);
+    const reminder = await t.db.collection('jobs').findOne({ name: 'bill-reminders' });
+    expect(reminder).toMatchObject({ status: 'queued' });
+    expect(reminder!.repeatEverySeconds).toBe(900);
+  });
 });

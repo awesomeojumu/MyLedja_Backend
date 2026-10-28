@@ -278,4 +278,12 @@ export class WorkspaceIndex extends GlobalRepository<{ _id: string }> {
   async ids(): Promise<string[]> {
     return (await this.collection.find({}, { projection: { _id: 1 } }).toArray()).map((w) => w._id);
   }
+
+  async timeZones(): Promise<{ id: string; timeZone: string }[]> {
+    const rows = await this.collection.find({}, { projection: { _id: 1, timeZone: 1 } }).toArray();
+    return rows.map((w) => {
+      const row = w as { _id: string; timeZone: string };
+      return { id: row._id, timeZone: row.timeZone };
+    });
+  }
 }
