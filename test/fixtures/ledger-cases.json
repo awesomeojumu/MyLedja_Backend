@@ -5,7 +5,17 @@
   "accounts": [
     { "key": "gtbank", "kind": "asset", "accountType": "bank", "name": "GTBank Current" },
     { "key": "opay", "kind": "asset", "accountType": "wallet", "name": "OPay Wallet" },
-    { "key": "card", "kind": "liability", "accountType": "card", "name": "Zenith Credit Card" }
+    { "key": "card", "kind": "liability", "accountType": "card", "name": "Zenith Credit Card" },
+    { "key": "bank_loan", "kind": "liability", "accountType": "loan", "name": "GTBank Loan" },
+    {
+      "key": "tunde",
+      "kind": "asset",
+      "accountType": "receivable",
+      "name": "Tunde owes me",
+      "personDebt": "receivable"
+    },
+    { "key": "pension", "kind": "asset", "accountType": "pension", "name": "Pension RSA" },
+    { "key": "nhf", "kind": "asset", "accountType": "nhf", "name": "NHF" }
   ],
   "categories": [
     { "key": "salary", "kind": "income", "name": "Salary", "budgetable": true },
@@ -18,7 +28,8 @@
       "kind": "expense",
       "name": "Interest and charges",
       "system": "interest_and_charges"
-    }
+    },
+    { "key": "taxes", "kind": "expense", "name": "Taxes", "system": "taxes" }
   ],
   "cases": [
     {
@@ -189,6 +200,181 @@
       }
     },
     {
+      "id": 7,
+      "title": "Bank loan ₦500,000.00 received",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": {
+            "type": "loan_proceeds",
+            "accountId": "@gtbank",
+            "loanAccountId": "@bank_loan",
+            "amount": "50000000",
+            "date": "2026-10-01"
+          },
+          "expectLines": [
+            { "account": "@gtbank", "amount": "50000000" },
+            { "account": "@bank_loan", "amount": "-50000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "gtbank": "50000000", "bank_loan": "50000000" },
+        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "0"
+      }
+    },
+    {
+      "id": 8,
+      "title": "Loan payment ₦60,000.00 (₦50,000.00 principal, ₦10,000.00 interest)",
+      "steps": [
+        {
+          "post": {
+            "type": "loan_proceeds",
+            "accountId": "@gtbank",
+            "loanAccountId": "@bank_loan",
+            "amount": "50000000",
+            "date": "2026-10-01"
+          }
+        },
+        {
+          "ref": "e1",
+          "post": {
+            "type": "loan_repayment",
+            "loanAccountId": "@bank_loan",
+            "accountId": "@gtbank",
+            "principal": "5000000",
+            "interest": "1000000",
+            "date": "2026-11-05"
+          },
+          "expectLines": [
+            { "account": "@bank_loan", "amount": "5000000" },
+            { "account": "@interest_and_charges", "amount": "1000000" },
+            { "account": "@gtbank", "amount": "-6000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "gtbank": "44000000", "bank_loan": "45000000" },
+        "months": {
+          "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} },
+          "2026-11": { "income": "0", "spent": "1000000", "spentByCategory": { "interest_and_charges": "1000000" } }
+        },
+        "netWorth": "-1000000"
+      }
+    },
+    {
+      "id": 9,
+      "title": "Lend Tunde ₦100,000.00",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": {
+            "type": "lend",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "amount": "10000000",
+            "date": "2026-10-05"
+          },
+          "expectLines": [
+            { "account": "@tunde", "amount": "10000000" },
+            { "account": "@opay", "amount": "-10000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "opay": "-10000000", "tunde": "10000000" },
+        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "0"
+      }
+    },
+    {
+      "id": 10,
+      "title": "Tunde pays ₦42,000.00 (₦40,000.00 principal, ₦2,000.00 interest)",
+      "steps": [
+        {
+          "post": {
+            "type": "lend",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "amount": "10000000",
+            "date": "2026-10-05"
+          }
+        },
+        {
+          "ref": "e1",
+          "post": {
+            "type": "collect",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "principal": "4000000",
+            "interest": "200000",
+            "date": "2026-11-15"
+          },
+          "expectLines": [
+            { "account": "@opay", "amount": "4200000" },
+            { "account": "@tunde", "amount": "-4000000" },
+            { "account": "@system:interest_earned", "amount": "-200000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "opay": "-5800000", "tunde": "6000000" },
+        "months": {
+          "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} },
+          "2026-11": { "income": "200000", "spent": "0", "spentByCategory": {} }
+        },
+        "netWorth": "200000"
+      }
+    },
+    {
+      "id": 11,
+      "title": "Write off Tunde's ₦60,000.00",
+      "steps": [
+        {
+          "post": {
+            "type": "lend",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "amount": "10000000",
+            "date": "2026-10-05"
+          }
+        },
+        {
+          "post": {
+            "type": "collect",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "principal": "4000000",
+            "interest": "0",
+            "date": "2026-11-15"
+          }
+        },
+        {
+          "ref": "e1",
+          "post": {
+            "type": "write_off",
+            "receivableAccountId": "@tunde",
+            "amount": "6000000",
+            "date": "2026-12-01"
+          },
+          "expectLines": [
+            { "account": "@system:written_off", "amount": "6000000" },
+            { "account": "@tunde", "amount": "-6000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "opay": "-6000000", "tunde": "0" },
+        "months": {
+          "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} },
+          "2026-11": { "income": "0", "spent": "0", "spentByCategory": {} },
+          "2026-12": { "income": "0", "spent": "0", "spentByCategory": {} }
+        },
+        "netWorth": "-6000000"
+      }
+    },
+    {
       "id": 12,
       "title": "Split ₦9,000.00 into ₦3,000.00 Food and ₦6,000.00 Household",
       "steps": [
@@ -293,6 +479,42 @@
       "expect": {
         "balances": { "gtbank": "-3000000" },
         "eventCount": 1
+      }
+    },
+    {
+      "id": 18,
+      "title": "Gross salary ₦800,000.00 with PAYE, pension and NHF",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": {
+            "type": "salary_gross",
+            "accountId": "@gtbank",
+            "categoryId": "@salary",
+            "gross": "80000000",
+            "takeHome": "62000000",
+            "paye": "9600000",
+            "pensionAccountId": "@pension",
+            "pension": "6400000",
+            "nhfAccountId": "@nhf",
+            "nhf": "2000000",
+            "date": "2026-10-27"
+          },
+          "expectLines": [
+            { "account": "@gtbank", "amount": "62000000" },
+            { "account": "@taxes", "amount": "9600000" },
+            { "account": "@pension", "amount": "6400000" },
+            { "account": "@nhf", "amount": "2000000" },
+            { "account": "@salary", "amount": "-80000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "gtbank": "62000000", "pension": "6400000", "nhf": "2000000" },
+        "months": {
+          "2026-10": { "income": "80000000", "spent": "9600000", "spentByCategory": { "taxes": "9600000" } }
+        },
+        "netWorth": "70400000"
       }
     },
     {
@@ -489,6 +711,75 @@
             }
           }
         }
+      }
+    },
+    {
+      "id": 26,
+      "title": "Record as money back: ₦40,000.00 against ₦100,000.00 lent",
+      "steps": [
+        {
+          "post": {
+            "type": "lend",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "amount": "10000000",
+            "date": "2026-10-01"
+          }
+        },
+        {
+          "ref": "e1",
+          "post": {
+            "type": "collect",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "principal": "4000000",
+            "interest": "0",
+            "date": "2026-10-20"
+          },
+          "expectLines": [
+            { "account": "@opay", "amount": "4000000" },
+            { "account": "@tunde", "amount": "-4000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "opay": "-6000000", "tunde": "6000000" },
+        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "0"
+      }
+    },
+    {
+      "id": 27,
+      "title": "Same ₦40,000.00 treated as income instead",
+      "steps": [
+        {
+          "post": {
+            "type": "lend",
+            "receivableAccountId": "@tunde",
+            "accountId": "@opay",
+            "amount": "10000000",
+            "date": "2026-10-01"
+          }
+        },
+        {
+          "ref": "e1",
+          "post": {
+            "type": "income",
+            "accountId": "@opay",
+            "categoryId": "@salary",
+            "amount": "4000000",
+            "date": "2026-10-20"
+          },
+          "expectLines": [
+            { "account": "@opay", "amount": "4000000" },
+            { "account": "@salary", "amount": "-4000000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "opay": "-6000000", "tunde": "10000000" },
+        "months": { "2026-10": { "income": "4000000", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "4000000"
       }
     }
   ]

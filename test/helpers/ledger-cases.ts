@@ -60,7 +60,13 @@ export type LedgerCase = {
 
 export type CasesFile = {
   currency: string;
-  accounts: { key: string; kind: LedgerKind; accountType: string; name: string }[];
+  accounts: {
+    key: string;
+    kind: LedgerKind;
+    accountType: string;
+    name: string;
+    personDebt?: 'receivable' | 'payable';
+  }[];
   categories: { key: string; kind: 'income' | 'expense'; name: string; budgetable?: boolean; system?: SystemKey }[];
   cases: LedgerCase[];
 };
@@ -249,6 +255,7 @@ export function memoryEngine(file: CasesFile): Engine {
       systemKey: null,
       categoryId: null,
       archived: false,
+      personDebt: a.personDebt ?? null,
     };
     refs.set(ref.id, ref);
     realIds.set(a.key, ref.id);

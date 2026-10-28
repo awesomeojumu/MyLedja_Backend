@@ -25,10 +25,26 @@ export type Built = {
 /** True for a person's own accounts (banks, cards, loans and so on), as opposed to categories and system accounts. */
 const isReal = (a: AccountRef) => (a.kind === 'asset' || a.kind === 'liability') && a.systemKey === null;
 
+const isCash = (a: AccountRef) => isReal(a) && !a.personDebt;
+
+function receivable(r: Resolver, id: string, field: string): AccountRef {
+  const a = r.account(id);
+  if (!a || a.personDebt !== 'receivable') throw LedgerErrors.wrongAccountKind(field);
+  if (a.archived) throw LedgerErrors.archived(field);
+  return a;
+}
+
+function loanAccount(r: Resolver, id: string, field: string): AccountRef {
+  const a = r.account(id);
+  if (!a || a.kind !== 'liability' || a.personDebt) throw LedgerErrors.wrongAccountKind(field);
+  if (a.archived) throw LedgerErrors.archived(field);
+  return a;
+}
+
 function real(r: Resolver, id: string, field: string): AccountRef {
   const a = r.account(id);
   if (!a) throw LedgerErrors.accountMissing(field);
-  if (!isReal(a)) throw LedgerErrors.wrongAccountKind(field);
+  if (!isCash(a)) throw LedgerErrors.wrongAccountKind(field);
   if (a.archived) throw LedgerErrors.archived(field);
   return a;
 }
@@ -65,6 +81,18 @@ export function buildEvent(input: EventInput, r: Resolver): Built {
       return buildAdjustment(input, r);
     case 'refund':
       return buildRefund(input, r);
+    case 'loan_proceeds':
+      return buildLoanProceeds(input, r);
+    case 'loan_repayment':
+      return buildLoanRepayment(input, r);
+    case 'lend':
+      return buildLend(input, r);
+    case 'collect':
+      return buildCollect(input, r);
+    case 'write_off':
+      return buildWriteOff(input, r);
+    case 'salary_gross':
+      return buildSalaryGross(input, r);
   }
 }
 
@@ -150,6 +178,100 @@ function buildRefund(input: Extract<EventInput, { type: 'refund' }>, r: Resolver
   const amount = parseMinor(input.amount);
   if (orig.refunded + amount > cost) throw LedgerErrors.refundTooBig(cost - orig.refunded, acc.currency);
   return { type: 'refund', lines: [line(acc, amount), line(cat, -amount, acc.currency)], refundOf: input.refundOf };
+}
+
+/** E13: Dr cash · Cr loan liability. */
+function buildLoanProceeds(input: Extract<EventInput, { type: 'loan_proceeds' }>, r: Resolver): Built {
+  const cash = real(r, input.accountId, 'accountId');
+  const loan = loanAccount(r, input.loanAccountId, 'loanAccountId');
+  const amount = parseMinor(input.amount);
+  if (cash.currency !== loan.currency) throw LedgerErrors.currencyMismatch('loanAccountId');
+  return { type: 'loan_proceeds', lines: [line(cash, amount), line(loan, -amount, cash.currency)] };
+}
+
+/** E14: Dr loan (principal) · Dr interest expense · Cr cash. */
+function buildLoanRepayment(input: Extract<EventInput, { type: 'loan_repayment' }>, r: Resolver): Built {
+  const loan = loanAccount(r, input.loanAccountId, 'loanAccountId');
+  const cash = real(r, input.accountId, 'accountId');
+  const principal = parseMinor(input.principal);
+  const interest = parseMinor(input.interest ?? '0');
+  if (cash.currency !== loan.currency) throw LedgerErrors.currencyMismatch('loanAccountId');
+  const interestExpense = r.system('interest_and_charges');
+  const total = principal + interest;
+  return {
+    type: 'loan_repayment',
+    lines: [
+      line(loan, principal, cash.currency),
+      ...(interest > 0n ? [line(interestExpense, interest, cash.currency)] : []),
+      line(cash, -total),
+    ],
+  };
+}
+
+/** E15: Dr receivable · Cr cash. */
+function buildLend(input: Extract<EventInput, { type: 'lend' }>, r: Resolver): Built {
+  const recv = receivable(r, input.receivableAccountId, 'receivableAccountId');
+  const cash = real(r, input.accountId, 'accountId');
+  const amount = parseMinor(input.amount);
+  if (recv.currency !== cash.currency) throw LedgerErrors.currencyMismatch('receivableAccountId');
+  return { type: 'lend', lines: [line(recv, amount), line(cash, -amount, cash.currency)] };
+}
+
+/** E16: Dr cash · Cr receivable (principal) · Cr interest income. */
+function buildCollect(input: Extract<EventInput, { type: 'collect' }>, r: Resolver): Built {
+  const recv = receivable(r, input.receivableAccountId, 'receivableAccountId');
+  const cash = real(r, input.accountId, 'accountId');
+  const principal = parseMinor(input.principal);
+  const interest = parseMinor(input.interest ?? '0');
+  if (recv.currency !== cash.currency) throw LedgerErrors.currencyMismatch('receivableAccountId');
+  const interestIncome = r.system('interest_earned');
+  const total = principal + interest;
+  return {
+    type: 'collect',
+    lines: [
+      line(cash, total),
+      line(recv, -principal, cash.currency),
+      ...(interest > 0n ? [line(interestIncome, -interest, cash.currency)] : []),
+    ],
+  };
+}
+
+/** E17: Dr written off · Cr receivable. */
+function buildWriteOff(input: Extract<EventInput, { type: 'write_off' }>, r: Resolver): Built {
+  const recv = receivable(r, input.receivableAccountId, 'receivableAccountId');
+  const amount = parseMinor(input.amount);
+  const loss = r.system('written_off');
+  return { type: 'write_off', lines: [line(loss, amount, recv.currency), line(recv, -amount, recv.currency)] };
+}
+
+/** E24: gross salary with PAYE, pension and NHF. */
+function buildSalaryGross(input: Extract<EventInput, { type: 'salary_gross' }>, r: Resolver): Built {
+  const cash = real(r, input.accountId, 'accountId');
+  const income = category(r, input.categoryId, 'income');
+  const gross = parseMinor(input.gross);
+  const takeHome = parseMinor(input.takeHome);
+  const paye = parseMinor(input.paye);
+  const pension = parseMinor(input.pension);
+  const nhf = parseMinor(input.nhf);
+  const pensionAcc = r.account(input.pensionAccountId);
+  const nhfAcc = r.account(input.nhfAccountId);
+  if (!pensionAcc || pensionAcc.kind !== 'asset' || pensionAcc.personDebt) {
+    throw LedgerErrors.wrongAccountKind('pensionAccountId');
+  }
+  if (!nhfAcc || nhfAcc.kind !== 'asset' || nhfAcc.personDebt) throw LedgerErrors.wrongAccountKind('nhfAccountId');
+  const taxes = r.system('taxes');
+  const parts = takeHome + paye + pension + nhf;
+  if (parts !== gross) throw LedgerErrors.splitTotal(gross, parts, cash.currency);
+  return {
+    type: 'salary_gross',
+    lines: [
+      line(cash, takeHome),
+      line(taxes, paye, cash.currency),
+      line(pensionAcc, pension, cash.currency),
+      line(nhfAcc, nhf, cash.currency),
+      line(income, -gross, cash.currency),
+    ],
+  };
 }
 
 /** E25: the original's lines with every sign flipped. */

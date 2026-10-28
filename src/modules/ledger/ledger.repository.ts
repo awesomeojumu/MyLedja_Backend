@@ -41,6 +41,7 @@ export type LedgerAccountDoc = {
   archivedAt: Date | null;
   sortOrder: number;
   operationId: string | null;
+  personDebt?: 'receivable' | 'payable' | null;
   createdAt: Date;
   updatedAt: Date;
   version: number;
@@ -53,6 +54,7 @@ export const toRef = (a: LedgerAccountDoc): AccountRef => ({
   systemKey: a.systemKey,
   categoryId: a.categoryId,
   archived: a.archivedAt !== null,
+  personDebt: a.personDebt ?? null,
 });
 
 export class LedgerAccountsRepository extends BaseRepository<LedgerAccountDoc> {

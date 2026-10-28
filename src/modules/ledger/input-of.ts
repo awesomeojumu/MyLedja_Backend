@@ -79,5 +79,12 @@ export function inputOf(e: TransactionDoc, accountOf: (id: string) => AccountRef
     }
     case 'reversal':
       return null;
+    case 'loan_proceeds':
+    case 'loan_repayment':
+    case 'lend':
+    case 'collect':
+    case 'write_off':
+    case 'salary_gross':
+      return null;
   }
 }

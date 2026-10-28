@@ -102,6 +102,81 @@ export const RefundInput = z
     description: "E11: a seller giving money back. Lowers the purchase category's spending in the refund's month.",
   });
 
+export const LoanProceedsInput = z
+  .object({
+    type: z.literal('loan_proceeds'),
+    accountId: Uuid.meta({ description: 'Cash account that received the loan.' }),
+    loanAccountId: Uuid.meta({ description: 'Bank or person loan liability account.' }),
+    amount: PositiveMinor,
+    ...common,
+  })
+  .meta({ id: 'LoanProceedsInput', description: 'E13: borrowed money is not income (case 7).' });
+
+export const LoanRepaymentInput = z
+  .object({
+    type: z.literal('loan_repayment'),
+    loanAccountId: Uuid,
+    accountId: Uuid,
+    principal: PositiveMinor,
+    interest: z
+      .string({ error: AMOUNT_ERROR })
+      .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
+      .default('0')
+      .meta({ description: 'Interest portion; counts as spending (case 8).' }),
+    ...common,
+  })
+  .meta({ id: 'LoanRepaymentInput', description: 'E14: principal reduces the loan; interest is spending.' });
+
+export const LendInput = z
+  .object({
+    type: z.literal('lend'),
+    receivableAccountId: Uuid.meta({ description: '"They owe me" asset account.' }),
+    accountId: Uuid.meta({ description: 'Cash that left your pocket.' }),
+    amount: PositiveMinor,
+    ...common,
+  })
+  .meta({ id: 'LendInput', description: 'E15: lending is not spending (case 9).' });
+
+export const CollectInput = z
+  .object({
+    type: z.literal('collect'),
+    receivableAccountId: Uuid,
+    accountId: Uuid,
+    principal: PositiveMinor,
+    interest: z
+      .string({ error: AMOUNT_ERROR })
+      .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
+      .default('0')
+      .meta({ description: 'Interest counts as income (case 10).' }),
+    ...common,
+  })
+  .meta({ id: 'CollectInput', description: 'E16: money back from a person; principal is not income.' });
+
+export const WriteOffInput = z
+  .object({
+    type: z.literal('write_off'),
+    receivableAccountId: Uuid,
+    amount: PositiveMinor,
+    ...common,
+  })
+  .meta({ id: 'WriteOffInput', description: 'E17: written off receivable (case 11).' });
+
+export const SalaryGrossInput = z
+  .object({
+    type: z.literal('salary_gross'),
+    accountId: Uuid.meta({ description: 'Take-home to this account.' }),
+    categoryId: Uuid.meta({ description: 'Salary income category (gross credit).' }),
+    gross: PositiveMinor,
+    takeHome: PositiveMinor,
+    paye: PositiveMinor.meta({ description: 'PAYE to Taxes expense.' }),
+    pensionAccountId: Uuid,
+    pension: PositiveMinor,
+    nhfAccountId: Uuid,
+    nhf: PositiveMinor,
+    ...common,
+  })
+  .meta({ id: 'SalaryGrossInput', description: 'E24: gross salary with statutory deductions (case 18).' });
+
 export const EventInput = z
   .discriminatedUnion('type', [
     IncomeInput,
@@ -110,6 +185,12 @@ export const EventInput = z
     OpeningBalanceInput,
     BalanceAdjustmentInput,
     RefundInput,
+    LoanProceedsInput,
+    LoanRepaymentInput,
+    LendInput,
+    CollectInput,
+    WriteOffInput,
+    SalaryGrossInput,
   ])
   .meta({ id: 'EventInput' });
 
