@@ -9,6 +9,7 @@ import { RateLimitRepository } from './common/http/rate-limit.repository.js';
 import type { Database } from './db/client.js';
 import { JobRunner } from './jobs/runner.js';
 import { cleanExpiredJob } from './jobs/clean-expired.job.js';
+import { billRemindersJob, recurringDailyJob } from './jobs/planning.job.js';
 import { JobsRepository } from './jobs/jobs.repository.js';
 import {
   AccountBalancesRepository,
@@ -267,6 +268,9 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     now,
   );
   jobs.register(balanceCheckJob(balanceCheck));
+  const workspaceIndex = new WorkspaceIndex(db);
+  jobs.register(billRemindersJob({ workspaces: workspaceIndex }));
+  jobs.register(recurringDailyJob({ workspaces: workspaceIndex, now }));
 
   return {
     config,
