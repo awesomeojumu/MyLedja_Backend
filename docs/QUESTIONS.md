@@ -281,3 +281,17 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Recommendation: B — matches DESIGN routes (`/plan`, `/income`, `/goals`, `/debts`) and keeps income-stream fields off generic schedule bodies. OpenAPI tags: Plan, Goals, Debts, Income. Money-back lives under Debts (`/debts/money-back-suggestions`). Sync `OPERATION_TYPES` lists Phase 2 writes; push rejects them until module PRs wire handlers (Q-B22 pattern).
 - Answer:
 - Status: open
+
+## Q-B24: Phase 2 ledger events (E13–E17, E24)
+
+- Task: Phase 2 ledger PR
+- Raised by: backend agent
+- Documents: TECH-SPEC 6.2, 6.14 cases 7–11, 18, 26–27
+- Context and decision:
+  - New `EventInput` types: `loan_proceeds`, `loan_repayment`, `lend`, `collect`, `write_off`, `salary_gross` (E24).
+  - Person receivables use `ledger_accounts.personDebt: receivable` (payable later for borrow-from-person).
+  - `ledger-cases.json` extended with cases 7–11, 18, 26, 27; sha256 updated.
+  - Case 24 (pension rounding on ₦800,000.01) stays a money helper test — deferred to income module PR.
+  - E18/E19 (goals) still no ledger event for same-account earmarks; goal spending adds `goalId` on expenses in a later PR.
+- Answer:
+- Status: open

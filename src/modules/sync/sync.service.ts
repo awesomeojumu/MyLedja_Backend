@@ -21,11 +21,15 @@ import {
   UpdateTransactionBody,
 } from '../transactions/transactions.contract.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
+import type { SchedulesService } from '../schedules/schedules.service.js';
+import { scheduleRoutes } from '../schedules/schedules.contract.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
 const PREVIOUS_SCHEMA_VERSION = 0;
 const REVERSAL_SUFFIX = ':reversal';
+const CreateScheduleBody = scheduleRoutes.create.body!;
+const UpdateScheduleBody = scheduleRoutes.update.body!;
 const TagCreateBody = z.object({ id: Uuid.optional(), name: z.string().trim().min(1).max(40) });
 
 type PushBody = {
@@ -45,6 +49,7 @@ export class SyncService {
     private readonly accounts: AccountsService,
     private readonly categories: CategoriesService,
     private readonly budget: BudgetService,
+    private readonly schedules: SchedulesService,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -282,8 +287,15 @@ export class SyncService {
           duplicate: false,
         };
       }
-      case 'schedule.create':
-      case 'schedule.update':
+      case 'schedule.create': {
+        const body = CreateScheduleBody.parse(payload);
+        return { result: await this.schedules.create(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'schedule.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the schedule to update.');
+        const body = UpdateScheduleBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.schedules.update(ctx, targetId, body), duplicate: false };
+      }
       case 'goal.create':
       case 'goal.update':
       case 'goal.allocate':
@@ -330,6 +342,14 @@ export class SyncService {
           if (!m) return null;
           return m.categories.find((c) => c.categoryId === categoryId) ?? m;
         }
+        case 'schedules':
+          return await this.schedules.get(ctx, row.docId);
+        case 'occurrences':
+          try {
+            return await this.schedules.getOccurrence(ctx, row.docId);
+          } catch {
+            return null;
+          }
         default:
           return null;
       }
