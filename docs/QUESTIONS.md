@@ -218,3 +218,16 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Fix:** the contract interceptor now sets `req.operationId` from `X-Operation-Id` so HTTP writes reach the ledger with the real id (accounts had been posting openings as `undefined:opening`).
 - Answer:
 - Status: open
+
+## Q-B19: Budgets (B1.9)
+
+- Task: B1.9
+- Raised by: backend agent
+- Context and decision:
+  - **Storage:** `budget_months` holds `{ workspaceId, month, categoryId, assignedMinor }` as bigint (same as `account_balances`), unique on `(workspaceId, month, categoryId)`. Id is `{categoryId}:{month}`.
+  - **Formulas:** reads go through `ledger/read.budgetMonths` + `monthFigures` over `period_totals`. History starts at the earlier of the first assignment, the first period total, or the requested window, so envelope carry and overspend into `left_to_plan` stay correct.
+  - **Assign `carryOver`:** optional flag updates the category document (tracking style). Envelope responses always report `carryOver: true`.
+  - **Move / cover:** change assigned amounts; refused when the source can't cover.
+  - **Templates:** Phase 2 (B2.7).
+- Answer:
+- Status: open
