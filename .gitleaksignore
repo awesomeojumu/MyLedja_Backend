@@ -1,0 +1,2 @@
+# Fake keys used only by tests; never valid anywhere.
+0e51cc779d46748a440a7f7d1dd707a6cbb4753c:test/helpers/test-config.ts:generic-api-key:10
