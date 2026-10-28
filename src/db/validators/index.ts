@@ -136,6 +136,7 @@ export const VALIDATORS: Record<string, Document> = {
     archivedAt: nullable(date),
     sortOrder: int,
     operationId: nullable(str),
+    personDebt: { enum: ['receivable', 'payable', null] },
   }),
   category_groups: record(['name', 'kind', 'sortOrder'], {
     name: str,
@@ -271,6 +272,35 @@ export const VALIDATORS: Record<string, Document> = {
       expiresAt: date,
     },
   },
+  schedules: record(
+    ['kind', 'name', 'amountMinor', 'amountApproximate', 'recurrence', 'startDate', 'end', 'autoPost', 'status'],
+    {
+      kind: { enum: ['bill', 'subscription', 'transfer', 'income'] },
+      name: str,
+      payeeId: nullable(uuid),
+      accountId: nullable(uuid),
+      categoryId: nullable(uuid),
+      amountMinor: str,
+      amountApproximate: { bsonType: 'bool' },
+      recurrence: { bsonType: 'object' },
+      startDate: localDate,
+      end: { bsonType: 'object' },
+      autoPost: { bsonType: 'bool' },
+      reminder: { bsonType: ['object', 'null'] },
+      nextDate: nullable(localDate),
+      status: { enum: ['active', 'paused', 'cancelled'] },
+      cancelledAt: nullable(date),
+      operationId: nullable(str),
+    },
+  ),
+  occurrences: record(['scheduleId', 'date', 'amountMinor', 'status'], {
+    scheduleId: uuid,
+    date: localDate,
+    amountMinor: str,
+    status: { enum: ['scheduled', 'due', 'overdue', 'paid', 'received', 'missed', 'skipped'] },
+    matchedTransactionId: nullable(uuid),
+    paidAt: nullable(date),
+  }),
 };
 
 /** Creates each collection with its validator, or updates the validator if it exists. Safe to run twice. */

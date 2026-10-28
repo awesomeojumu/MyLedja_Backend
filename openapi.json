@@ -956,6 +956,81 @@
         ],
         "additionalProperties": false
       },
+      "CollectInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collect"
+          },
+          "receivableAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "principal": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "interest": {
+            "default": "0",
+            "description": "Interest counts as income (case 10).",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,17})$"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "receivableAccountId",
+          "accountId",
+          "principal",
+          "date"
+        ],
+        "description": "E16: money back from a person; principal is not income."
+      },
       "ColumnMapping": {
         "type": "object",
         "properties": {
@@ -2294,6 +2369,24 @@
           },
           {
             "$ref": "#/components/schemas/RefundInput"
+          },
+          {
+            "$ref": "#/components/schemas/LoanProceedsInput"
+          },
+          {
+            "$ref": "#/components/schemas/LoanRepaymentInput"
+          },
+          {
+            "$ref": "#/components/schemas/LendInput"
+          },
+          {
+            "$ref": "#/components/schemas/CollectInput"
+          },
+          {
+            "$ref": "#/components/schemas/WriteOffInput"
+          },
+          {
+            "$ref": "#/components/schemas/SalaryGrossInput"
           }
         ]
       },
@@ -3695,6 +3788,77 @@
           "date"
         ]
       },
+      "LendInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "lend"
+          },
+          "receivableAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "\"They owe me\" asset account."
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Cash that left your pocket."
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "receivableAccountId",
+          "accountId",
+          "amount",
+          "date"
+        ],
+        "description": "E15: lending is not spending (case 9)."
+      },
       "LinkIncomeToStreamBody": {
         "type": "object",
         "properties": {
@@ -3712,6 +3876,152 @@
         "required": [
           "transactionId"
         ]
+      },
+      "LoanProceedsInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "loan_proceeds"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Cash account that received the loan."
+          },
+          "loanAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Bank or person loan liability account."
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "accountId",
+          "loanAccountId",
+          "amount",
+          "date"
+        ],
+        "description": "E13: borrowed money is not income (case 7)."
+      },
+      "LoanRepaymentInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "loan_repayment"
+          },
+          "loanAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "principal": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "interest": {
+            "default": "0",
+            "description": "Interest portion; counts as spending (case 8).",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,17})$"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "loanAccountId",
+          "accountId",
+          "principal",
+          "date"
+        ],
+        "description": "E14: principal reduces the loan; interest is spending."
       },
       "MarkOccurrencePaidBody": {
         "type": "object",
@@ -5003,6 +5313,113 @@
           "daysBefore"
         ]
       },
+      "SalaryGrossInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "salary_gross"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Take-home to this account."
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Salary income category (gross credit)."
+          },
+          "gross": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "takeHome": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "paye": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "PAYE to Taxes expense."
+          },
+          "pensionAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "pension": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "nhfAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "nhf": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "accountId",
+          "categoryId",
+          "gross",
+          "takeHome",
+          "paye",
+          "pensionAccountId",
+          "pension",
+          "nhfAccountId",
+          "nhf",
+          "date"
+        ],
+        "description": "E24: gross salary with statutory deductions (case 18)."
+      },
       "Schedule": {
         "type": "object",
         "properties": {
@@ -5377,6 +5794,12 @@
               "opening_balance",
               "balance_adjustment",
               "refund",
+              "loan_proceeds",
+              "loan_repayment",
+              "lend",
+              "collect",
+              "write_off",
+              "salary_gross",
               "reversal"
             ]
           },
@@ -6368,6 +6791,69 @@
           "transaction"
         ],
         "additionalProperties": false
+      },
+      "WriteOffInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "write_off"
+          },
+          "receivableAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "receivableAccountId",
+          "amount",
+          "date"
+        ],
+        "description": "E17: written off receivable (case 11)."
       }
     }
   },
@@ -16453,6 +16939,12 @@
                   "opening_balance",
                   "balance_adjustment",
                   "refund",
+                  "loan_proceeds",
+                  "loan_repayment",
+                  "lend",
+                  "collect",
+                  "write_off",
+                  "salary_gross",
                   "reversal"
                 ]
               }

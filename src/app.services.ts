@@ -48,6 +48,8 @@ import { ReconcileService } from './modules/reconcile/reconcile.service.js';
 import { ImportsRepository } from './modules/imports/imports.repository.js';
 import { ImportsService } from './modules/imports/imports.service.js';
 import { SyncService } from './modules/sync/sync.service.js';
+import { SchedulesRepository, OccurrencesRepository } from './modules/schedules/schedules.repository.js';
+import { SchedulesService } from './modules/schedules/schedules.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -148,7 +150,16 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     config,
     now,
   );
-  const sync = new SyncService(counters, changes, ledger, transactions, accounts, categories, budget, now);
+  const schedules = new SchedulesService(
+    database,
+    new SchedulesRepository(db),
+    new OccurrencesRepository(db),
+    ledger,
+    transactions,
+    audit,
+    now,
+  );
+  const sync = new SyncService(counters, changes, ledger, transactions, accounts, categories, budget, schedules, now);
   const workspaces = new WorkspacesService(
     database,
     workspacesRepo,
@@ -222,6 +233,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     reconcile,
     budget,
     imports,
+    schedules,
     sync,
     balanceCheck,
     auth,
