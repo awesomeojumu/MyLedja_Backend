@@ -101,11 +101,15 @@ let people = 0;
 
 /** Signs up and confirms a new person; returns their tokens and Personal workspace. */
 export async function signUp(t: TestApp, name = 'Ada'): Promise<SignedIn> {
-  const email = `${name.toLowerCase()}.${people++}@example.test`;
+  const n = people++;
+  const email = `${name.toLowerCase()}.${n}@example.test`;
   const password = 'a-long-unusual-passphrase';
+  // Unique IP so bulk six-pack suites don't trip signup-ip / verify-ip rate limits.
+  const remoteAddress = `10.${Math.floor(n / 250) % 256}.${n % 250}.${1 + (n % 200)}`;
   const res = await t.app.inject({
     method: 'POST',
     url: '/v1/auth/sign-up',
+    remoteAddress,
     headers: op(),
     payload: { name, email, password, termsAccepted: true },
   });
@@ -113,6 +117,7 @@ export async function signUp(t: TestApp, name = 'Ada'): Promise<SignedIn> {
   const verified = await t.app.inject({
     method: 'POST',
     url: '/v1/auth/verify-email',
+    remoteAddress,
     headers: op(),
     payload: { email, code: t.outbox.lastCode(email), deviceName: 'Test phone' },
   });
