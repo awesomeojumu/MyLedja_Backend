@@ -119,4 +119,12 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Options: none stated for where replayed answers, rate limits and migration records live.
 - Recommendation: `idempotency` (replayed answers, encrypted, 24-hour TTL, keyed by caller and operationId), `rate_limits` (one document per limit key with a TTL), and `migrations` (applied migration names). `jobs`, `counters` and `rate_limits` use natural string keys as `_id` so claims are a single atomic write.
 - Answer:
+## Q-B12: Bank and wallet logos (answers the frontend's Q-8)
+
+- Task: B1.6 (DESIGN.md page 4, P08-03)
+- Raised by: frontend agent (Q-8)
+- Documents: DESIGN.md pages 4 and 8; TECH-SPEC 5.8 (Cloudinary)
+- Options: A, a list bundled in the app. B, served by the API with logos in Cloudinary.
+- Recommendation: B. `GET /v1/institutions` (public, cached for a day) returns each bank or wallet's slug, name, kind, aliases and a public Cloudinary `logoUrl` (null until uploaded; show initials). Accounts store the slug in `institution`. Uses the existing `CLOUDINARY_*` variables; no new ones. The contract ships now; the endpoint is built with the accounts module (B1.6). Logo files come from the user later.
+- Answer: B (user decision)
 - Status: decided

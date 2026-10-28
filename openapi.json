@@ -118,6 +118,75 @@
         ],
         "additionalProperties": false
       },
+      "Institution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable slug, for example \"gtbank\". Accounts store it as `institution`."
+          },
+          "name": {
+            "type": "string",
+            "description": "As people know it, for example \"GTBank\"."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bank",
+              "wallet",
+              "microfinance",
+              "other"
+            ]
+          },
+          "logoUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A public Cloudinary image (square, transparent background). Null until a logo is uploaded: show the initials."
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Other names it goes by, for search (\"Guaranty Trust Bank\")."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "logoUrl",
+          "aliases"
+        ],
+        "additionalProperties": false
+      },
+      "InstitutionList": {
+        "type": "object",
+        "properties": {
+          "institutions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Institution"
+            }
+          },
+          "version": {
+            "type": "string",
+            "description": "Changes whenever the list or a logo changes, so the app can cache the list."
+          }
+        },
+        "required": [
+          "institutions",
+          "version"
+        ],
+        "additionalProperties": false
+      },
       "PublicConfig": {
         "type": "object",
         "properties": {
@@ -1188,6 +1257,29 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/institutions": {
+      "get": {
+        "operationId": "listInstitutions",
+        "tags": [
+          "Institutions"
+        ],
+        "summary": "Banks and wallets, with logos",
+        "description": "The banks and wallets people choose from when adding an account (Welcome step 3, Add account). Served by the API with logos in Cloudinary, so the list grows without an app update. Public and cacheable (`Cache-Control: public, max-age=86400`). Logos arrive later; until then `logoUrl` is null.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstitutionList"
                 }
               }
             }
