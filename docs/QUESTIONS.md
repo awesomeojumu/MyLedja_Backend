@@ -145,3 +145,20 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **`ledger-cases.json`** lives in `test/fixtures/` with its sha256. The app copies both files byte for byte.
 - Answer:
 - Status: open
+
+## Q-B14: Phase 1 API contract choices
+
+- Task: B1.6 to B1.13
+- Raised by: backend agent
+- Documents: TECH-SPEC 5.3, 8, 9; DESIGN.md pages 5 to 11 and 24
+- Options and recommendations (all in effect; the contract is in `openapi.json`):
+  - **Device-made ids.** Every create takes an optional `id` (UUID v7), so the app can refer to records offline before they sync.
+  - **Edits carry `baseVersion`.** An old one answers 409 `already_changed` with `current`.
+  - **Uncategorized.** Every workspace gets an "Uncategorized" spending category and an "Other income" category (group "Other"), so imported or quick-added money always lands somewhere and can be sorted later.
+  - **CSV upload** sends the text in the request body (up to 2 MB). The server keeps a private copy in Cloudinary when it's set up; without Cloudinary, imports still work and the file isn't kept. Excel, PDF and other formats come in Phase 4.
+  - **Undo** for deleting a category, merging payees and importing uses an id returned by the action (`undoId`, `mergeId`, the import id). Deleting a transaction is undone by posting it again.
+  - **Transfer matching** reverses the two one-sided transactions and posts one transfer, dated like the money out.
+  - **Sync** operation types mirror the routes, and each payload is that route's body. Tombstones are kept for 180 days; a device further behind gets `reset: true`.
+  - **Ticking in Reconcile** saves the cleared mark at once; Cancel keeps the ticks but locks nothing.
+- Answer:
+- Status: open
