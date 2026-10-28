@@ -50,6 +50,26 @@ describe('POST /v1/auth/sign-up', () => {
     expect(short.json()).toMatchObject({ field: 'password', message: 'Use at least 10 characters' });
   });
 
+  it('a rate limit says how long to wait, not always "a minute"', async () => {
+    const email = freshEmail();
+    const attempt = () =>
+      t.app.inject({
+        method: 'POST',
+        url: '/v1/auth/sign-up',
+        remoteAddress: '203.0.113.7',
+        payload: { name: 'Ada', email, password: PASSWORD, termsAccepted: true },
+        headers: op(),
+      });
+    for (let i = 0; i < 5; i++) await attempt();
+    const limited = await attempt();
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json()).toEqual({
+      code: 'too_many_attempts',
+      message: 'Too many tries. Wait 60 minutes and try again.',
+      retryAfterSeconds: 3600,
+    });
+  });
+
   it('refuses sign-up without consent to the terms (B3.8)', async () => {
     const res = await post('/v1/auth/sign-up', {
       name: 'A',

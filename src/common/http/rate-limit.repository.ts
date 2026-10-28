@@ -32,7 +32,12 @@ export class RateLimitRepository extends GlobalRepository<RateDoc> {
       doc = { _id: key, ...fresh };
     }
     if (doc.count > limit) {
-      throw Errors.tooMany(Math.max(1, Math.ceil((doc.expiresAt.getTime() - now.getTime()) / 1000)));
+      const seconds = Math.max(1, Math.ceil((doc.expiresAt.getTime() - now.getTime()) / 1000));
+      const minutes = Math.ceil(seconds / 60);
+      throw Errors.tooMany(
+        seconds,
+        `Too many tries. Wait ${minutes <= 1 ? '1 minute' : `${minutes} minutes`} and try again.`,
+      );
     }
   }
 
