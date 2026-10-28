@@ -122,10 +122,12 @@ export type BudgetInput = {
   months: readonly string[];
   categoryIds: readonly string[];
   assigned(categoryId: string, month: string): bigint;
-  /** Net spending: expense lines minus refunds dated in the month. */
+  /** Net spending: expense lines minus refunds dated in the month. E19 goal spend is excluded. */
   activity(categoryId: string, month: string): bigint;
   /** Income lines in budgetable categories, received in the month. */
   budgetableIncome(month: string): bigint;
+  /** E18 earmarks made in the month (TECH-SPEC 6.6 left_to_plan). Spends from goals do not count. */
+  goalAllocations?(month: string): bigint;
   /** Tracking style: categories whose carry-over switch is on. */
   carriesOver?(categoryId: string): boolean;
 };
@@ -168,7 +170,12 @@ export function budgetMonths(input: BudgetInput): BudgetMonth[] {
     }
     const overspentFromLastMonth = input.style === 'envelope' ? overspent : 0n;
     if (input.style === 'envelope') {
-      leftToPlan = input.budgetableIncome(month) + leftToPlan - assignedTotal - overspent;
+      leftToPlan =
+        input.budgetableIncome(month) +
+        leftToPlan -
+        assignedTotal -
+        overspent -
+        (input.goalAllocations?.(month) ?? 0n);
       overspent = overspentNow;
     }
     out.push({

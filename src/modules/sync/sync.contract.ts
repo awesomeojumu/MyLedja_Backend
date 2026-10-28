@@ -23,6 +23,7 @@ export const OPERATION_TYPES = [
   'goal.create',
   'goal.update',
   'goal.allocate',
+  'goal.spend',
   'debt.lend',
   'debt.borrow',
   'debt.payment',

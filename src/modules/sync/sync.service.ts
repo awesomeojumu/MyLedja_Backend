@@ -43,6 +43,7 @@ const WriteOffBody = debtRoutes.writeOff.body!;
 const CreateGoalBody = goalRoutes.create.body!;
 const UpdateGoalBody = goalRoutes.update.body!;
 const AllocateGoalBody = goalRoutes.allocate.body!;
+const SpendGoalBody = goalRoutes.spend.body!;
 const CreateIncomeStreamBody = incomeRoutes.createStream.body!;
 const UpdateIncomeStreamBody = incomeRoutes.updateStream.body!;
 const TagCreateBody = z.object({ id: Uuid.optional(), name: z.string().trim().min(1).max(40) });
@@ -327,6 +328,11 @@ export class SyncService {
         if (!targetId) throw Errors.validation('targetId', 'Choose the goal to fund.');
         const body = AllocateGoalBody.parse(payload);
         return { result: await this.goals.allocate(ctx, targetId, body, op.operationId), duplicate: false };
+      }
+      case 'goal.spend': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the goal to spend from.');
+        const body = SpendGoalBody.parse(payload);
+        return { result: await this.goals.spend(ctx, targetId, body, op.operationId), duplicate: false };
       }
       case 'debt.lend': {
         const body = LendBody.parse(payload);

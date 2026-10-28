@@ -40,4 +40,9 @@ export class GoalsController {
   setSchedule(@In() i: Input<typeof r.setSchedule>, @Req() req: Req): Promise<Output<typeof r.setSchedule>> {
     return this.s.goals.setSchedule(req.ctx!, i.params.goalId, i.body);
   }
+
+  @Route(r.spend)
+  spend(@In() i: Input<typeof r.spend>, @Req() req: Req): Promise<Output<typeof r.spend>> {
+    return this.s.goals.spend(req.ctx!, i.params.goalId, i.body, req.operationId!);
+  }
 }

@@ -355,6 +355,7 @@ export const VALIDATORS: Record<string, Document> = {
     amountMinor: str,
     fromAccountId: nullable(uuid),
     transactionId: nullable(uuid),
+    kind: { enum: ['allocate', 'spend'] },
   }),
   income_streams: record(['scheduleId', 'streamKind', 'taxClass', 'countInBudget', 'recordAs'], {
     scheduleId: uuid,

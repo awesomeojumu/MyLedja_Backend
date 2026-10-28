@@ -34,6 +34,8 @@ export type GoalAllocationDoc = {
   amountMinor: string;
   fromAccountId: string | null;
   transactionId: string | null;
+  /** allocate (E18) or spend (E19). Older rows without kind are treated as allocate. */
+  kind?: 'allocate' | 'spend';
   createdAt: Date;
   updatedAt: Date;
   version: number;

@@ -9,7 +9,8 @@ import type { CategoriesRepository } from '../categories/categories.repository.j
 import type { CategoriesService } from '../categories/categories.service.js';
 import type { LedgerAccountDoc } from '../ledger/ledger.repository.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
-import { budgetMonths, monthFigures, monthRange, netWorth, type PeriodTotal } from '../ledger/read.js';
+import { budgetMonths, monthFigures, monthOf, monthRange, netWorth, type PeriodTotal } from '../ledger/read.js';
+import type { GoalAllocationsRepository } from '../goals/goals.repository.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import type { WorkspacesRepository } from '../workspaces/workspaces.repository.js';
 import type { BudgetCategory, BudgetMonth, BudgetTemplate, Dashboard } from './budget.contract.js';
@@ -44,6 +45,7 @@ export class BudgetService {
     private readonly categoriesRepo: CategoriesRepository,
     private readonly workspaces: WorkspacesRepository,
     private readonly transactions: TransactionsService,
+    private readonly goalAllocations: GoalAllocationsRepository,
     private readonly audit: AuditRepository,
     private readonly now: () => Date = () => new Date(),
   ) {}
@@ -452,6 +454,8 @@ export class BudgetService {
         .filter(Boolean) as string[],
     );
     const carry = new Map(cats.map((c) => [c.id, c.carryOver]));
+    const goalSpendByCatMonth = await this.goalSpendByCategoryMonth(ctx, historyStart, windowEnd, session);
+    const earmarksByMonth = await this.goalEarmarksByMonth(ctx, historyStart, windowEnd, session);
     const raw = budgetMonths({
       style,
       months,
@@ -460,7 +464,9 @@ export class BudgetService {
       activity: (id, m) => {
         const ledgerId = catLedgerId.get(id);
         if (!ledgerId) return 0n;
-        return monthFigures(totals, m, accountOf).spentByAccount.get(ledgerId) ?? 0n;
+        const rawSpent = monthFigures(totals, m, accountOf).spentByAccount.get(ledgerId) ?? 0n;
+        // E19: goal spend posts to the category but is not overspending (TECH-SPEC 6.6).
+        return rawSpent - (goalSpendByCatMonth.get(`${id}|${m}`) ?? 0n);
       },
       budgetableIncome: (m) => {
         let sum = 0n;
@@ -469,6 +475,7 @@ export class BudgetService {
         }
         return sum;
       },
+      goalAllocations: (m) => earmarksByMonth.get(m) ?? 0n,
       carriesOver: (id) => carry.get(id) ?? false,
     });
 
@@ -513,6 +520,55 @@ export class BudgetService {
           leftToSpend: toMinorString(leftToSpend),
         };
       });
+  }
+
+  /** Category activity to exclude for E19 goal spends (TECH-SPEC 6.6). */
+  private async goalSpendByCategoryMonth(
+    ctx: WorkspaceContext,
+    fromMonth: string,
+    toMonth: string,
+    session?: ClientSession,
+  ): Promise<Map<string, bigint>> {
+    const from = `${fromMonth}-01`;
+    const to = `${toMonth}-31`;
+    const events = await this.ledger.transactions.find(
+      ctx,
+      {
+        status: 'posted',
+        type: 'expense',
+        'links.goalId': { $type: 'string' },
+        date: { $gte: from, $lte: to },
+      } as never,
+      { session },
+    );
+    const out = new Map<string, bigint>();
+    for (const e of events) {
+      const m = monthOf(e.date);
+      for (const l of e.lines) {
+        if (!l.categoryId || l.amountMinor <= 0n) continue;
+        const key = `${l.categoryId}|${m}`;
+        out.set(key, (out.get(key) ?? 0n) + l.amountMinor);
+      }
+    }
+    return out;
+  }
+
+  /** E18 earmarks in each month for left_to_plan (TECH-SPEC 6.6). */
+  private async goalEarmarksByMonth(
+    ctx: WorkspaceContext,
+    fromMonth: string,
+    toMonth: string,
+    session?: ClientSession,
+  ): Promise<Map<string, bigint>> {
+    const rows = await this.goalAllocations.find(ctx, {}, { session });
+    const out = new Map<string, bigint>();
+    for (const a of rows) {
+      if (a.kind === 'spend') continue;
+      const m = monthOf(a.date);
+      if (m < fromMonth || m > toMonth) continue;
+      out.set(m, (out.get(m) ?? 0n) + BigInt(a.amountMinor));
+    }
+    return out;
   }
 
   private async historyStart(ctx: WorkspaceContext, fallback: string, session?: ClientSession) {
