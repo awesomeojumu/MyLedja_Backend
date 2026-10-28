@@ -9,8 +9,7 @@ const root = resolve(import.meta.dirname, '..');
 const cases = resolve(root, 'test/fixtures/ledger-cases.json');
 const sum = resolve(root, 'test/fixtures/ledger-cases.sha256');
 const sibling =
-  process.env.LEDGER_CASES_SIBLING ??
-  resolve(root, '../myledja_frontend/test/fixtures/ledger-cases.json');
+  process.env.LEDGER_CASES_SIBLING ?? resolve(root, '../myledja_frontend/test/fixtures/ledger-cases.json');
 
 if (!existsSync(cases) && !existsSync(sum)) {
   console.log('cases:check: no ledger cases yet (they arrive in Phase 1).');
