@@ -399,6 +399,21 @@ export class SyncService {
       case 'holding.prices': {
         return { result: await this.investments.setPrices(ctx, SetPricesBody.parse(payload)), duplicate: false };
       }
+      case 'holding.archive': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the holding to remove.');
+        return { result: await this.investments.archive(ctx, targetId), duplicate: false };
+      }
+      case 'holding.price.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the holding.');
+        const date = z.string().parse(payload.date);
+        await this.investments.deletePrice(ctx, targetId, date);
+        return { result: null, duplicate: false };
+      }
+      case 'exchange_rate.delete': {
+        const body = SetExchangeRateBody.pick({ currency: true, date: true }).parse(payload);
+        await this.currencies.remove(ctx, body.currency, body.date);
+        return { result: null, duplicate: false };
+      }
       case 'exchange_rate.set': {
         const body = SetExchangeRateBody.parse(payload);
         return { result: await this.currencies.set(ctx, body), duplicate: false };
@@ -414,6 +429,16 @@ export class SyncService {
           baseVersion: baseVersion ?? payload.baseVersion,
         });
         return { result: await this.reports.updateDashboard(ctx, targetId, body), duplicate: false };
+      }
+      case 'report_dashboard.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the dashboard to delete.');
+        await this.reports.deleteDashboard(ctx, targetId);
+        return { result: null, duplicate: false };
+      }
+      case 'saved_report.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the report to delete.');
+        await this.reports.deleteSaved(ctx, targetId);
+        return { result: null, duplicate: false };
       }
       case 'saved_report.create': {
         const body = reportRoutes.createSaved.body!.parse(payload);
