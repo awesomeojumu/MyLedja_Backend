@@ -356,6 +356,19 @@ export const VALIDATORS: Record<string, Document> = {
     fromAccountId: nullable(uuid),
     transactionId: nullable(uuid),
   }),
+  income_streams: record(['scheduleId', 'streamKind', 'taxClass', 'countInBudget', 'recordAs'], {
+    scheduleId: uuid,
+    streamKind: { enum: ['regular', 'varies', 'irregular', 'passive'] },
+    employerOrSource: nullable(str),
+    taxClass: { enum: ['paye', 'self_employed', 'rental', 'investment', 'other'] },
+    countInBudget: { bsonType: 'bool' },
+    recordAs: { enum: ['take_home', 'gross'] },
+    grossAmountMinor: nullable(str),
+    deductions: { bsonType: 'array' },
+    routing: { bsonType: 'array' },
+    amountRange: { bsonType: ['object', 'null'] },
+    linkedTransactionIds: { bsonType: 'array', items: uuid },
+  }),
 };
 
 /** Creates each collection with its validator, or updates the validator if it exists. Safe to run twice. */

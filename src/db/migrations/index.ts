@@ -217,7 +217,15 @@ const m0010: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010];
+const m0011: Migration = {
+  name: '0011-income-streams',
+  async up(db) {
+    await installValidators(db);
+    await db.collection('income_streams').createIndex({ workspaceId: 1, scheduleId: 1 }, { unique: true });
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {

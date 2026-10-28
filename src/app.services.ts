@@ -54,6 +54,8 @@ import { DebtsRepository } from './modules/debts/debts.repository.js';
 import { DebtsService } from './modules/debts/debts.service.js';
 import { GoalsRepository, GoalAllocationsRepository } from './modules/goals/goals.repository.js';
 import { GoalsService } from './modules/goals/goals.service.js';
+import { IncomeStreamsRepository } from './modules/income/income.repository.js';
+import { IncomeService } from './modules/income/income.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -181,6 +183,15 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
+  const income = new IncomeService(
+    database,
+    new IncomeStreamsRepository(db),
+    schedules,
+    transactions,
+    ledger,
+    audit,
+    now,
+  );
   const sync = new SyncService(
     counters,
     changes,
@@ -192,6 +203,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     schedules,
     debts,
     goals,
+    income,
     now,
   );
   const workspaces = new WorkspacesService(
@@ -270,6 +282,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     schedules,
     debts,
     goals,
+    income,
     sync,
     balanceCheck,
     auth,

@@ -15,6 +15,7 @@ import { ReconcileController } from './modules/reconcile/reconcile.controller.js
 import { SchedulesController } from './modules/schedules/schedules.controller.js';
 import { DebtsController } from './modules/debts/debts.controller.js';
 import { GoalsController } from './modules/goals/goals.controller.js';
+import { IncomeController } from './modules/income/income.controller.js';
 import { SyncController } from './modules/sync/sync.controller.js';
 import { TransactionsController } from './modules/transactions/transactions.controller.js';
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
@@ -42,6 +43,7 @@ export class AppModule {
         SchedulesController,
         DebtsController,
         GoalsController,
+        IncomeController,
         SyncController,
       ],
       providers: [

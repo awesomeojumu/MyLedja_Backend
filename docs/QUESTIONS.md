@@ -350,3 +350,15 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - Sync: `goal.create`, `goal.update`, `goal.allocate`; change feed `goals`, `goal_allocations`.
 - Answer:
 - Status: open
+
+## Q-B29: Income streams (B2.3)
+
+- Task: B2.3
+- Raised by: backend agent
+- Context and decision:
+  - Income streams stored in `income_streams` with a backing schedule (`kind: income`) for recurrence and occurrences.
+  - Month view: expected/received from occurrences; gross salary E24 auto-post deferred (recordAs stored; take_home default).
+  - `linkTransaction` tracks ids on the stream doc; full partial matching and steadiness dots deferred.
+  - Sync: `income.stream.create`, `income.stream.update`; change feed `income_streams`.
+- Answer:
+- Status: open
