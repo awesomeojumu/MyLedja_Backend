@@ -7,6 +7,10 @@ import { healthRoutes } from './modules/health/health.contract.js';
 import { importRoutes } from './modules/imports/imports.contract.js';
 import { institutionRoutes } from './modules/institutions/institutions.contract.js';
 import { reconcileRoutes } from './modules/reconcile/reconcile.contract.js';
+import { debtRoutes } from './modules/debts/debts.contract.js';
+import { goalRoutes } from './modules/goals/goals.contract.js';
+import { incomeRoutes } from './modules/income/income.contract.js';
+import { scheduleRoutes } from './modules/schedules/schedules.contract.js';
 import { syncRoutes } from './modules/sync/sync.contract.js';
 import { transactionRoutes } from './modules/transactions/transactions.contract.js';
 import { workspaceRoutes } from './modules/workspaces/workspaces.contract.js';
@@ -28,4 +32,8 @@ export const ALL_ROUTES: RouteDef[] = [
   reconcileRoutes,
   importRoutes,
   syncRoutes,
+  scheduleRoutes,
+  goalRoutes,
+  debtRoutes,
+  incomeRoutes,
 ].flatMap((group) => Object.values(group) as RouteDef[]);

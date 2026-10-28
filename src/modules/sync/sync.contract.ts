@@ -18,6 +18,17 @@ export const OPERATION_TYPES = [
   'payee.update',
   'tag.create',
   'budget.assign',
+  'schedule.create',
+  'schedule.update',
+  'goal.create',
+  'goal.update',
+  'goal.allocate',
+  'debt.lend',
+  'debt.borrow',
+  'debt.payment',
+  'debt.write_off',
+  'income.stream.create',
+  'income.stream.update',
 ] as const;
 
 export const CURRENT_SCHEMA_VERSION = 1;

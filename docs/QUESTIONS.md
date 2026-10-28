@@ -271,3 +271,13 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Pull:** page `changes` after `since` (exclusive). `doc` is the matching GET-shaped view when `op=upsert` (null on load failure or tombstone). `reset: true` when `since > 0` and there is a gap before the oldest retained seq (tombstones kept 180 days / purged early rows) — client should re-download from `since=0`.
 - Answer:
 - Status: open
+
+## Q-B23: Phase 2 API paths and tags (contract early)
+
+- Task: Phase 2 contract PR
+- Raised by: backend agent
+- Documents: TECH-SPEC §8 (Plan, Goals, Debts); DESIGN pages 12–16
+- Options: A, nest everything under `/schedules` and `/debts` only. B, split Plan (`/plan`, `/schedules`), Income (`/income`), Goals, Debts as implemented.
+- Recommendation: B — matches DESIGN routes (`/plan`, `/income`, `/goals`, `/debts`) and keeps income-stream fields off generic schedule bodies. OpenAPI tags: Plan, Goals, Debts, Income. Money-back lives under Debts (`/debts/money-back-suggestions`). Sync `OPERATION_TYPES` lists Phase 2 writes; push rejects them until module PRs wire handlers (Q-B22 pattern).
+- Answer:
+- Status: open

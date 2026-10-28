@@ -282,6 +282,18 @@ export class SyncService {
           duplicate: false,
         };
       }
+      case 'schedule.create':
+      case 'schedule.update':
+      case 'goal.create':
+      case 'goal.update':
+      case 'goal.allocate':
+      case 'debt.lend':
+      case 'debt.borrow':
+      case 'debt.payment':
+      case 'debt.write_off':
+      case 'income.stream.create':
+      case 'income.stream.update':
+        throw Errors.validation('type', 'This app version cannot sync that change yet. Update MyLedja.');
       default: {
         const _exhaustive: never = op.type;
         throw Errors.validation('type', `Unknown operation type: ${_exhaustive}`);
