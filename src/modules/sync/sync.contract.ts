@@ -30,6 +30,8 @@ export const OPERATION_TYPES = [
   'debt.write_off',
   'income.stream.create',
   'income.stream.update',
+  'rule.upsert',
+  'rule.delete',
 ] as const;
 
 export const CURRENT_SCHEMA_VERSION = 1;

@@ -25,6 +25,7 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run test:int && npm run test:e2e && npm run build && npm run cases:check && npm run openapi:check"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.134.0",
     "@fastify/cookie": "11.1.3",
     "@fastify/helmet": "13.1.2",
     "@nestjs/common": "12.1.3",
@@ -37,8 +38,10 @@
     "mongodb": "7.7.0",
     "nodemailer": "10.1.0",
     "qrcode": "1.5.4",
+    "read-excel-file": "9.3.12",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
+    "unpdf": "1.8.1",
     "uuid": "14.0.3",
     "zod": "4.6.7"
   },

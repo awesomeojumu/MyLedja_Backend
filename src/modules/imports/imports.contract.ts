@@ -67,7 +67,36 @@ const tag = 'Imports';
 const base = '/v1/workspaces/:workspaceId/imports';
 const editor = { kind: 'workspace', minRole: 'editor' } as const;
 
+export const StatementImport = Import.extend({
+  reader: z.enum(['parser', 'ai']).meta({ description: 'Read on the server, or by AI from redacted lines.' }),
+  bank: z
+    .string()
+    .nullable()
+    .meta({ description: 'gtbank, access, zenith, uba, kuda, premiumtrust or bank78 when recognised.' }),
+}).meta({ id: 'StatementImport' });
+
 export const importRoutes = {
+  uploadStatement: defineRoute({
+    name: 'uploadStatement',
+    method: 'POST',
+    path: `${base}/statement`,
+    tag,
+    summary: 'Upload a PDF or Excel statement (B4.2)',
+    description:
+      'Read on the server where the layout allows. With useAi and consent to AI statement reading, unreadable files are read by AI from redacted transaction lines only. Rows land in review like a CSV.',
+    access: editor,
+    params: WorkspaceParams,
+    body: z.object({
+      id: Uuid.optional(),
+      accountId: Uuid,
+      fileName: z.string().trim().min(1).max(200),
+      fileBase64: z.string().min(8).max(14_000_000, { error: 'Use a file under 10 MB' }),
+      useAi: z.boolean().default(false),
+    }),
+    status: 201,
+    response: StatementImport,
+    errors: [400, 401, 403, 404, 503],
+  }),
   upload: defineRoute({
     name: 'uploadImport',
     method: 'POST',

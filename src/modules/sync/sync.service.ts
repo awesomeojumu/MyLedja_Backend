@@ -30,6 +30,8 @@ import { goalRoutes } from '../goals/goals.contract.js';
 import type { IncomeService } from '../income/income.service.js';
 import { incomeRoutes } from '../income/income.contract.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
+import { RuleBody } from '../rules/rules.contract.js';
+import type { RulesService } from '../rules/rules.service.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
 const PREVIOUS_SCHEMA_VERSION = 0;
@@ -57,6 +59,9 @@ type PullQuery = { since: string; limit: number };
 
 /** Offline sync: push queued operations in order, pull the change feed (build plan B1.11). */
 export class SyncService {
+  /** Set after construction, like transactions.onUnlock, to keep the constructor's order stable. */
+  rules!: RulesService;
+
   constructor(
     private readonly counters: CountersRepository,
     private readonly changes: ChangesRepository,
@@ -362,6 +367,17 @@ export class SyncService {
         const body = UpdateIncomeStreamBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
         return { result: await this.income.updateStream(ctx, targetId, body), duplicate: false };
       }
+      case 'rule.upsert': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the rule to save.');
+        return {
+          result: await this.rules.upsert(ctx, targetId, RuleBody.parse(payload), baseVersion),
+          duplicate: false,
+        };
+      }
+      case 'rule.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the rule to delete.');
+        return { result: await this.rules.remove(ctx, targetId), duplicate: false };
+      }
       default: {
         const _exhaustive: never = op.type;
         throw Errors.validation('type', `Unknown operation type: ${_exhaustive}`);
@@ -425,6 +441,8 @@ export class SyncService {
           } catch {
             return null;
           }
+        case 'rules':
+          return await this.rules.get(ctx, row.docId).catch(() => null);
         case 'income_streams':
           try {
             return await this.income.getStreamDoc(ctx, row.docId);

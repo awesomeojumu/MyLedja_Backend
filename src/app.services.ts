@@ -71,6 +71,14 @@ import { ExportsRepository } from './modules/exports/exports.repository.js';
 import { ExportsService } from './modules/exports/exports.service.js';
 import { fileStoreFor } from './modules/files/cloudinary.js';
 import { deleteAccountJob, nightlyBackupJob } from './jobs/trust.jobs.js';
+import { AiService } from './modules/ai/ai.service.js';
+import { providersFor } from './modules/ai/ai.providers.js';
+import { StatementsService } from './modules/imports/statements/statements.service.js';
+import { RulesRepository } from './modules/rules/rules.repository.js';
+import { RulesService } from './modules/rules/rules.service.js';
+import { BankLinkIndex, BankLinksRepository } from './modules/banking/banking.repository.js';
+import { BankingService } from './modules/banking/banking.service.js';
+import { MonoProvider } from './modules/banking/mono.js';
 
 export const SERVICES = Symbol('SERVICES');
 export const REFRESH_COOKIE = 'myledja_refresh';
@@ -291,6 +299,28 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   );
   jobs.register(nightlyBackupJob(exports));
   jobs.register(deleteAccountJob(exports));
+  const ai = new AiService(providersFor(config), workspacesRepo, now);
+  const statements = new StatementsService(imports, ai, users, categoriesRepo, files);
+  const rules = new RulesService(database, new RulesRepository(db), ledger, audit, now);
+  imports.rules = rules;
+  sync.rules = rules;
+  const banking = new BankingService(
+    config.mono ? new MonoProvider(config.mono) : null,
+    config.mono?.webhookSecret ?? null,
+    new BankLinksRepository(db),
+    new BankLinkIndex(db),
+    imports,
+    crypto,
+    audit,
+    jobs,
+    now,
+  );
+  jobs.register({
+    name: 'bank-sync',
+    everySeconds: 86_400,
+    maxAttempts: 3,
+    run: (job) => banking.runSync(job.payload),
+  });
 
   return {
     config,
@@ -318,6 +348,11 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     security,
     exports,
     files,
+    ai,
+    statements,
+    rules,
+    banking,
+    categoriesRepo,
     idempotency,
     limits,
     jobs,

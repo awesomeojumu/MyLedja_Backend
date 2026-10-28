@@ -22,6 +22,9 @@ import { TransactionsController } from './modules/transactions/transactions.cont
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
 import { SecurityController } from './modules/security/security.controller.js';
 import { ExportsController } from './modules/exports/exports.controller.js';
+import { AiController } from './modules/ai/ai.controller.js';
+import { RulesController } from './modules/rules/rules.controller.js';
+import { BankingController } from './modules/banking/banking.controller.js';
 
 @Module({})
 export class AppModule {
@@ -51,6 +54,9 @@ export class AppModule {
         SyncController,
         SecurityController,
         ExportsController,
+        AiController,
+        RulesController,
+        BankingController,
       ],
       providers: [
         { provide: SERVICES, useValue: services },

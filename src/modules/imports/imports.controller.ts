@@ -16,6 +16,14 @@ export class ImportsController {
     return this.s.imports.upload(req.ctx!, i.body);
   }
 
+  @Route(r.uploadStatement)
+  uploadStatement(
+    @In() i: Input<typeof r.uploadStatement>,
+    @Req() req: Req,
+  ): Promise<Output<typeof r.uploadStatement>> {
+    return this.s.statements.upload(req.ctx!, i.body);
+  }
+
   @Route(r.get)
   get(@In() i: Input<typeof r.get>, @Req() req: Req): Promise<Output<typeof r.get>> {
     return this.s.imports.get(req.ctx!, i.params.importId);

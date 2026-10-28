@@ -17,6 +17,9 @@ import { transactionRoutes } from './modules/transactions/transactions.contract.
 import { workspaceRoutes } from './modules/workspaces/workspaces.contract.js';
 import { securityRoutes } from './modules/security/security.contract.js';
 import { exportRoutes } from './modules/exports/exports.contract.js';
+import { aiRoutes } from './modules/ai/ai.contract.js';
+import { ruleRoutes } from './modules/rules/rules.contract.js';
+import { bankingRoutes } from './modules/banking/banking.contract.js';
 
 /** Every route the API serves. `npm run openapi` writes openapi.json from this list. */
 export const ALL_ROUTES: RouteDef[] = [
@@ -42,4 +45,7 @@ export const ALL_ROUTES: RouteDef[] = [
   notificationRoutes,
   securityRoutes,
   exportRoutes,
+  aiRoutes,
+  ruleRoutes,
+  bankingRoutes,
 ].flatMap((group) => Object.values(group) as RouteDef[]);

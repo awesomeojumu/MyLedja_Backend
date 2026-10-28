@@ -26,6 +26,8 @@ export const VARIABLE_NAMES = [
   'MONO_SEC_KEY',
   'MONO_PUBLIC_KEY',
   'MONO_APP_ID',
+  // Optional (TECH-SPEC 2.3 rule 4): the webhook secret set in Mono's dashboard. Unset, every webhook is refused.
+  'MONO_WEBHOOK_SECRET',
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
   'CLOUDINARY_API_SECRET',
@@ -34,6 +36,8 @@ export const VARIABLE_NAMES = [
   'GOOGLE_CLIENT_SECRET',
   'ANTHROPIC_API_KEY',
   'GOOGLE_GEMINI_API_KEY',
+  // Optional (TECH-SPEC 2.3 rule 4): "true" once the Gemini key is confirmed on a paid plan (TECH-SPEC 5.8).
+  'GOOGLE_GEMINI_PAID_PLAN',
 ] as const;
 export type VariableName = (typeof VARIABLE_NAMES)[number];
 
@@ -105,13 +109,21 @@ export const configSchema = z.object({
     }),
     z.object({ provider: z.literal('off') }),
   ]),
-  mono: z.object({ secretKey: z.string(), publicKey: z.string(), appId: z.string().nullable() }).nullable(),
+  mono: z
+    .object({
+      secretKey: z.string(),
+      publicKey: z.string(),
+      appId: z.string().nullable(),
+      webhookSecret: z.string().nullable(),
+    })
+    .nullable(),
   cloudinary: z
     .object({ cloudName: z.string(), apiKey: z.string(), apiSecret: z.string(), folder: z.string().nullable() })
     .nullable(),
   google: z.object({ clientId: z.string(), clientSecret: z.string().nullable() }).nullable(),
   anthropicApiKey: z.string().nullable(),
   geminiApiKey: z.string().nullable(),
+  geminiPaidPlan: z.boolean(),
 });
 export type AppConfig = z.infer<typeof configSchema>;
 
@@ -217,7 +229,14 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
     dnsServers: splitList(get('DNS_SERVERS') ?? ''),
     contactEmail: get('CONTACT_EMAIL'),
     email,
-    mono: monoKey ? { secretKey: monoKey, publicKey: get('MONO_PUBLIC_KEY')!, appId: get('MONO_APP_ID') } : null,
+    mono: monoKey
+      ? {
+          secretKey: monoKey,
+          publicKey: get('MONO_PUBLIC_KEY')!,
+          appId: get('MONO_APP_ID'),
+          webhookSecret: get('MONO_WEBHOOK_SECRET'),
+        }
+      : null,
     cloudinary:
       cloudinarySet.length === cloudinary.length
         ? {
@@ -230,6 +249,7 @@ export function parseConfig(env: Record<string, string | undefined>): AppConfig 
     google: googleId ? { clientId: googleId, clientSecret: get('GOOGLE_CLIENT_SECRET') } : null,
     anthropicApiKey: get('ANTHROPIC_API_KEY'),
     geminiApiKey: get('GOOGLE_GEMINI_API_KEY'),
+    geminiPaidPlan: get('GOOGLE_GEMINI_PAID_PLAN') === 'true',
   });
 }
 
