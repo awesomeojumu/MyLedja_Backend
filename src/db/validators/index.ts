@@ -148,6 +148,13 @@ export const VALIDATORS: Record<string, Document> = {
     archivedAt: nullable(date),
     operationId: nullable(str),
   }),
+  report_dashboards: record(['name', 'sortOrder', 'cards'], {
+    name: str,
+    sortOrder: int,
+    cards: { bsonType: 'array', items: { bsonType: 'object', required: ['id', 'kind', 'layout'] } },
+    operationId: nullable(str),
+  }),
+  saved_reports: record(['name', 'spec'], { name: str, spec: { bsonType: 'object' }, operationId: nullable(str) }),
   exchange_rates: record(['currency', 'date', 'rate', 'source'], {
     currency: currency,
     date: localDate,

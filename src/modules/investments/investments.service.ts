@@ -183,6 +183,17 @@ export class InvestmentsService {
     return book.holdings.map((h) => ({ holding: h, position: positions.get(h._id)!.position }));
   }
 
+  /** Every holding's value and cost on each date, from one load (reports and Health). */
+  async valuationsOn(ctx: WorkspaceContext, dates: readonly string[]) {
+    const book = await this.book(ctx);
+    return new Map(
+      dates.map((date) => {
+        const at = this.positionsOn(book, date);
+        return [date, book.holdings.map((h) => ({ holding: h, position: at.get(h._id)!.position }))] as const;
+      }),
+    );
+  }
+
   private holdingView(h: HoldingDoc, p: Position): z.input<typeof Holding> {
     return {
       id: h._id,

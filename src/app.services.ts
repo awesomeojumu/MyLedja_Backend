@@ -83,6 +83,8 @@ import { HoldingsRepository, PricesRepository } from './modules/investments/inve
 import { InvestmentsService } from './modules/investments/investments.service.js';
 import { ExchangeRatesRepository } from './modules/currencies/currencies.repository.js';
 import { CurrenciesService } from './modules/currencies/currencies.service.js';
+import { ReportDashboardsRepository, SavedReportsRepository } from './modules/reports/reports.repository.js';
+import { ReportsService } from './modules/reports/reports.service.js';
 
 export const SERVICES = Symbol('SERVICES');
 export const REFRESH_COOKIE = 'myledja_refresh';
@@ -236,6 +238,34 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
+  const schedulesRepo = new SchedulesRepository(db);
+  const occurrencesRepo = new OccurrencesRepository(db);
+  const reports = new ReportsService({
+    database,
+    dashboards: new ReportDashboardsRepository(db),
+    saved: new SavedReportsRepository(db),
+    ledger,
+    categories: categoriesRepo,
+    groups: new GroupsRepository(db),
+    payees: payeesRepo,
+    tags: new TagsRepository(db),
+    workspaces: workspacesRepo,
+    budget,
+    investments,
+    currencies,
+    income,
+    schedules: schedulesRepo,
+    occurrences: occurrencesRepo,
+    goalAllocations: goalAllocationsRepo,
+    audit,
+    now,
+  });
+  budget.wealthFor = async (ctx, dates) => {
+    const convert = await currencies.converterFor(ctx);
+    const vals = await investments.valuationsOn(ctx, dates);
+    return { convert, holdings: vals };
+  };
+  budget.phase5Cards = (ctx, month) => reports.dashboardCards(ctx, month);
   const sync = new SyncService(
     counters,
     changes,
@@ -348,6 +378,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   sync.rules = rules;
   sync.investments = investments;
   sync.currencies = currencies;
+  sync.reports = reports;
   const banking = new BankingService(
     config.mono ? new MonoProvider(config.mono) : null,
     config.mono?.webhookSecret ?? null,
@@ -398,6 +429,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     banking,
     investments,
     currencies,
+    reports,
     categoriesRepo,
     idempotency,
     limits,

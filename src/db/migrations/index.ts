@@ -268,6 +268,22 @@ const m0014: Migration = {
   },
 };
 
+const m0015: Migration = {
+  name: '0015-reports',
+  async up(db) {
+    await installValidators(db);
+    for (const name of ['report_dashboards', 'saved_reports']) {
+      await db
+        .collection(name)
+        .createIndex(
+          { workspaceId: 1, operationId: 1 },
+          { unique: true, partialFilterExpression: { operationId: { $type: 'string' } } },
+        );
+    }
+    await db.collection('report_dashboards').createIndex({ workspaceId: 1, sortOrder: 1 });
+  },
+};
+
 export const MIGRATIONS: Migration[] = [
   m0001,
   m0002,
@@ -283,6 +299,7 @@ export const MIGRATIONS: Migration[] = [
   m0012,
   m0013,
   m0014,
+  m0015,
 ];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */

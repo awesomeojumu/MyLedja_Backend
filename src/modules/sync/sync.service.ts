@@ -35,6 +35,8 @@ import type { RulesService } from '../rules/rules.service.js';
 import { CreateHoldingBody, SetPricesBody, UpdateHoldingBody } from '../investments/investments.contract.js';
 import type { InvestmentsService } from '../investments/investments.service.js';
 import type { CurrenciesService } from '../currencies/currencies.service.js';
+import type { ReportsService } from '../reports/reports.service.js';
+import { reportRoutes } from '../reports/reports.contract.js';
 import { SetExchangeRateBody } from '../currencies/currencies.contract.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
@@ -67,6 +69,7 @@ export class SyncService {
   rules!: RulesService;
   investments!: InvestmentsService;
   currencies!: CurrenciesService;
+  reports!: ReportsService;
 
   constructor(
     private readonly counters: CountersRepository,
@@ -400,6 +403,30 @@ export class SyncService {
         const body = SetExchangeRateBody.parse(payload);
         return { result: await this.currencies.set(ctx, body), duplicate: false };
       }
+      case 'report_dashboard.create': {
+        const body = reportRoutes.createDashboard.body!.parse(payload);
+        return { result: await this.reports.createDashboard(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'report_dashboard.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the dashboard to update.');
+        const body = reportRoutes.updateDashboard.body!.parse({
+          ...payload,
+          baseVersion: baseVersion ?? payload.baseVersion,
+        });
+        return { result: await this.reports.updateDashboard(ctx, targetId, body), duplicate: false };
+      }
+      case 'saved_report.create': {
+        const body = reportRoutes.createSaved.body!.parse(payload);
+        return { result: await this.reports.createSaved(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'saved_report.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the report to update.');
+        const body = reportRoutes.updateSaved.body!.parse({
+          ...payload,
+          baseVersion: baseVersion ?? payload.baseVersion,
+        });
+        return { result: await this.reports.updateSaved(ctx, targetId, body), duplicate: false };
+      }
       default: {
         const _exhaustive: never = op.type;
         throw Errors.validation('type', `Unknown operation type: ${_exhaustive}`);
@@ -471,6 +498,10 @@ export class SyncService {
           return await this.investments.getPrice(ctx, row.docId);
         case 'exchange_rates':
           return await this.currencies.get(ctx, row.docId);
+        case 'report_dashboards':
+          return await this.reports.getDashboard(ctx, row.docId);
+        case 'saved_reports':
+          return await this.reports.getSaved(ctx, row.docId);
         case 'income_streams':
           try {
             return await this.income.getStreamDoc(ctx, row.docId);

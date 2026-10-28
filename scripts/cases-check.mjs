@@ -8,8 +8,13 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const cases = resolve(root, 'test/fixtures/ledger-cases.json');
 const sum = resolve(root, 'test/fixtures/ledger-cases.sha256');
+// The checkouts are named MyLedja_Frontend (BUILD-PLAN 2.3); the lowercase name is kept for older setups.
 const sibling =
-  process.env.LEDGER_CASES_SIBLING ?? resolve(root, '../myledja_frontend/test/fixtures/ledger-cases.json');
+  process.env.LEDGER_CASES_SIBLING ??
+  ['../MyLedja_Frontend', '../myledja_frontend']
+    .map((dir) => resolve(root, dir, 'test/fixtures/ledger-cases.json'))
+    .find((p) => existsSync(p)) ??
+  resolve(root, '../MyLedja_Frontend/test/fixtures/ledger-cases.json');
 
 if (!existsSync(cases) && !existsSync(sum)) {
   console.log('cases:check: no ledger cases yet (they arrive in Phase 1).');

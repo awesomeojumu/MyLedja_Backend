@@ -36,6 +36,10 @@ export const OPERATION_TYPES = [
   'holding.update',
   'holding.prices',
   'exchange_rate.set',
+  'report_dashboard.create',
+  'report_dashboard.update',
+  'saved_report.create',
+  'saved_report.update',
 ] as const;
 
 export const CURRENT_SCHEMA_VERSION = 1;
