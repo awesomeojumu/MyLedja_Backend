@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+*.tsbuildinfo
+
+# Keys and certificates
+*.key
+*.pem
+*.p12
+
+# Environment: real values stay local, templates are shared
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local data, tests, logs
+.data/
+coverage/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
