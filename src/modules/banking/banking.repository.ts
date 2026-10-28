@@ -15,6 +15,10 @@ export type BankLinkDoc = {
   status: 'active' | 'needs_reauth' | 'disconnected';
   lastSyncedAt: Date | null;
   lastSyncedDate: string | null;
+  /** How far back the first sync reaches, chosen when connecting (P08-08). */
+  historyDays?: number;
+  /** When the person's consent to the provider ends, if the provider says (P26-13). */
+  consentExpiresAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   version: number;

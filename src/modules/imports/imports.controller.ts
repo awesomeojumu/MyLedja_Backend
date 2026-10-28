@@ -39,6 +39,16 @@ export class ImportsController {
     return this.s.imports.post(req.ctx!, i.params.importId, i.body, req.operationId!);
   }
 
+  @Route(r.list)
+  list(@In() i: Input<typeof r.list>, @Req() req: Req): Promise<Output<typeof r.list>> {
+    return this.s.imports.list(req.ctx!, i.query);
+  }
+
+  @Route(r.reviewed)
+  reviewed(@In() i: Input<typeof r.reviewed>, @Req() req: Req): Promise<Output<typeof r.reviewed>> {
+    return this.s.imports.markReviewed(req.ctx!, i.params.importId);
+  }
+
   @Route(r.undo)
   undo(@In() i: Input<typeof r.undo>, @Req() req: Req): Promise<Output<typeof r.undo>> {
     return this.s.imports.undo(req.ctx!, i.params.importId, req.operationId!);

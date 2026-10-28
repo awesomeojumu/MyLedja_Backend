@@ -71,7 +71,7 @@ export class ImportsService {
 
   async upload(
     ctx: WorkspaceContext,
-    body: { id?: string; accountId: string; fileName: string; content: string },
+    body: { id?: string; accountId: string; fileName: string; content: string; source?: 'file' | 'bank' },
   ): Promise<z.input<typeof Import>> {
     const account = await this.accounts.real(ctx, body.accountId);
     const grid = parseCsv(body.content);
@@ -92,6 +92,7 @@ export class ImportsService {
           accountId: body.accountId,
           fileName: body.fileName,
           content: body.content,
+          source: body.source ?? 'file',
           status: 'uploaded',
           preview,
           mapping: suggested,
@@ -348,8 +349,35 @@ export class ImportsService {
       rows: doc.rows,
       counts: doc.counts,
       stored: doc.stored,
+      source: doc.source ?? 'file',
       version: doc.version,
     };
+  }
+
+  async list(ctx: WorkspaceContext, q: { status: 'mapped' | 'posted' | 'reviewed'; accountId?: string | undefined }) {
+    const docs = await this.repos.find(
+      ctx,
+      { status: q.status, ...(q.accountId ? { accountId: q.accountId } : {}) },
+      { sort: { createdAt: -1 }, limit: 50 },
+    );
+    return { imports: docs.map((d) => this.view(d)) };
+  }
+
+  async markReviewed(ctx: WorkspaceContext, id: string) {
+    const before = await this.require(ctx, id);
+    if (before.status !== 'mapped') throw ImportErrors.notMappable();
+    const after = await this.database.transaction(async (session) => {
+      const doc = await this.repos.findOneAndUpdate(
+        ctx,
+        { _id: id, version: before.version },
+        { $set: { status: 'reviewed', updatedAt: this.now() }, $inc: { version: 1 } },
+        { session },
+      );
+      if (!doc) throw ImportErrors.notMappable();
+      await this.ledger.feed(ctx, [{ collection: 'imports', docId: id, op: 'upsert' }], session);
+      return doc;
+    });
+    return this.view(after);
   }
 
   /** Existing live movements on the account, for duplicate checks. */

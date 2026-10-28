@@ -5,8 +5,8 @@
  */
 
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
-// Card numbers: 13 to 19 digits, optionally in groups.
-const CARD = /\b(?:\d[ -]?){13,19}\b/g;
+// Card numbers: four groups of four (the last may be longer), or 13 to 19 digits run together; never part of an amount.
+const CARD = /\b(?:\d{4}[ -]){3}\d{1,7}\b(?![.,]\d)|\b\d{13,19}\b(?![.,]\d)/g;
 // Nigerian phone numbers: +234 or 0, then 7, 8 or 9, then 9 more digits, with or without spaces.
 const PHONE = /(?:\+?234[\s-]?|\b0)[789][01]\d(?:[\s-]?\d){7}\b/g;
 // NUBAN account numbers (10 digits) and BVN (11 digits), standing alone.
@@ -22,7 +22,7 @@ function escape(s: string) {
 
 export function redact(text: string, holderNames: string[] = []): string {
   let out = text.replace(EMAIL, '[email]').replace(STREET, '[address]').replace(MASKED, '[account]');
-  out = out.replace(CARD, (m) => (m.replace(/\D/g, '').length >= 13 ? '[card]' : m));
+  out = out.replace(CARD, '[card]');
   out = out.replace(PHONE, '[phone]').replace(LONG_NUMBER, '[number]');
   for (const name of holderNames) {
     const parts = name.split(/\s+/).filter((p) => p.length >= 3);

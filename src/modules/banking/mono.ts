@@ -24,6 +24,8 @@ export interface BankProvider {
   account(providerAccountId: string): Promise<BankAccount>;
   transactions(providerAccountId: string, since: string): Promise<BankTransaction[]>;
   requestSync(providerAccountId: string): Promise<void>;
+  /** A one-time token for reopening the provider's screen when consent has lapsed. */
+  reauthToken(providerAccountId: string): Promise<string>;
   unlink(providerAccountId: string): Promise<void>;
 }
 
@@ -114,6 +116,13 @@ export class MonoProvider implements BankProvider {
 
   async requestSync(id: string): Promise<void> {
     await this.call('POST', `/accounts/${id}/sync`).catch(() => undefined);
+  }
+
+  async reauthToken(id: string): Promise<string> {
+    const r = await this.call<{ data?: { token?: string }; token?: string }>('POST', `/accounts/${id}/reauthorise`);
+    const token = r.data?.token ?? r.token;
+    if (!token) throw new Error('mono_no_token');
+    return token;
   }
 
   async unlink(id: string): Promise<void> {

@@ -13,7 +13,9 @@ export type ImportDoc = {
   fileName: string;
   /** Raw CSV text kept for Phase 1 (Cloudinary is optional / stub). */
   content: string;
-  status: 'uploaded' | 'mapped' | 'posted' | 'undone';
+  status: 'uploaded' | 'mapped' | 'posted' | 'undone' | 'reviewed';
+  /** A file the person uploaded, or transactions a bank connection pulled in (B4.6). */
+  source?: 'file' | 'bank';
   preview: string[][];
   mapping: z.output<typeof ColumnMapping> | null;
   rows: z.output<typeof ImportRow>[];

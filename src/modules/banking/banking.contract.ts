@@ -13,6 +13,8 @@ export const BankLink = z
     last4: z.string().nullable(),
     status: z.enum(['active', 'needs_reauth', 'disconnected']),
     lastSyncedAt: z.iso.datetime().nullable(),
+    consentExpiresAt: z.iso.datetime().nullable(),
+    historyDays: z.number().int(),
   })
   .meta({ id: 'BankLink' });
 
@@ -30,7 +32,17 @@ export const bankingRoutes = {
     description: 'Links the bank to one of your accounts. 404 bank_off when Mono is not set up.',
     access: { kind: 'workspace', minRole: 'editor' },
     params: WorkspaceParams,
-    body: z.object({ id: Uuid.optional(), accountId: Uuid, code: z.string().min(4).max(500) }),
+    body: z.object({
+      id: Uuid.optional(),
+      accountId: Uuid,
+      code: z.string().min(4).max(500),
+      historyDays: z
+        .union([z.literal(30), z.literal(90), z.literal(180), z.literal(365)])
+        .default(90)
+        .meta({
+          description: 'How far back to import on the first sync (P08-08).',
+        }),
+    }),
     status: 201,
     response: BankLink,
     errors: [400, 401, 403, 404, 502],
@@ -58,6 +70,30 @@ export const bankingRoutes = {
     status: 200,
     response: z.object({ import: StatementImport.nullable(), newTransactions: z.number().int() }),
     errors: [401, 403, 404, 502],
+  }),
+  reauth: defineRoute({
+    name: 'reconnectBank',
+    method: 'POST',
+    path: `${base}/links/:linkId/reauth`,
+    tag,
+    summary: '"Reconnect": a token to reopen Mono when consent has lapsed',
+    access: { kind: 'workspace', minRole: 'editor' },
+    params: LinkParams,
+    status: 200,
+    response: z.object({ reauthToken: z.string() }),
+    errors: [401, 403, 404, 502],
+  }),
+  reconnected: defineRoute({
+    name: 'bankReconnected',
+    method: 'POST',
+    path: `${base}/links/:linkId/reconnected`,
+    tag,
+    summary: 'Mono reports the reconnection worked; syncing resumes',
+    access: { kind: 'workspace', minRole: 'editor' },
+    params: LinkParams,
+    status: 200,
+    response: BankLink,
+    errors: [401, 403, 404],
   }),
   disconnect: defineRoute({
     name: 'disconnectBank',

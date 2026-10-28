@@ -26,6 +26,16 @@ export class BankingController {
     return this.s.banking.sync(req.ctx!, i.params.linkId);
   }
 
+  @Route(r.reauth)
+  reauth(@In() i: Input<typeof r.reauth>, @Req() req: Req): Promise<Output<typeof r.reauth>> {
+    return this.s.banking.reauth(req.ctx!, i.params.linkId);
+  }
+
+  @Route(r.reconnected)
+  reconnected(@In() i: Input<typeof r.reconnected>, @Req() req: Req): Promise<Output<typeof r.reconnected>> {
+    return this.s.banking.reconnected(req.ctx!, i.params.linkId);
+  }
+
   @Route(r.disconnect)
   disconnect(@In() i: Input<typeof r.disconnect>, @Req() req: Req): Promise<void> {
     return this.s.banking.disconnect(req.ctx!, i.params.linkId);

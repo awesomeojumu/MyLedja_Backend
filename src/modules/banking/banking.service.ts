@@ -60,10 +60,15 @@ export class BankingService {
       last4: d.last4,
       status: d.status,
       lastSyncedAt: d.lastSyncedAt?.toISOString() ?? null,
+      consentExpiresAt: d.consentExpiresAt?.toISOString() ?? null,
+      historyDays: d.historyDays ?? FIRST_SYNC_DAYS,
     };
   }
 
-  async link(ctx: WorkspaceContext, body: { id?: string | undefined; accountId: string; code: string }) {
+  async link(
+    ctx: WorkspaceContext,
+    body: { id?: string | undefined; accountId: string; code: string; historyDays: number },
+  ) {
     const provider = this.need();
     let providerId: string;
     let info;
@@ -85,6 +90,8 @@ export class BankingService {
       status: 'active',
       lastSyncedAt: null,
       lastSyncedDate: null,
+      historyDays: body.historyDays,
+      consentExpiresAt: null,
       createdAt: now,
       updatedAt: now,
       version: 1,
@@ -105,7 +112,8 @@ export class BankingService {
     const link = await this.links.findOne(ctx, { _id: linkId });
     if (!link || link.status === 'disconnected') throw Errors.notFound();
     const since =
-      link.lastSyncedDate ?? new Date(this.now().getTime() - FIRST_SYNC_DAYS * 86_400_000).toISOString().slice(0, 10);
+      link.lastSyncedDate ??
+      new Date(this.now().getTime() - (link.historyDays ?? FIRST_SYNC_DAYS) * 86_400_000).toISOString().slice(0, 10);
     let txs;
     try {
       txs = await provider.transactions(this.crypto.decryptText('bank-link', link.providerAccount), since);
@@ -132,6 +140,7 @@ export class BankingService {
       id,
       accountId: link.accountId,
       fileName: `${link.institution} ${now.toISOString().slice(0, 10)}`,
+      source: 'bank',
       content: csv,
     });
     const view = await this.imports.map(ctx, id, {
@@ -147,6 +156,28 @@ export class BankingService {
     });
     await this.audit.record(ctx, { action: 'bank.synced', target: { collection: 'bank_links', id: linkId } });
     return { import: { ...view, reader: 'parser' as const, bank: null }, newTransactions: view.counts.new };
+  }
+
+  async reauth(ctx: WorkspaceContext, linkId: string) {
+    const provider = this.need();
+    const link = await this.links.findOne(ctx, { _id: linkId });
+    if (!link || link.status === 'disconnected') throw Errors.notFound();
+    try {
+      return { reauthToken: await provider.reauthToken(this.crypto.decryptText('bank-link', link.providerAccount)) };
+    } catch {
+      throw new AppError(502, 'bank_unreachable', MESSAGES.failed);
+    }
+  }
+
+  async reconnected(ctx: WorkspaceContext, linkId: string) {
+    const link = await this.links.findOneAndUpdate(
+      ctx,
+      { _id: linkId, status: { $ne: 'disconnected' } },
+      { $set: { status: 'active', updatedAt: this.now() }, $inc: { version: 1 } },
+    );
+    if (!link) throw Errors.notFound();
+    await this.audit.record(ctx, { action: 'bank.reconnected', target: { collection: 'bank_links', id: linkId } });
+    return this.view(link);
   }
 
   async disconnect(ctx: WorkspaceContext, linkId: string) {
