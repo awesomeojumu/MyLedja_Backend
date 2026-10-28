@@ -23,9 +23,10 @@ export async function dbEngine(t: TestApp, file: CasesFile): Promise<Engine & { 
   for (const a of file.accounts) {
     const doc = await ledger.openAccount(ctx, {
       kind: a.kind as 'asset' | 'liability',
-      accountType: a.accountType as never,
+      accountType: (a.personDebt ? 'other_asset' : a.accountType) as never,
       name: a.name,
       currency: file.currency,
+      personDebt: a.personDebt ?? null,
     });
     realIds.set(a.key, doc._id);
     ledgerIds.set(a.key, doc._id);

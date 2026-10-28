@@ -12,6 +12,7 @@ export class IntegrityError extends Error {
 }
 
 const isReal = (a: AccountRef) => (a.kind === 'asset' || a.kind === 'liability') && a.systemKey === null;
+const isCash = (a: AccountRef) => isReal(a) && !a.personDebt;
 
 /**
  * The checks of TECH-SPEC 6.11 that need only the event and its accounts (1, 2, 3, 5 and 7).
@@ -80,6 +81,41 @@ export function checkLines(
       const exp = byKind('expense');
       if (reals.length !== 1 || exp.length !== 1 || exp[0]!.amountMinor >= 0n)
         throw new IntegrityError(3, 'a refund needs one account and one expense credit');
+      return;
+    }
+    case 'loan_proceeds': {
+      const assets = lines.filter((_, i) => accounts[i]!.kind === 'asset' && !accounts[i]!.personDebt);
+      const loans = lines.filter((_, i) => accounts[i]!.kind === 'liability' && !accounts[i]!.personDebt);
+      if (assets.length !== 1 || loans.length !== 1) throw new IntegrityError(3, 'loan proceeds needs cash and a loan');
+      return;
+    }
+    case 'loan_repayment': {
+      const banks = lines.filter((_, i) => accounts[i]!.kind === 'asset' && isCash(accounts[i]!));
+      if (banks.length !== 1) throw new IntegrityError(3, 'loan repayment needs one cash account');
+      return;
+    }
+    case 'lend': {
+      const cash = lines.filter((_, i) => isCash(accounts[i]!));
+      const recv = lines.filter((_, i) => accounts[i]!.personDebt === 'receivable');
+      if (cash.length !== 1 || recv.length !== 1) throw new IntegrityError(3, 'lend needs cash and a receivable');
+      return;
+    }
+    case 'collect': {
+      const cash = lines.filter((_, i) => isCash(accounts[i]!));
+      const recv = lines.filter((_, i) => accounts[i]!.personDebt === 'receivable');
+      if (cash.length !== 1 || recv.length !== 1) throw new IntegrityError(3, 'collect needs cash and a receivable');
+      return;
+    }
+    case 'write_off': {
+      const recv = lines.filter((_, i) => accounts[i]!.personDebt === 'receivable');
+      const loss = lines.filter((_, i) => accounts[i]!.systemKey === 'written_off');
+      if (recv.length !== 1 || loss.length !== 1) throw new IntegrityError(3, 'write-off needs receivable and loss');
+      return;
+    }
+    case 'salary_gross': {
+      const inc = byKind('income');
+      if (inc.length !== 1 || inc[0]!.amountMinor >= 0n)
+        throw new IntegrityError(3, 'salary gross needs one income credit');
       return;
     }
     case 'reversal':

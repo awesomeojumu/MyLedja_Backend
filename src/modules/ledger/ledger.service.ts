@@ -131,6 +131,7 @@ export class LedgerService {
       onBudget?: boolean;
       sortOrder?: number;
       operationId?: string | null;
+      personDebt?: 'receivable' | 'payable' | null;
     },
     session?: ClientSession,
   ): Promise<LedgerAccountDoc> {
@@ -143,6 +144,7 @@ export class LedgerService {
       onBudget: a.onBudget ?? true,
       sortOrder: a.sortOrder ?? 0,
       operationId: a.operationId ?? null,
+      personDebt: a.personDebt ?? null,
     };
     return this.accounts.insertOne(ctx, doc, { session });
   }
@@ -460,8 +462,27 @@ export class LedgerService {
           refunded = await this.transactions.refundedAgainst(ctx, original._id, { session });
         }
         break;
-      default:
+      case 'opening_balance':
+      case 'balance_adjustment':
         realIds.add(input.accountId);
+        break;
+      case 'loan_proceeds':
+        realIds.add(input.accountId).add(input.loanAccountId);
+        break;
+      case 'loan_repayment':
+        realIds.add(input.accountId).add(input.loanAccountId);
+        break;
+      case 'lend':
+      case 'collect':
+        realIds.add(input.accountId).add(input.receivableAccountId);
+        break;
+      case 'write_off':
+        realIds.add(input.receivableAccountId);
+        break;
+      case 'salary_gross':
+        realIds.add(input.accountId).add(input.pensionAccountId).add(input.nhfAccountId);
+        categoryIds.add(input.categoryId);
+        break;
     }
     // One session can run only one operation at a time, so these run in turn.
     const reals = await this.accounts.byIds(ctx, [...realIds], { session });
@@ -510,6 +531,7 @@ function blankAccount(
     archivedAt: null,
     sortOrder: 0,
     operationId: null,
+    personDebt: null,
     createdAt: now,
     updatedAt: now,
     version: 1,

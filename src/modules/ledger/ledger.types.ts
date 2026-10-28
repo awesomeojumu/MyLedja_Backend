@@ -20,7 +20,7 @@ export const SYSTEM_ACCOUNTS = {
 export type SystemKey = keyof typeof SYSTEM_ACCOUNTS;
 export const SYSTEM_KEYS = Object.keys(SYSTEM_ACCOUNTS) as SystemKey[];
 
-/** Phase 1 event types (E1 to E12 and E25). Later phases add loan, debt and investment types. */
+/** Phase 1 event types (E1 to E12 and E25). Phase 2 adds E13–E17 and E24. */
 export const EVENT_TYPES = [
   'income',
   'expense',
@@ -28,6 +28,12 @@ export const EVENT_TYPES = [
   'opening_balance',
   'balance_adjustment',
   'refund',
+  'loan_proceeds',
+  'loan_repayment',
+  'lend',
+  'collect',
+  'write_off',
+  'salary_gross',
   'reversal',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -48,6 +54,8 @@ export type AccountRef = {
   systemKey: SystemKey | null;
   categoryId: string | null;
   archived: boolean;
+  /** Person-debt ledger (R receivable, P payable). Not a bank, card or product loan account. */
+  personDebt?: 'receivable' | 'payable' | null;
 };
 
 export type EventLinks = {
