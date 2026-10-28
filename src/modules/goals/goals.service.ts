@@ -358,11 +358,7 @@ export class GoalsService {
         ],
         session,
       );
-      await this.audit.record(
-        ctx,
-        { action: 'goal.spent', target: { collection: 'goals', id: goalId } },
-        { session },
-      );
+      await this.audit.record(ctx, { action: 'goal.spent', target: { collection: 'goals', id: goalId } }, { session });
       return { goal: after, alloc, transactionId: tx._id };
     });
     return {

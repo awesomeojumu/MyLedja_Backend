@@ -171,11 +171,7 @@ export function budgetMonths(input: BudgetInput): BudgetMonth[] {
     const overspentFromLastMonth = input.style === 'envelope' ? overspent : 0n;
     if (input.style === 'envelope') {
       leftToPlan =
-        input.budgetableIncome(month) +
-        leftToPlan -
-        assignedTotal -
-        overspent -
-        (input.goalAllocations?.(month) ?? 0n);
+        input.budgetableIncome(month) + leftToPlan - assignedTotal - overspent - (input.goalAllocations?.(month) ?? 0n);
       overspent = overspentNow;
     }
     out.push({
