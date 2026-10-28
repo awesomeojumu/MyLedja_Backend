@@ -359,7 +359,7 @@ function countOf(rows: Row[]) {
 
 function notesOf(row: Row): string | null {
   const parts = [row.description, row.notes].map((s) => s?.trim()).filter((s): s is string => !!s);
-  return parts.length ? parts.join(' — ') : null;
+  return parts.length ? parts.join('. ') : null;
 }
 
 function validateMapping(m: Mapping) {
@@ -368,7 +368,7 @@ function validateMapping(m: Mapping) {
   if (hasAmount === hasSplit) {
     throw Errors.validation(
       'mapping.amount',
-      'Map one Amount column, or Money in and Money out — not both, and not neither.',
+      'Map one Amount column, or Money in and Money out. Not both, and not neither.',
     );
   }
   if (!hasAmount && (m.moneyIn === null || m.moneyOut === null)) {
