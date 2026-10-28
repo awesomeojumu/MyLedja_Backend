@@ -6,6 +6,7 @@ import { AccessGuard, AUTHENTICATOR, MEMBERSHIPS } from './common/auth/access.gu
 import { COOKIE_WRITER, ContractInterceptor, CRYPTO, IDEMPOTENCY } from './common/http/contract.interceptor.js';
 import { ErrorFilter } from './common/http/error.filter.js';
 import { AuthController } from './modules/auth/auth.controller.js';
+import { CategoriesController, PayeesController, TagsController } from './modules/categories/categories.controller.js';
 import { HealthController } from './modules/health/health.controller.js';
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
 
@@ -15,7 +16,14 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [ConfigModule.forRoot(services.config)],
-      controllers: [HealthController, AuthController, WorkspacesController],
+      controllers: [
+        HealthController,
+        AuthController,
+        WorkspacesController,
+        CategoriesController,
+        TagsController,
+        PayeesController,
+      ],
       providers: [
         { provide: SERVICES, useValue: services },
         { provide: AUTHENTICATOR, useValue: services.auth },

@@ -102,7 +102,32 @@ const m0002: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002];
+/**
+ * Categories, groups, tags and payees (B1.7). Default categories are seeded when a workspace is made;
+ * no workspace predates this release, so there is nothing to backfill (Q-B15).
+ */
+const m0003: Migration = {
+  name: '0003-categories',
+  async up(db) {
+    await installValidators(db);
+    const ix = (name: string) => db.collection(name);
+    await ix('category_groups').createIndex({ workspaceId: 1, sortOrder: 1 });
+    await ix('categories').createIndex({ workspaceId: 1, groupId: 1, sortOrder: 1 });
+    await ix('categories').createIndex(
+      { workspaceId: 1, starterKey: 1 },
+      { unique: true, partialFilterExpression: { starterKey: { $type: 'string' } } },
+    );
+    await ix('categories').createIndex({ workspaceId: 1, 'deletion.undoId': 1 }, { sparse: true });
+    await ix('tags').createIndex({ workspaceId: 1, nameKey: 1 }, { unique: true });
+    await ix('payees').createIndex({ workspaceId: 1, nameKey: 1, _id: 1 });
+    await ix('payees').createIndex({ workspaceId: 1, aliasKeys: 1 });
+    await ix('payee_merges').createIndex({ workspaceId: 1, at: -1 });
+    await ix('transactions').createIndex({ workspaceId: 1, 'lines.categoryId': 1 });
+    await ix('transactions').createIndex({ workspaceId: 1, tagIds: 1 });
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {
