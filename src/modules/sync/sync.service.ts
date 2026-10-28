@@ -27,6 +27,8 @@ import type { DebtsService } from '../debts/debts.service.js';
 import { debtRoutes } from '../debts/debts.contract.js';
 import type { GoalsService } from '../goals/goals.service.js';
 import { goalRoutes } from '../goals/goals.contract.js';
+import type { IncomeService } from '../income/income.service.js';
+import { incomeRoutes } from '../income/income.contract.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
@@ -41,6 +43,8 @@ const WriteOffBody = debtRoutes.writeOff.body!;
 const CreateGoalBody = goalRoutes.create.body!;
 const UpdateGoalBody = goalRoutes.update.body!;
 const AllocateGoalBody = goalRoutes.allocate.body!;
+const CreateIncomeStreamBody = incomeRoutes.createStream.body!;
+const UpdateIncomeStreamBody = incomeRoutes.updateStream.body!;
 const TagCreateBody = z.object({ id: Uuid.optional(), name: z.string().trim().min(1).max(40) });
 
 type PushBody = {
@@ -63,6 +67,7 @@ export class SyncService {
     private readonly schedules: SchedulesService,
     private readonly debts: DebtsService,
     private readonly goals: GoalsService,
+    private readonly income: IncomeService,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -342,9 +347,15 @@ export class SyncService {
         const { debt } = await this.debts.writeOff(ctx, targetId, body.date, body.baseVersion, op.operationId);
         return { result: debt, duplicate: false };
       }
-      case 'income.stream.create':
-      case 'income.stream.update':
-        throw Errors.validation('type', 'This app version cannot sync that change yet. Update MyLedja.');
+      case 'income.stream.create': {
+        const body = CreateIncomeStreamBody.parse(payload);
+        return { result: await this.income.createStream(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'income.stream.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the income stream to update.');
+        const body = UpdateIncomeStreamBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.income.updateStream(ctx, targetId, body), duplicate: false };
+      }
       default: {
         const _exhaustive: never = op.type;
         throw Errors.validation('type', `Unknown operation type: ${_exhaustive}`);
@@ -405,6 +416,12 @@ export class SyncService {
         case 'goal_allocations':
           try {
             return await this.goals.getAllocation(ctx, row.docId);
+          } catch {
+            return null;
+          }
+        case 'income_streams':
+          try {
+            return await this.income.getStreamDoc(ctx, row.docId);
           } catch {
             return null;
           }
