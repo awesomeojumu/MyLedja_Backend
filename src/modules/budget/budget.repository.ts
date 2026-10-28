@@ -14,6 +14,16 @@ export type BudgetMonthDoc = {
   version: number;
 };
 
+export type BudgetTemplateDoc = {
+  _id: string;
+  workspaceId: string;
+  name: string;
+  rules: { categoryId: string; assignedMinor: bigint }[];
+  createdAt: Date;
+  updatedAt: Date;
+  version: number;
+};
+
 /** Assigned plan (or limit) per spending category per month (TECH-SPEC 5.4 `budget_months`). */
 export class BudgetMonthsRepository extends BaseRepository<BudgetMonthDoc> {
   constructor(db: Db) {
@@ -57,5 +67,15 @@ export class BudgetMonthsRepository extends BaseRepository<BudgetMonthDoc> {
       { ...o, upsert: true },
     );
     return after!;
+  }
+}
+
+export class BudgetTemplatesRepository extends BaseRepository<BudgetTemplateDoc> {
+  constructor(db: Db) {
+    super(db, 'templates');
+  }
+
+  list(ctx: WorkspaceContext, o: Opts = {}) {
+    return this.find(ctx, {}, { ...o, sort: { name: 1 } });
   }
 }

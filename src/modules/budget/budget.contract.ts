@@ -44,6 +44,15 @@ export const BudgetMonth = z
 export const MonthParams = WorkspaceParams.extend({ month: Month });
 export const BudgetCategoryParams = MonthParams.extend({ categoryId: Uuid });
 
+export const BudgetTemplate = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    rules: z.array(z.object({ categoryId: z.string(), assigned: MinorAmount })),
+    version: z.number().int(),
+  })
+  .meta({ id: 'BudgetTemplate' });
+
 const tag = 'Budget';
 const base = '/v1/workspaces/:workspaceId/budget/:month';
 const viewer = { kind: 'workspace', minRole: 'viewer' } as const;
@@ -104,6 +113,51 @@ export const budgetRoutes = {
         .min(1)
         .max(100),
     }),
+    status: 200,
+    response: BudgetMonth,
+    errors: [400, 401, 403, 404],
+  }),
+  listTemplates: defineRoute({
+    name: 'listBudgetTemplates',
+    method: 'GET',
+    path: '/v1/workspaces/:workspaceId/budget/templates',
+    tag,
+    summary: 'Saved budget templates for this workspace',
+    access: viewer,
+    params: WorkspaceParams,
+    status: 200,
+    response: z.object({ templates: z.array(BudgetTemplate) }).meta({ id: 'BudgetTemplateList' }),
+    errors: [400, 401, 404],
+  }),
+  saveTemplate: defineRoute({
+    name: 'saveBudgetTemplate',
+    method: 'PUT',
+    path: '/v1/workspaces/:workspaceId/budget/templates/:templateId',
+    tag,
+    summary: 'Create or replace a budget template',
+    description: 'Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates).',
+    access: editor,
+    params: WorkspaceParams.extend({ templateId: Uuid }),
+    body: z.object({
+      name: z.string().trim().min(1).max(80),
+      rules: z
+        .array(z.object({ categoryId: Uuid, assigned: MinorAmount }))
+        .min(1)
+        .max(200),
+    }),
+    status: 200,
+    response: BudgetTemplate,
+    errors: [400, 401, 403, 404],
+  }),
+  applyTemplate: defineRoute({
+    name: 'applyBudgetTemplate',
+    method: 'POST',
+    path: `${base}/templates/:templateId/apply`,
+    tag,
+    summary: 'Fill the month from a template',
+    access: editor,
+    params: MonthParams.extend({ templateId: Uuid }),
+    body: z.object({ preview: z.boolean().default(false) }),
     status: 200,
     response: BudgetMonth,
     errors: [400, 401, 403, 404],

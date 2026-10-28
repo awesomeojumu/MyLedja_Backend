@@ -383,6 +383,10 @@ export const VALIDATORS: Record<string, Document> = {
     actions: { bsonType: 'array' },
     dedupeKey: nullable(str),
   }),
+  templates: record(['name', 'rules'], {
+    name: str,
+    rules: { bsonType: 'array' },
+  }),
 };
 
 /** Creates each collection with its validator, or updates the validator if it exists. Safe to run twice. */

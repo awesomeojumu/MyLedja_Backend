@@ -141,4 +141,19 @@ describe('budget (B1.9)', () => {
     expect(moved.categories.find((c) => c.categoryId === household.id)!.assigned).toBe('2000000');
     expect(moved.categories.find((c) => c.categoryId === w.food.id)!.assigned).toBe('13000000');
   });
+
+  it('applies a saved template to a month (B2.7)', async () => {
+    const w = await world('envelope');
+    await w.earn('50000000', '2026-10-01');
+    const tplId = uuidv7();
+    await w.s.budget.saveTemplate(w.ctx, tplId, {
+      name: 'Usual October',
+      rules: [{ categoryId: w.food.id, assigned: '8000000' }],
+    });
+    const list = await w.s.budget.listTemplates(w.ctx);
+    expect(list.templates).toHaveLength(1);
+    const month = await w.s.budget.applyTemplate(w.ctx, '2026-10', tplId, false);
+    const food = month.categories.find((c) => c.categoryId === w.food.id)!;
+    expect(food.assigned).toBe('8000000');
+  });
 });

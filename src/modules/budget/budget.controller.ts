@@ -30,6 +30,21 @@ export class BudgetController {
   cover(@In() i: Input<typeof b.cover>, @Req() req: Req): Promise<Output<typeof b.cover>> {
     return this.s.budget.cover(req.ctx!, i.params.month, i.body);
   }
+
+  @Route(b.listTemplates)
+  listTemplates(@Req() req: Req): Promise<Output<typeof b.listTemplates>> {
+    return this.s.budget.listTemplates(req.ctx!);
+  }
+
+  @Route(b.saveTemplate)
+  saveTemplate(@In() i: Input<typeof b.saveTemplate>, @Req() req: Req): Promise<Output<typeof b.saveTemplate>> {
+    return this.s.budget.saveTemplate(req.ctx!, i.params.templateId, i.body);
+  }
+
+  @Route(b.applyTemplate)
+  applyTemplate(@In() i: Input<typeof b.applyTemplate>, @Req() req: Req): Promise<Output<typeof b.applyTemplate>> {
+    return this.s.budget.applyTemplate(req.ctx!, i.params.month, i.params.templateId, i.body.preview);
+  }
 }
 
 @Controller()

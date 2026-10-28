@@ -41,7 +41,7 @@ import {
 } from './modules/auth/tokens.js';
 import { type EmailSender, Mailer, pickSender } from './modules/notifications/email/email.js';
 import { TransferDismissalsRepository, TransactionsService } from './modules/transactions/transactions.service.js';
-import { BudgetMonthsRepository } from './modules/budget/budget.repository.js';
+import { BudgetMonthsRepository, BudgetTemplatesRepository } from './modules/budget/budget.repository.js';
 import { BudgetService } from './modules/budget/budget.service.js';
 import { ReconciliationsRepository } from './modules/reconcile/reconcile.repository.js';
 import { ReconcileService } from './modules/reconcile/reconcile.service.js';
@@ -140,6 +140,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const budget = new BudgetService(
     database,
     new BudgetMonthsRepository(db),
+    new BudgetTemplatesRepository(db),
     ledger,
     categories,
     categoriesRepo,

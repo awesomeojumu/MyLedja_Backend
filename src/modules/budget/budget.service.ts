@@ -12,8 +12,8 @@ import type { LedgerService } from '../ledger/ledger.service.js';
 import { budgetMonths, monthFigures, monthRange, netWorth, type PeriodTotal } from '../ledger/read.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import type { WorkspacesRepository } from '../workspaces/workspaces.repository.js';
-import type { BudgetCategory, BudgetMonth, Dashboard } from './budget.contract.js';
-import type { BudgetMonthsRepository } from './budget.repository.js';
+import type { BudgetCategory, BudgetMonth, BudgetTemplate, Dashboard } from './budget.contract.js';
+import type { BudgetMonthsRepository, BudgetTemplateDoc, BudgetTemplatesRepository } from './budget.repository.js';
 
 export const BudgetErrors = {
   notSpending: () =>
@@ -38,6 +38,7 @@ export class BudgetService {
   constructor(
     private readonly database: Database,
     private readonly repos: BudgetMonthsRepository,
+    private readonly templates: BudgetTemplatesRepository,
     private readonly ledger: LedgerService,
     private readonly categories: CategoriesService,
     private readonly categoriesRepo: CategoriesRepository,
@@ -180,6 +181,64 @@ export class BudgetService {
         { session },
       );
     });
+    return (await this.get(ctx, month, 1)).months[0]!;
+  }
+
+  async listTemplates(ctx: WorkspaceContext): Promise<{ templates: z.input<typeof BudgetTemplate>[] }> {
+    const docs = await this.templates.list(ctx);
+    return { templates: docs.map(templateView) };
+  }
+
+  async saveTemplate(
+    ctx: WorkspaceContext,
+    templateId: string,
+    body: { name: string; rules: { categoryId: string; assigned: string }[] },
+  ): Promise<z.input<typeof BudgetTemplate>> {
+    return this.database.transaction(async (session) => {
+      for (const rule of body.rules) await this.requireSpending(ctx, rule.categoryId, session);
+      const now = this.now();
+      const rules = body.rules.map((r) => ({ categoryId: r.categoryId, assignedMinor: parseMinor(r.assigned) }));
+      const after = await this.templates.findOneAndUpdate(
+        ctx,
+        { _id: templateId },
+        {
+          $set: { name: body.name, rules, updatedAt: now },
+          $inc: { version: 1 },
+          $setOnInsert: { createdAt: now },
+        },
+        { session, upsert: true },
+      );
+      await this.ledger.feed(ctx, [{ collection: 'templates', docId: templateId, op: 'upsert' }], session);
+      return templateView(after!);
+    });
+  }
+
+  async applyTemplate(
+    ctx: WorkspaceContext,
+    month: string,
+    templateId: string,
+    preview: boolean,
+  ): Promise<z.input<typeof BudgetMonth>> {
+    const tpl = await this.templates.findOne(ctx, { _id: templateId });
+    if (!tpl) throw Errors.notFound();
+    if (!preview) {
+      await this.database.transaction(async (session) => {
+        for (const rule of tpl.rules) {
+          await this.requireSpending(ctx, rule.categoryId, session);
+          await this.repos.setAssigned(ctx, month, rule.categoryId, rule.assignedMinor, this.now(), { session });
+          await this.ledger.feed(
+            ctx,
+            [{ collection: 'budget_months', docId: `${rule.categoryId}:${month}`, op: 'upsert' }],
+            session,
+          );
+        }
+        await this.audit.record(
+          ctx,
+          { action: 'budget.template_applied', target: { collection: 'templates', id: templateId }, after: { month } },
+          { session },
+        );
+      });
+    }
     return (await this.get(ctx, month, 1)).months[0]!;
   }
 
@@ -513,4 +572,13 @@ function daysInMonth(month: string): number {
 
 function minMonth(a: string, b: string) {
   return a < b ? a : b;
+}
+
+function templateView(doc: BudgetTemplateDoc): z.input<typeof BudgetTemplate> {
+  return {
+    id: doc._id,
+    name: doc.name,
+    rules: doc.rules.map((r) => ({ categoryId: r.categoryId, assigned: toMinorString(r.assignedMinor) })),
+    version: doc.version,
+  };
 }
