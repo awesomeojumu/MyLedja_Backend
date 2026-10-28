@@ -138,7 +138,20 @@ const m0004: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004];
+const m0005: Migration = {
+  name: '0005-reconciliations',
+  async up(db) {
+    await installValidators(db);
+    const ix = db.collection('reconciliations');
+    await ix.createIndex({ workspaceId: 1, accountId: 1, createdAt: -1 });
+    await ix.createIndex(
+      { workspaceId: 1, accountId: 1 },
+      { unique: true, partialFilterExpression: { status: 'in_progress' } },
+    );
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {

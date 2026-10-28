@@ -55,6 +55,16 @@ export class TransferDismissalsRepository extends BaseRepository<TransferDismiss
 
 /** People's money movements (build plan B1.8): list, post, correct, reverse, bulk and transfer matching. */
 export class TransactionsService {
+  /** Set by `buildServices` once reconcile exists, so unlock can update that history. */
+  onUnlock:
+    | ((
+        ctx: WorkspaceContext,
+        reconciliationId: string,
+        transactionId: string,
+        session: ClientSession,
+      ) => Promise<void>)
+    | null = null;
+
   constructor(
     private readonly database: Database,
     private readonly ledger: LedgerService,
@@ -193,7 +203,7 @@ export class TransactionsService {
         { session },
       );
       if (!after) throw LedgerErrors.notFoundEvent();
-      // The reconcile module records unlocks on the reconciliation document (B1.13).
+      if (this.onUnlock) await this.onUnlock(ctx, before.reconciliationId, id, session);
       await this.ledger.feed(ctx, [{ collection: 'transactions', docId: id, op: 'upsert' }], session);
       await this.audit.record(
         ctx,
