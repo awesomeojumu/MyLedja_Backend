@@ -83,7 +83,7 @@ export const workspaceRoutes = {
     tag,
     summary: 'Finish Welcome',
     description:
-      'Saves the workspace name, week start and budget style, and marks setup complete. Accounts (with their opening balances) and categories are kept with the workspace and posted to the ledger when it ships (build plan B1.1 and B1.6), so the app sends them once. Sending setup again replaces what was kept.',
+      'Saves the workspace name, week start and budget style, creates each account with its opening balance (E8, never income) and each category (in the group named; a group called "Income" holds income categories), and marks setup complete. Account `id`s made on the device are kept. Sending setup again adds only what is new: accounts and categories already created are matched by id, then by name.',
     access: { kind: 'workspace', minRole: 'admin' },
     params: WorkspaceParams,
     body: SetupBody,
