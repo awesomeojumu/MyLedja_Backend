@@ -27,7 +27,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.repository.ts', 'src/common/repository/**', 'src/db/**', 'test/helpers/**'],
+    files: ['src/**/*.repository.ts', 'src/common/repository/**', 'src/db/**', 'test/**', 'src/**/__tests__/**'],
     rules: { 'no-restricted-syntax': ['error', noProcessEnv, noFloatMoney] },
   },
   {

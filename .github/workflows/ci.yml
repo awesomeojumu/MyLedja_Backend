@@ -27,6 +27,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:int
+      - run: npm run test:e2e
       - run: npm run build
       - run: npm run cases:check
       - run: npm run openapi:check

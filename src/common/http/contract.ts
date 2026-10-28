@@ -45,10 +45,12 @@ export interface RouteDef<
   csrfProtected?: boolean;
 }
 
+type Part<S> = [NonNullable<S>] extends [z.ZodType] ? z.output<NonNullable<S>> : undefined;
+
 export type Input<D extends RouteDef> = {
-  params: D['params'] extends z.ZodType ? z.output<D['params']> : Record<string, never>;
-  query: D['query'] extends z.ZodType ? z.output<D['query']> : Record<string, never>;
-  body: D['body'] extends z.ZodType ? z.output<D['body']> : undefined;
+  params: Part<D['params']>;
+  query: Part<D['query']>;
+  body: Part<D['body']>;
 };
 
 export type Output<D extends RouteDef> = D['response'] extends z.ZodType ? z.input<D['response']> : void;
