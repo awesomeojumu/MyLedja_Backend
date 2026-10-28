@@ -70,6 +70,7 @@ export class ContractInterceptor implements NestInterceptor {
     const reply = context.switchToHttp().getResponse<FastifyReply>();
     req.route = route;
     const operationId = readOperationId(req, route);
+    req.operationId = operationId;
     req.input = {
       params: route.params ? parseOrThrow(route.params, req.params ?? {}) : {},
       query: route.query ? parseOrThrow(route.query, req.query ?? {}) : {},

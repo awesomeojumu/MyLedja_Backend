@@ -149,6 +149,7 @@ export class LedgerService {
 
   /** Posts one event (build plan B1.3). A repeated operationId returns the first event and posts nothing. */
   async post(ctx: WorkspaceContext, input: EventInput, opts: PostOptions): Promise<PostResult> {
+    if (!opts.operationId) throw new AppError(400, 'operation_id_missing', 'This change needs an operation id.');
     const existing = await this.transactions.byOperation(ctx, opts.operationId);
     if (existing) return { event: existing, duplicate: true };
     try {
