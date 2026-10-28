@@ -142,3 +142,10 @@ export async function addMember(t: TestApp, workspaceId: string, userId: string,
     .collection('memberships')
     .insertOne({ _id: uuidv7() as never, workspaceId, userId, role, createdAt: now, updatedAt: now, version: 1 });
 }
+
+/** A workspace for service-level tests, made the way sign-up makes one but without the HTTP limits. */
+export async function newWorkspace(t: TestApp) {
+  const userId = uuidv7();
+  const ctx = await t.database.transaction((session) => t.services.workspaces.createPersonal(userId, session));
+  return { userId, workspaceId: ctx.workspaceId, ctx };
+}

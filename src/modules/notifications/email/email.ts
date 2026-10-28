@@ -164,6 +164,18 @@ export class Mailer {
     });
   }
 
+  balanceMismatch(to: string, workspaceId: string, mismatches: number) {
+    return this.deliver({
+      to,
+      template: 'balance_mismatch',
+      subject: 'MyLedja balance check found a mismatch',
+      text: [
+        `The nightly balance check found ${mismatches} stored balance(s) in workspace ${workspaceId} that differ from the sum of their lines.`,
+        'Nothing was overwritten. The details are in the balance_checks collection.',
+      ].join('\n'),
+    });
+  }
+
   passwordChanged(to: string) {
     return this.deliver({
       to,

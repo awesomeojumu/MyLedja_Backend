@@ -85,4 +85,15 @@ export class CountersRepository extends BaseRepository<CounterDoc> {
   async create(ctx: WorkspaceContext, o: Opts = {}) {
     await this.insertOne(ctx, { _id: ctx.workspaceId, seq: 0n }, o);
   }
+
+  /** Takes the next `count` numbers of the change feed; returns the first. */
+  async take(ctx: WorkspaceContext, count: number, o: Opts = {}): Promise<bigint> {
+    const after = await this.findOneAndUpdate(ctx, { _id: ctx.workspaceId }, { $inc: { seq: BigInt(count) } }, o);
+    if (!after) throw new Error('counter_missing');
+    return after.seq - BigInt(count) + 1n;
+  }
+
+  async current(ctx: WorkspaceContext, o: Opts = {}): Promise<bigint> {
+    return (await this.findOne(ctx, { _id: ctx.workspaceId }, o))?.seq ?? 0n;
+  }
 }

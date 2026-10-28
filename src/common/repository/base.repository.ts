@@ -49,8 +49,22 @@ export abstract class BaseRepository<T extends WorkspaceDoc> {
     return full;
   }
 
-  async updateOne(ctx: WorkspaceContext, filter: Filter<T>, update: UpdateFilter<T>, options: Opts = {}) {
+  async updateOne(
+    ctx: WorkspaceContext,
+    filter: Filter<T>,
+    update: UpdateFilter<T>,
+    options: Opts & { upsert?: boolean } = {},
+  ) {
     return this.collection.updateOne(this.scope(ctx, filter), withoutWorkspaceChange(update), options);
+  }
+
+  async updateMany(ctx: WorkspaceContext, filter: Filter<T>, update: UpdateFilter<T>, options: Opts = {}) {
+    return this.collection.updateMany(this.scope(ctx, filter), withoutWorkspaceChange(update), options);
+  }
+
+  async aggregate<R extends Document>(ctx: WorkspaceContext, pipeline: Document[], options: Opts = {}): Promise<R[]> {
+    if (!ctx?.workspaceId) throw new Error('workspace_context_missing');
+    return this.collection.aggregate<R>([{ $match: { workspaceId: ctx.workspaceId } }, ...pipeline], options).toArray();
   }
 
   async findOneAndUpdate(
