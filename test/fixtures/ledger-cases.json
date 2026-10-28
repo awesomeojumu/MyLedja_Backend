@@ -1,6 +1,6 @@
 {
-  "about": "MyLedja worked cases (TECH-SPEC 6.14). Shared by the backend and the app: change it in the backend, then copy it and its sha256 to the app. Amounts are whole kobo as strings. In inputs, \"@key\" names an account or category below and \"#ref\" names an earlier step's event. Balances are as shown to people: what you have, or for a liability what you owe. Each case starts from an empty workspace.",
-  "version": 1,
+  "about": "MyLedja worked cases (TECH-SPEC 6.14). Shared by the backend and the app: change it in the backend, then copy it and its sha256 to the app. Amounts are whole kobo as strings. In inputs, \"@key\" names an account or category below and \"#ref\" names an earlier step's event. Balances are as shown to people: what you have, or for a liability what you owe. Each case starts from an empty workspace. Phase 5: a \"price\" step enters a holding's price; \"rates\" on a case are naira per unit of each other currency; \"unrealised\" and \"withoutRates\" check TECH-SPEC 6.7 and 6.8.",
+  "version": 2,
   "currency": "NGN",
   "accounts": [
     { "key": "gtbank", "kind": "asset", "accountType": "bank", "name": "GTBank Current" },
@@ -15,7 +15,10 @@
       "personDebt": "receivable"
     },
     { "key": "pension", "kind": "asset", "accountType": "pension", "name": "Pension RSA" },
-    { "key": "nhf", "kind": "asset", "accountType": "nhf", "name": "NHF" }
+    { "key": "nhf", "kind": "asset", "accountType": "nhf", "name": "NHF" },
+    { "key": "stanbic", "kind": "asset", "accountType": "investment", "name": "Stanbic Shares" },
+    { "key": "mtn", "kind": "asset", "accountType": "holding", "name": "MTN Nigeria", "holdingOf": "stanbic" },
+    { "key": "usd", "kind": "asset", "accountType": "bank", "name": "GTBank Dollar", "currency": "USD" }
   ],
   "categories": [
     { "key": "salary", "kind": "income", "name": "Salary", "budgetable": true },
@@ -352,12 +355,7 @@
         },
         {
           "ref": "e1",
-          "post": {
-            "type": "write_off",
-            "receivableAccountId": "@tunde",
-            "amount": "6000000",
-            "date": "2026-12-01"
-          },
+          "post": { "type": "write_off", "receivableAccountId": "@tunde", "amount": "6000000", "date": "2026-12-01" },
           "expectLines": [
             { "account": "@system:written_off", "amount": "6000000" },
             { "account": "@tunde", "amount": "-6000000" }
@@ -476,9 +474,109 @@
           }
         }
       ],
+      "expect": { "balances": { "gtbank": "-3000000" }, "eventCount": 1 }
+    },
+    {
+      "id": 15,
+      "title": "Buy 500 MTN at ₦210.00 plus ₦500.00 fees",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" }
+        },
+        {
+          "ref": "e2",
+          "post": {
+            "type": "investment_buy",
+            "holdingId": "@mtn",
+            "accountId": "@gtbank",
+            "units": "500",
+            "price": "21000",
+            "fees": "50000",
+            "date": "2026-10-10"
+          },
+          "expectLines": [
+            { "account": "@mtn", "amount": "10550000" },
+            { "account": "@gtbank", "amount": "-10550000" }
+          ]
+        }
+      ],
       "expect": {
-        "balances": { "gtbank": "-3000000" },
-        "eventCount": 1
+        "balances": { "gtbank": "70680000", "mtn": "10550000" },
+        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "81230000"
+      }
+    },
+    {
+      "id": 16,
+      "title": "Price rises to ₦236.00",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" }
+        },
+        {
+          "ref": "e2",
+          "post": {
+            "type": "investment_buy",
+            "holdingId": "@mtn",
+            "accountId": "@gtbank",
+            "units": "500",
+            "price": "21000",
+            "fees": "50000",
+            "date": "2026-10-10"
+          }
+        },
+        { "price": { "holdingId": "@mtn", "price": "23600", "date": "2026-10-20" } }
+      ],
+      "expect": {
+        "balances": { "gtbank": "70680000", "mtn": "10550000" },
+        "unrealised": { "mtn": "1250000" },
+        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "82480000"
+      }
+    },
+    {
+      "id": 17,
+      "title": "Sell 200 at ₦240.00, no fees",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" }
+        },
+        {
+          "ref": "e2",
+          "post": {
+            "type": "investment_buy",
+            "holdingId": "@mtn",
+            "accountId": "@gtbank",
+            "units": "500",
+            "price": "21000",
+            "fees": "50000",
+            "date": "2026-10-10"
+          }
+        },
+        {
+          "ref": "e3",
+          "post": {
+            "type": "investment_sell",
+            "holdingId": "@mtn",
+            "accountId": "@gtbank",
+            "units": "200",
+            "price": "24000",
+            "date": "2026-10-25"
+          },
+          "expectLines": [
+            { "account": "@gtbank", "amount": "4800000" },
+            { "account": "@mtn", "amount": "-4220000" },
+            { "account": "@system:investment_gain", "amount": "-580000" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "gtbank": "75480000", "mtn": "6330000" },
+        "months": { "2026-10": { "income": "580000", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "81810000"
       }
     },
     {
@@ -747,6 +845,23 @@
           "2026-10": { "income": "80000001", "spent": "9600000", "spentByCategory": { "taxes": "9600000" } }
         },
         "netWorth": "70400001"
+      }
+    },
+    {
+      "id": 25,
+      "title": "$120.00 balance at ₦1,550.00 per dollar",
+      "rates": { "USD": "1550" },
+      "steps": [
+        {
+          "ref": "e1",
+          "post": { "type": "opening_balance", "accountId": "@usd", "amount": "12000", "date": "2026-10-01" }
+        }
+      ],
+      "expect": {
+        "balances": { "usd": "12000" },
+        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "netWorth": "18600000",
+        "withoutRates": { "netWorth": "0", "partial": ["USD"] }
       }
     },
     {

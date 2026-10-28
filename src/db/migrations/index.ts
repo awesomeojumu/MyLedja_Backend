@@ -246,6 +246,28 @@ const m0013: Migration = {
   },
 };
 
+const m0014: Migration = {
+  name: '0014-investments-and-rates',
+  async up(db) {
+    await installValidators(db);
+    await db
+      .collection('holdings')
+      .createIndex(
+        { workspaceId: 1, operationId: 1 },
+        { unique: true, partialFilterExpression: { operationId: { $type: 'string' } } },
+      );
+    await db.collection('holdings').createIndex({ workspaceId: 1, accountId: 1 });
+    await db.collection('prices').createIndex({ workspaceId: 1, holdingId: 1, date: 1 }, { unique: true });
+    await db.collection('exchange_rates').createIndex({ workspaceId: 1, currency: 1, date: 1 }, { unique: true });
+    await db
+      .collection('transactions')
+      .createIndex(
+        { workspaceId: 1, 'links.holdingId': 1, date: 1 },
+        { partialFilterExpression: { 'links.holdingId': { $type: 'string' } } },
+      );
+  },
+};
+
 export const MIGRATIONS: Migration[] = [
   m0001,
   m0002,
@@ -260,6 +282,7 @@ export const MIGRATIONS: Migration[] = [
   m0011,
   m0012,
   m0013,
+  m0014,
 ];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */

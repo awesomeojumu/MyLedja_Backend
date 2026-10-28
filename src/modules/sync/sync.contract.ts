@@ -32,6 +32,10 @@ export const OPERATION_TYPES = [
   'income.stream.update',
   'rule.upsert',
   'rule.delete',
+  'holding.create',
+  'holding.update',
+  'holding.prices',
+  'exchange_rate.set',
 ] as const;
 
 export const CURRENT_SCHEMA_VERSION = 1;

@@ -137,6 +137,27 @@ export const VALIDATORS: Record<string, Document> = {
     sortOrder: int,
     operationId: nullable(str),
     personDebt: { enum: ['receivable', 'payable', null] },
+    holdingOf: nullable(uuid),
+  }),
+  holdings: record(['name', 'type', 'accountId', 'currency', 'archivedAt'], {
+    name: str,
+    symbol: nullable(str),
+    type: { enum: ['stock', 'fund', 'pension', 'crypto', 'fixed_deposit', 'other'] },
+    accountId: uuid,
+    currency: currency,
+    archivedAt: nullable(date),
+    operationId: nullable(str),
+  }),
+  exchange_rates: record(['currency', 'date', 'rate', 'source'], {
+    currency: currency,
+    date: localDate,
+    rate: { bsonType: 'decimal' },
+    source: { enum: ['manual'] },
+  }),
+  prices: record(['holdingId', 'date', 'priceMinor'], {
+    holdingId: uuid,
+    date: localDate,
+    priceMinor: { bsonType: 'string', pattern: '^[1-9]\\d{0,17}$' },
   }),
   category_groups: record(['name', 'kind', 'sortOrder'], {
     name: str,
@@ -205,6 +226,7 @@ export const VALIDATORS: Record<string, Document> = {
     reconciliationId: nullable(uuid),
     clearedAccountIds: { bsonType: 'array', items: uuid },
     importId: nullable(uuid),
+    investment: { bsonType: ['object', 'null'] },
   }),
   account_balances: {
     bsonType: 'object',

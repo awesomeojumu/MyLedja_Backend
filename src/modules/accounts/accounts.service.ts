@@ -54,6 +54,15 @@ const isReal = { accountType: { $ne: null }, systemKey: null } as const;
 
 /** People's own accounts (build plan B1.6): bank, cash, cards, loans, investments and property. */
 export class AccountsService {
+  /**
+   * Exchange rates and holdings, once those modules exist (Phase 5). Net worth then converts other currencies
+   * and counts holdings at market value, so it includes unrealised gains (TECH-SPEC 6.7).
+   */
+  wealthFor?: (ctx: WorkspaceContext) => Promise<{
+    convert: (amount: bigint, from: string, date: string) => bigint | null;
+    holdings: { holding: { accountId: string; currency: string }; position: { value: bigint } }[];
+  }>;
+
   constructor(
     private readonly database: Database,
     private readonly ledger: LedgerService,
@@ -66,20 +75,28 @@ export class AccountsService {
     const docs = (await this.ledger.accounts.find(ctx, isReal as never, {
       sort: { sortOrder: 1, createdAt: 1 },
     })) as Doc[];
-    const views = await this.views(ctx, docs);
+    const wealth = await this.wealthFor?.(ctx);
+    const views = await this.views(ctx, docs, wealth);
     const currency = await this.currencyOf(ctx);
-    const balanceOf = new Map(views.map((v, i) => [docs[i]!._id, rawOf(docs[i]!, v.balance)]));
+    const today = new Date(this.now()).toISOString().slice(0, 10);
+    // An investment account is worth its own balance plus its holdings at market value.
+    const balanceOf = new Map(
+      views.map((v, i) => [docs[i]!._id, rawOf(docs[i]!, v.balance) + parseMinor(v.holdingsValue)]),
+    );
     const live = docs.filter((d) => !d.archivedAt || d.closedWithBalance);
+    const toHome = (amount: bigint, from: string) =>
+      from === currency ? amount : (wealth?.convert(amount, from, today) ?? null);
     const worth = netWorth(
       balanceOf,
       live.map((d) => ({ id: d._id, kind: d.kind, currency: d.currency, systemKey: null })),
       currency,
+      toHome,
     );
     let assets = 0n;
     let owed = 0n;
     for (const d of live) {
-      if (d.currency !== currency) continue;
-      const b = balanceOf.get(d._id) ?? 0n;
+      const b = toHome(balanceOf.get(d._id) ?? 0n, d.currency);
+      if (b === null) continue;
       if (b > 0n) assets += b;
       else owed -= b;
     }
@@ -305,8 +322,21 @@ export class AccountsService {
     );
   }
 
-  private async views(ctx: WorkspaceContext, docs: Doc[]): Promise<z.input<typeof Account>[]> {
+  private async views(
+    ctx: WorkspaceContext,
+    docs: Doc[],
+    wealth?: Awaited<ReturnType<NonNullable<AccountsService['wealthFor']>>>,
+  ): Promise<z.input<typeof Account>[]> {
     if (docs.length === 0) return [];
+    const holds =
+      wealth ??
+      (docs.some((d) => d.accountType && GROUP_OF[d.accountType] === 'investments')
+        ? await this.wealthFor?.(ctx)
+        : undefined);
+    const holdingsValue = new Map<string, bigint>();
+    for (const h of holds?.holdings ?? []) {
+      holdingsValue.set(h.holding.accountId, (holdingsValue.get(h.holding.accountId) ?? 0n) + h.position.value);
+    }
     const ids = docs.map((d) => d._id);
     const balances = await this.ledger.balances.forAccounts(ctx, ids);
     const uncleared = await this.ledger.transactions.aggregate<{ _id: string; total: bigint }>(ctx, [
@@ -347,6 +377,7 @@ export class AccountsService {
         closedWithBalance: d.closedWithBalance ?? false,
         sortOrder: d.sortOrder,
         balance: show(raw),
+        holdingsValue: toMinorString(holdingsValue.get(d._id) ?? 0n),
         clearedBalance: show(raw - unc),
         unclearedBalance: show(unc),
         lastReconciledAt: last.find((l) => l._id === d._id)?.date ?? null,

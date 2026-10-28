@@ -12,7 +12,7 @@ export class IntegrityError extends Error {
 }
 
 const isReal = (a: AccountRef) => (a.kind === 'asset' || a.kind === 'liability') && a.systemKey === null;
-const isCash = (a: AccountRef) => isReal(a) && !a.personDebt;
+const isCash = (a: AccountRef) => isReal(a) && !a.personDebt && !a.holding;
 
 /**
  * The checks of TECH-SPEC 6.11 that need only the event and its accounts (1, 2, 3, 5 and 7).
@@ -35,7 +35,8 @@ export function checkLines(
   const accounts = lines.map((l) => {
     const a = accountOf(l.ledgerAccountId);
     if (!a) throw new IntegrityError(2, `account ${l.ledgerAccountId} is not in this workspace`);
-    if (a.currency !== l.currency && a.systemKey !== 'fx_clearing') {
+    // Equity system accounts (opening balances, adjustments, revaluation, exchange clearing) hold any currency.
+    if (a.currency !== l.currency && !(a.systemKey && a.kind === 'equity')) {
       throw LedgerErrors.currencyMismatch('amount');
     }
     return a;
@@ -119,6 +120,26 @@ export function checkLines(
       const inc = byKind('income');
       if (inc.length !== 1 || inc[0]!.amountMinor >= 0n)
         throw new IntegrityError(3, 'salary gross needs one income credit');
+      return;
+    }
+    case 'investment_buy': {
+      const cash = lines.filter((_, i) => isCash(accounts[i]!));
+      const held = lines.filter((_, i) => accounts[i]!.holding);
+      if (lines.length !== 2 || cash.length !== 1 || held.length !== 1 || held[0]!.amountMinor <= 0n)
+        throw new IntegrityError(3, 'a buy needs one cash account and one holding debit');
+      return;
+    }
+    case 'investment_sell': {
+      const cash = lines.filter((_, i) => isCash(accounts[i]!));
+      const held = lines.filter((_, i) => accounts[i]!.holding);
+      const rest = accounts.filter((a) => !isCash(a) && !a.holding);
+      if (
+        cash.length !== 1 ||
+        held.length !== 1 ||
+        held[0]!.amountMinor >= 0n ||
+        rest.some((a) => a.systemKey !== 'investment_gain' && a.systemKey !== 'investment_loss')
+      )
+        throw new IntegrityError(3, 'a sale needs cash, the holding cost and a gain or loss');
       return;
     }
     case 'reversal':

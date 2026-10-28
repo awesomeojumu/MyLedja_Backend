@@ -2,6 +2,7 @@ import type { ClientSession, Db, Decimal128, Filter } from 'mongodb';
 import { newId } from '../../common/ids/ids.js';
 import { BaseRepository, GlobalRepository } from '../../common/repository/base.repository.js';
 import type { WorkspaceContext } from '../../common/workspace/workspace-context.js';
+import type { InvestmentMeta } from './investments.js';
 import type { AccountRef, EventLinks, EventStatus, EventType, LedgerKind, Line, SystemKey } from './ledger.types.js';
 
 type Opts = { session?: ClientSession };
@@ -42,6 +43,8 @@ export type LedgerAccountDoc = {
   sortOrder: number;
   operationId: string | null;
   personDebt?: 'receivable' | 'payable' | null;
+  /** Set on a holding's ledger account: the investment account it's held in. Its id is the holding's id. */
+  holdingOf?: string | null;
   createdAt: Date;
   updatedAt: Date;
   version: number;
@@ -55,6 +58,7 @@ export const toRef = (a: LedgerAccountDoc): AccountRef => ({
   categoryId: a.categoryId,
   archived: a.archivedAt !== null,
   personDebt: a.personDebt ?? null,
+  holding: !!a.holdingOf,
 });
 
 export class LedgerAccountsRepository extends BaseRepository<LedgerAccountDoc> {
@@ -106,6 +110,8 @@ export type TransactionDoc = {
   /** Accounts on which this event is ticked as cleared. */
   clearedAccountIds: string[];
   importId: string | null;
+  /** E20 to E22: units, prices and the lots a sale took (TECH-SPEC 6.8). Absent on other events. */
+  investment?: InvestmentMeta | null;
   createdAt: Date;
   updatedAt: Date;
   version: number;

@@ -79,6 +79,10 @@ import { RulesService } from './modules/rules/rules.service.js';
 import { BankLinkIndex, BankLinksRepository } from './modules/banking/banking.repository.js';
 import { BankingService } from './modules/banking/banking.service.js';
 import { MonoProvider } from './modules/banking/mono.js';
+import { HoldingsRepository, PricesRepository } from './modules/investments/investments.repository.js';
+import { InvestmentsService } from './modules/investments/investments.service.js';
+import { ExchangeRatesRepository } from './modules/currencies/currencies.repository.js';
+import { CurrenciesService } from './modules/currencies/currencies.service.js';
 
 export const SERVICES = Symbol('SERVICES');
 export const REFRESH_COOKIE = 'myledja_refresh';
@@ -130,7 +134,33 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   );
   const currencyOf = async (ctx: WorkspaceContext, session?: ClientSession) =>
     (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN';
+  const workspaceInfo = async (ctx: WorkspaceContext) => {
+    const ws = await workspacesRepo.get(ctx);
+    return { currency: ws?.currency ?? 'NGN', timeZone: ws?.timeZone ?? 'Africa/Lagos' };
+  };
+  const investments = new InvestmentsService(
+    database,
+    new HoldingsRepository(db),
+    new PricesRepository(db),
+    ledger,
+    audit,
+    workspaceInfo,
+    now,
+  );
+  const currencies = new CurrenciesService(
+    database,
+    new ExchangeRatesRepository(db),
+    ledger,
+    audit,
+    (ctx) => currencyOf(ctx),
+    now,
+  );
+  investments.converterFor = (ctx) => currencies.converterFor(ctx);
   const accounts = new AccountsService(database, ledger, audit, currencyOf, now);
+  accounts.wealthFor = async (ctx) => ({
+    convert: await currencies.converterFor(ctx),
+    holdings: await investments.valuation(ctx),
+  });
   const transactions = new TransactionsService(
     database,
     ledger,
@@ -316,6 +346,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const rules = new RulesService(database, new RulesRepository(db), ledger, audit, now);
   imports.rules = rules;
   sync.rules = rules;
+  sync.investments = investments;
+  sync.currencies = currencies;
   const banking = new BankingService(
     config.mono ? new MonoProvider(config.mono) : null,
     config.mono?.webhookSecret ?? null,
@@ -364,6 +396,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     statements,
     rules,
     banking,
+    investments,
+    currencies,
     categoriesRepo,
     idempotency,
     limits,
