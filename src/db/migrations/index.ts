@@ -238,6 +238,14 @@ const m0012: Migration = {
   },
 };
 
+const m0013: Migration = {
+  name: '0013-templates',
+  async up(db) {
+    await installValidators(db);
+    await db.collection('templates').createIndex({ workspaceId: 1, name: 1 });
+  },
+};
+
 export const MIGRATIONS: Migration[] = [
   m0001,
   m0002,
@@ -251,6 +259,7 @@ export const MIGRATIONS: Migration[] = [
   m0010,
   m0011,
   m0012,
+  m0013,
 ];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
