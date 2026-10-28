@@ -10,6 +10,7 @@ import { AuthController } from './modules/auth/auth.controller.js';
 import { BudgetController, DashboardController } from './modules/budget/budget.controller.js';
 import { CategoriesController, PayeesController, TagsController } from './modules/categories/categories.controller.js';
 import { HealthController } from './modules/health/health.controller.js';
+import { ImportsController } from './modules/imports/imports.controller.js';
 import { ReconcileController } from './modules/reconcile/reconcile.controller.js';
 import { TransactionsController } from './modules/transactions/transactions.controller.js';
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
@@ -33,6 +34,7 @@ export class AppModule {
         ReconcileController,
         BudgetController,
         DashboardController,
+        ImportsController,
       ],
       providers: [
         { provide: SERVICES, useValue: services },
