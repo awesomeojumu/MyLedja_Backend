@@ -325,3 +325,16 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - Sync: `debt.lend`, `debt.borrow`, `debt.payment`, `debt.write_off` wired; change feed collection `debts`.
 - Answer:
 - Status: open
+
+## Q-B27: Money back suggestions (B2.6)
+
+- Task: B2.6
+- Raised by: backend agent
+- Documents: TECH-SPEC 6.15; cases 26–27
+- Context and decision:
+  - Suggestions computed on read from open debts + payee match and/or instalment amount match.
+  - `suggestionId` is a base64url JSON blob (debt, optional transaction, draft) — no server-side suggestion store in v1.
+  - **money_back:** reverse mistaken income on linked transaction when needed, then `recordPayment` (E16).
+  - **income:** post E1 from draft, or no-op when the transaction is already income (case 27).
+- Answer:
+- Status: open
