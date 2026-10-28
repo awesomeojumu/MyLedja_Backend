@@ -225,7 +225,33 @@ const m0011: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010, m0011];
+const m0012: Migration = {
+  name: '0012-notifications',
+  async up(db) {
+    await installValidators(db);
+    const ix = db.collection('notifications');
+    await ix.createIndex({ workspaceId: 1, userId: 1, createdAt: -1, _id: -1 });
+    await ix.createIndex(
+      { workspaceId: 1, userId: 1, dedupeKey: 1 },
+      { unique: true, partialFilterExpression: { dedupeKey: { $type: 'string' }, dismissedAt: null } },
+    );
+  },
+};
+
+export const MIGRATIONS: Migration[] = [
+  m0001,
+  m0002,
+  m0003,
+  m0004,
+  m0005,
+  m0006,
+  m0007,
+  m0008,
+  m0009,
+  m0010,
+  m0011,
+  m0012,
+];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {

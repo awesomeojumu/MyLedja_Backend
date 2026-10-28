@@ -351,7 +351,16 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Answer:
 - Status: open
 
-## Q-B29: Income streams (B2.3)
+## Q-B31: Worker B stack merged onto Worker A (#59)
+
+- Task: Phase 2 coordination
+- Raised by: backend agent (Worker A)
+- Context and decision:
+  - Worker B (`-c89a`) notifications/templates/jobs rebased onto `cursor/phase-2-income-e790` as `-e790` branches with migrations **0012-notifications**, **0013-templates** (Worker A keeps 0008–0011).
+  - Open PRs stacked: notifications → templates → jobs → B2.2 wiring (not duplicate APIs on sync-only base).
+  - Original #46/#45/#47 remain on `-c89a` for history; canonical stack is `-e790` chain.
+- Answer:
+- Status: open
 
 - Task: B2.3
 - Raised by: backend agent
