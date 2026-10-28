@@ -56,6 +56,8 @@ import { GoalsRepository, GoalAllocationsRepository } from './modules/goals/goal
 import { GoalsService } from './modules/goals/goals.service.js';
 import { IncomeStreamsRepository } from './modules/income/income.repository.js';
 import { IncomeService } from './modules/income/income.service.js';
+import { NotificationsRepository } from './modules/notifications/notifications.repository.js';
+import { NotificationsService } from './modules/notifications/notifications.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -192,6 +194,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
+  const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
   const sync = new SyncService(
     counters,
     changes,
@@ -283,6 +286,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     debts,
     goals,
     income,
+    notifications,
     sync,
     balanceCheck,
     auth,

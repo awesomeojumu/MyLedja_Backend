@@ -369,6 +369,20 @@ export const VALIDATORS: Record<string, Document> = {
     amountRange: { bsonType: ['object', 'null'] },
     linkedTransactionIds: { bsonType: 'array', items: uuid },
   }),
+  notifications: record(['userId', 'kind', 'title', 'body', 'readAt', 'dismissedAt', 'security', 'actions'], {
+    userId: uuid,
+    kind: {
+      enum: ['bill', 'budget', 'goal', 'debt', 'income', 'security', 'sync', 'account'],
+    },
+    title: str,
+    body: str,
+    amountMinor: nullable(str),
+    readAt: nullable(date),
+    dismissedAt: nullable(date),
+    security: { bsonType: 'bool' },
+    actions: { bsonType: 'array' },
+    dedupeKey: nullable(str),
+  }),
 };
 
 /** Creates each collection with its validator, or updates the validator if it exists. Safe to run twice. */

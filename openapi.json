@@ -4314,6 +4314,172 @@
         ],
         "additionalProperties": false
       },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bill",
+              "budget",
+              "goal",
+              "debt",
+              "income",
+              "security",
+              "sync",
+              "account"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "amount": {
+            "description": "Minor units when shown; null when hidden.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "readAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dismissedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "security": {
+            "type": "boolean",
+            "description": "Security notices cannot be muted (DESIGN.md page 27)."
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationAction"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "amount",
+          "readAt",
+          "dismissedAt",
+          "security",
+          "actions",
+          "createdAt",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationAction": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the app goes when the person taps the action."
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "target"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unreadCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "unreadCount"
+        ],
+        "additionalProperties": false
+      },
+      "NotificationsMarked": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "additionalProperties": false
+      },
       "Occurrence": {
         "type": "object",
         "properties": {
@@ -13714,6 +13880,381 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "The in-app inbox for the signed-in member",
+        "description": "Newest first. Filter by kind chip. Dismissed rows are hidden.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "bill",
+                "budget",
+                "goal",
+                "debt",
+                "income",
+                "security",
+                "sync",
+                "account"
+              ]
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/notifications/{notificationId}/dismiss": {
+      "post": {
+        "operationId": "dismissNotification",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Dismiss a notification from the inbox",
+        "description": "Security notices cannot be dismissed until answered.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/notifications/{notificationId}/read": {
+      "post": {
+        "operationId": "markNotificationRead",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark one notification read",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/notifications/mark-all-read": {
+      "post": {
+        "operationId": "markAllNotificationsRead",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark every unread notification read",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsMarked"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
             "content": {
               "application/json": {
                 "schema": {
