@@ -3,11 +3,13 @@ import type { z } from 'zod';
 import { AppError, Errors } from '../../common/errors/errors.js';
 import { newId } from '../../common/ids/ids.js';
 import { parseMinor, toMinorString } from '../../common/money/money.js';
+import { addCalendarDays } from '../../common/time/workspace-clock.js';
 import type { WorkspaceContext } from '../../common/workspace/workspace-context.js';
 import type { Database } from '../../db/client.js';
 import type { AuditRepository } from '../audit/audit.repository.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
+import type { NotificationsService } from '../notifications/notifications.service.js';
 import { scheduleRoutes as scheduleRouteDefs } from './schedules.contract.js';
 import type { Occurrence, PlanMonthSummary, RecurringCandidate, Schedule } from './schedules.contract.js';
 import { firstNextDate, occurrencesInMonth } from './recurrence.js';
@@ -52,6 +54,12 @@ const toOccurrence = (d: OccurrenceDoc): z.input<typeof Occurrence> => ({
   version: d.version,
 });
 
+const reminderCopy = (name: string, occDate: string, daysBefore: string) => {
+  if (daysBefore === '0') return { title: `${name} due today`, body: `Due on ${occDate}.` };
+  if (daysBefore === '1') return { title: `${name} due tomorrow`, body: `Due on ${occDate}.` };
+  return { title: `${name} coming up`, body: `Due on ${occDate} (${daysBefore} days).` };
+};
+
 export class SchedulesService {
   constructor(
     private readonly database: Database,
@@ -60,6 +68,7 @@ export class SchedulesService {
     private readonly ledger: LedgerService,
     private readonly transactions: TransactionsService,
     private readonly audit: AuditRepository,
+    private readonly notifications: NotificationsService,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -416,6 +425,59 @@ export class SchedulesService {
       });
     }
     return { candidates };
+  }
+
+  /** B2.2: in-app bill/income reminders for occurrences whose reminder day is `localDate`. */
+  async deliverReminders(ctx: WorkspaceContext, input: { localDate: string; ownerUserId: string }): Promise<void> {
+    const month = input.localDate.slice(0, 7);
+    await this.database.transaction((session) => this.ensureMonth(ctx, month, session));
+    const active = await this.schedules.find(ctx, { status: 'active', reminder: { $ne: null } });
+    for (const s of active) {
+      if (!s.reminder) continue;
+      const occs = await this.occurrences.forMonth(ctx, month, s._id);
+      for (const occ of occs) {
+        if (occ.status === 'paid' || occ.status === 'received' || occ.status === 'skipped') continue;
+        for (const daysBefore of s.reminder.daysBefore) {
+          const fireOn = addCalendarDays(occ.date, -parseInt(daysBefore, 10));
+          if (fireOn !== input.localDate) continue;
+          const kind = s.kind === 'income' ? 'income' : 'bill';
+          const copy = reminderCopy(s.name, occ.date, daysBefore);
+          await this.notifications.createOnce(ctx, {
+            userId: input.ownerUserId,
+            kind,
+            title: copy.title,
+            body: copy.body,
+            amountMinor: occ.amountMinor,
+            hideAmount: s.reminder.hideAmountOnLockScreen,
+            dedupeKey: `reminder:${s._id}:${occ.date}:before:${daysBefore}`,
+            actions: [
+              { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
+              { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
+            ],
+          });
+        }
+      }
+    }
+  }
+
+  /** B2.2: after local midnight, post occurrences with "Create the transaction for me". */
+  async autoPostDueOccurrences(ctx: WorkspaceContext, localDate: string): Promise<number> {
+    const month = localDate.slice(0, 7);
+    await this.database.transaction((session) => this.ensureMonth(ctx, month, session));
+    const due = await this.occurrences.find(ctx, { date: localDate, status: { $in: ['scheduled', 'due'] } });
+    let posted = 0;
+    for (const occ of due) {
+      const sched = await this.schedules.findOne(ctx, { _id: occ.scheduleId, status: 'active', autoPost: true });
+      if (!sched?.accountId || !sched.categoryId) continue;
+      const op = `job:auto-post:${occ._id}`;
+      if (sched.kind === 'income') {
+        await this.markReceived(ctx, occ._id, { create: { date: localDate, amount: occ.amountMinor } }, op);
+      } else {
+        await this.markPaid(ctx, occ._id, { create: { date: localDate, amount: occ.amountMinor } }, op);
+      }
+      posted += 1;
+    }
+    return posted;
   }
 
   private feed(

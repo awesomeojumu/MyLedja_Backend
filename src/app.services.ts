@@ -160,6 +160,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     config,
     now,
   );
+  const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
   const schedules = new SchedulesService(
     database,
     new SchedulesRepository(db),
@@ -167,6 +168,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     ledger,
     transactions,
     audit,
+    notifications,
     now,
   );
   const debts = new DebtsService(
@@ -196,7 +198,6 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
-  const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
   const sync = new SyncService(
     counters,
     changes,
@@ -269,8 +270,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   );
   jobs.register(balanceCheckJob(balanceCheck));
   const workspaceIndex = new WorkspaceIndex(db);
-  jobs.register(billRemindersJob({ workspaces: workspaceIndex }));
-  jobs.register(recurringDailyJob({ workspaces: workspaceIndex, now }));
+  jobs.register(billRemindersJob({ workspaces: workspaceIndex, workspaceDocs: workspacesRepo, schedules, now }));
+  jobs.register(recurringDailyJob({ workspaces: workspaceIndex, schedules, now }));
 
   return {
     config,
