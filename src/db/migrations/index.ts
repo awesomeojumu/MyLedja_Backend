@@ -151,7 +151,16 @@ const m0005: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005];
+/** Assigned plan per category per month (B1.9). */
+const m0006: Migration = {
+  name: '0006-budget-months',
+  async up(db) {
+    await installValidators(db);
+    await db.collection('budget_months').createIndex({ workspaceId: 1, month: 1, categoryId: 1 }, { unique: true });
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {
