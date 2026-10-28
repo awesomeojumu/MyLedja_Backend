@@ -53,13 +53,13 @@ Format and rules: build plan section 14. The owner asked for the best profession
 
 ## Q-B5: How the app learns the Google client id (answers the frontend's Q-4)
 
-- Task: B0.8, F0.9
+- Task: B0.8, F0.9, F0.2
 - Raised by: backend agent
-- Documents: TECH-SPEC 2.2 (three `EXPO_PUBLIC_` variables), 2.3 rules 3 and 4
+- Documents: TECH-SPEC 2.2 (three `EXPO_PUBLIC_` variables), 2.3 rules 3 and 4; compliance §5 A.3
 - Options: A, a new optional `EXPO_PUBLIC_GOOGLE_CLIENT_ID`. B, `GET /v1/public-config` returns `google.clientId` from the existing `GOOGLE_CLIENT_ID`.
 - Recommendation: B. No new variable, and the button hides itself when `google.enabled` is false. A client id isn't a secret. If prototype T0.2 needs separate iOS and Android ids, they become optional backend variables (2.3 rule 4).
-- Answer:
-- Status: open
+- Answer: B (agent under owner delegation for compliance §5 A.3, 28 Oct 2026). Frontend Q-4 superseded to match. `GET /v1/public-config` already ships `google.enabled` / `google.clientId`.
+- Status: decided
 
 ## Q-B6: How long a session lasts
 

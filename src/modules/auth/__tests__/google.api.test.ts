@@ -82,6 +82,52 @@ describe('POST /v1/auth/google (B0.8)', () => {
     expect(res.json().code).toBe('google_link_invalid');
   });
 
+  it('an existing password account links after an email-code sign-in (B0.8)', async () => {
+    const ada = await signUp(t);
+    const needed = await google(identity(ada.email));
+    expect(needed.statusCode).toBe(409);
+    const { linkToken } = needed.json();
+
+    await t.app.inject({ method: 'POST', url: '/v1/auth/recover', headers: op(), payload: { email: ada.email } });
+    const code = t.outbox.lastCode(ada.email);
+    expect(code).toMatch(/^\d{6}$/);
+
+    const wrong = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/sign-in',
+      headers: op(),
+      payload: { email: ada.email, code: '000000', googleLinkToken: linkToken },
+    });
+    expect(wrong.statusCode).toBe(400);
+    expect(wrong.json().code).toBe('code_wrong');
+    expect((await t.db.collection('users').findOne({ _id: ada.userId as never }))?.googleId).toBeNull();
+
+    const linked = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/sign-in',
+      headers: op(),
+      payload: { email: ada.email, code, googleLinkToken: linkToken },
+    });
+    expect(linked.statusCode).toBe(200);
+    expect(linked.json().user.id).toBe(ada.userId);
+    expect((await t.db.collection('users').findOne({ _id: ada.userId as never }))?.googleId).toMatch(/^g-/);
+
+    const after = await google([...t.google.tokens.entries()].find(([, v]) => v.email === ada.email)![0]);
+    expect(after.statusCode).toBe(200);
+    expect(after.json().user.id).toBe(ada.userId);
+
+    // A code alone (no googleLinkToken) is refused — not a passwordless sign-in.
+    await t.app.inject({ method: 'POST', url: '/v1/auth/recover', headers: op(), payload: { email: ada.email } });
+    const alone = await t.app.inject({
+      method: 'POST',
+      url: '/v1/auth/sign-in',
+      headers: op(),
+      payload: { email: ada.email, code: t.outbox.lastCode(ada.email) },
+    });
+    expect(alone.statusCode).toBe(400);
+    expect(alone.json().field).toBe('googleLinkToken');
+  });
+
   it("an unconfirmed sign-up is taken over by Google, and the stranger's password stops working", async () => {
     const email = 'victim@example.test';
     await t.app.inject({

@@ -22,8 +22,6 @@ export const NewPassword = z
   .max(200, { error: 'Use 200 characters or fewer' })
   .refine((v) => !isCommonPassword(v), { error: 'This password is too common. Choose another one' });
 
-const ExistingPassword = z.string({ error: 'Enter your password' }).min(1, { error: 'Enter your password' }).max(200);
-
 const Code = z.string({ error: 'Enter the 6-digit code from the email' }).regex(/^\d{6}$/, {
   error: 'Enter the 6-digit code from the email',
 });
@@ -66,7 +64,10 @@ export const CodeSent = z
 export const GoogleLinkNeeded = ErrorBody.extend({
   code: z.literal('google_link_needed'),
   email: z.string(),
-  linkToken: z.string().meta({ description: 'Send as `googleLinkToken` with a password sign-in to link Google.' }),
+  linkToken: z.string().meta({
+    description:
+      'Send as `googleLinkToken` with a password sign-in, or with a recovery email code, to link Google (TECH-SPEC 5.8).',
+  }),
 }).meta({ id: 'GoogleLinkNeeded' });
 
 export const SignUpBody = z.object({
@@ -88,13 +89,33 @@ export const VerifyEmailBody = z.object({
   deviceName: DeviceName,
 });
 
-export const SignInBody = z.object({
-  email: Email,
-  password: ExistingPassword,
-  staySignedIn: StaySignedIn,
-  deviceName: DeviceName,
-  googleLinkToken: z.string().max(4000).optional().meta({ description: 'From a google_link_needed answer.' }),
-});
+export const SignInBody = z
+  .object({
+    email: Email,
+    password: z.string().max(200).optional(),
+    code: Code.optional().meta({
+      description:
+        'Recovery email code. With `googleLinkToken`, proves ownership of an existing password account without the password (B0.8 / TECH-SPEC 5.8).',
+    }),
+    staySignedIn: StaySignedIn,
+    deviceName: DeviceName,
+    googleLinkToken: z.string().max(4000).optional().meta({ description: 'From a google_link_needed answer.' }),
+  })
+  .superRefine((v, ctx) => {
+    if (v.code !== undefined) {
+      if (!v.googleLinkToken) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Continue with Google again to link it.',
+          path: ['googleLinkToken'],
+        });
+      }
+      return;
+    }
+    if (!v.password) {
+      ctx.addIssue({ code: 'custom', message: 'Enter your password', path: ['password'] });
+    }
+  });
 
 export const GoogleBody = z.object({
   idToken: z.string().min(1).max(4000),
@@ -161,7 +182,7 @@ export const authRoutes = {
     tag,
     summary: 'Sign in with email and password',
     description:
-      'Wrong details give 401 "Email or password is wrong". After five failures, 429 with retryAfterSeconds (60, growing). An unverified account gives 403 email_not_verified and a new code is sent.',
+      'Wrong details give 401 "Email or password is wrong". After five failures, 429 with retryAfterSeconds (60, growing). An unverified account gives 403 email_not_verified and a new code is sent. To link Google after `google_link_needed`, send `googleLinkToken` with the password, or with a recovery `code` from POST /v1/auth/recover (no password).',
     access: { kind: 'public' },
     body: SignInBody,
     status: 200,
@@ -175,7 +196,7 @@ export const authRoutes = {
     tag,
     summary: 'Continue with Google',
     description:
-      'A new email creates an account. An email that already has a password answers 409 google_link_needed; sign in once with the password and `googleLinkToken` to link. 404 google_off when Google sign-in is not set up.',
+      'A new email creates an account. An email that already has a password answers 409 google_link_needed; link by signing in once with the password and `googleLinkToken`, or with a recovery email code and `googleLinkToken`. 404 google_off when Google sign-in is not set up.',
     access: { kind: 'public' },
     body: GoogleBody,
     status: 200,

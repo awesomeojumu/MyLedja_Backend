@@ -57,7 +57,8 @@ export const AUTH_MESSAGES = {
   notVerified: 'Check your email for a code to finish creating your account',
   googleOff: "Google sign-in isn't available yet. Use your email and password.",
   googleRefused: "Google couldn't confirm this account. Try again or use your email and password.",
-  googleLinkNeeded: 'This email already has a MyLedja password. Sign in with it once to link Google.',
+  googleLinkNeeded:
+    'This email already has a MyLedja password. Sign in with it, or with an email code, once to link Google.',
   googleLinkInvalid: 'Continue with Google again to link it.',
   googleTaken: 'This Google account is already linked to another MyLedja account.',
   sessionEnded: 'Your session has ended. Sign in again.',
@@ -200,13 +201,17 @@ export class AuthService {
   }
 
   async signIn(body: z.output<typeof SignInBody>, meta: RequestMeta): Promise<SessionResult> {
+    if (body.code && body.googleLinkToken) {
+      return this.signInWithEmailCodeLink({ ...body, code: body.code, googleLinkToken: body.googleLinkToken }, meta);
+    }
+
     await this.limits.hit(this.key('signin-ip', meta.ip), 100, 900);
     const lockKey = this.key('signin', body.email);
     const locked = await this.limits.lockedFor(lockKey);
     if (locked > 0) throw Errors.tooMany(locked, waitMessage(locked));
 
     const user = await this.users.byEmail(body.email);
-    const ok = await this.hasher.verify(user?.passwordHash ?? null, body.password);
+    const ok = await this.hasher.verify(user?.passwordHash ?? null, body.password ?? '');
     if (!user || !ok) {
       const lock = await this.limits.fail(lockKey, SIGN_IN_MAX_FAILURES, SIGN_IN_LOCK_SECONDS);
       if (lock > 0) throw Errors.tooMany(lock, waitMessage(lock));
@@ -220,17 +225,7 @@ export class AuthService {
       throw new AppError(403, 'email_not_verified', AUTH_MESSAGES.notVerified);
     }
 
-    let linked = user;
-    if (body.googleLinkToken) {
-      const link = await this.tokens.verifyGoogleLink(body.googleLinkToken);
-      if (!link || link.email !== user.email) {
-        throw new AppError(400, 'google_link_invalid', AUTH_MESSAGES.googleLinkInvalid, { field: 'googleLinkToken' });
-      }
-      const other = await this.users.byGoogleId(link.googleId);
-      if (other && other._id !== user._id) throw new AppError(409, 'google_taken', AUTH_MESSAGES.googleTaken);
-      await this.users.update(user._id, { googleId: link.googleId });
-      linked = { ...user, googleId: link.googleId };
-    }
+    const linked = body.googleLinkToken ? await this.applyGoogleLink(user, body.googleLinkToken) : user;
 
     return this.database.transaction(async (session) => {
       const result = await this.startSession(linked, body.staySignedIn, body.deviceName, session);
@@ -246,6 +241,50 @@ export class AuthService {
       );
       return result;
     });
+  }
+
+  /**
+   * B0.8 / TECH-SPEC 5.8: link Google after the person proves the email with a recovery code
+   * (POST /v1/auth/recover), without needing the password.
+   */
+  private async signInWithEmailCodeLink(
+    body: z.output<typeof SignInBody> & { code: string; googleLinkToken: string },
+    meta: RequestMeta,
+  ): Promise<SessionResult> {
+    await this.limits.hit(this.key('verify-ip', meta.ip), 30, 900);
+    const user = await this.users.byEmail(body.email);
+    if (!user?.emailVerifiedAt) {
+      throw new AppError(400, 'code_expired', AUTH_MESSAGES.codeExpired, { field: 'code' });
+    }
+    const codeId = await this.checkCode(body.email, 'recover', body.code);
+    const linked = await this.applyGoogleLink(user, body.googleLinkToken);
+    await this.limits.clear(this.key('signin', body.email));
+    return this.database.transaction(async (session) => {
+      await this.codes.remove(codeId, { session });
+      const result = await this.startSession(linked, body.staySignedIn, body.deviceName, session);
+      const ctx = await this.workspaces.personalContext(user._id, null, session);
+      await this.audit.record(
+        ctx,
+        {
+          action: 'user.google_linked',
+          target: { collection: 'users', id: user._id },
+          sessionId: result.sessionId,
+        },
+        { session },
+      );
+      return result;
+    });
+  }
+
+  private async applyGoogleLink(user: UserDoc, googleLinkToken: string): Promise<UserDoc> {
+    const link = await this.tokens.verifyGoogleLink(googleLinkToken);
+    if (!link || link.email !== user.email) {
+      throw new AppError(400, 'google_link_invalid', AUTH_MESSAGES.googleLinkInvalid, { field: 'googleLinkToken' });
+    }
+    const other = await this.users.byGoogleId(link.googleId);
+    if (other && other._id !== user._id) throw new AppError(409, 'google_taken', AUTH_MESSAGES.googleTaken);
+    await this.users.update(user._id, { googleId: link.googleId });
+    return { ...user, googleId: link.googleId };
   }
 
   async signInWithGoogle(body: z.output<typeof GoogleBody>, meta: RequestMeta): Promise<SessionResult> {
