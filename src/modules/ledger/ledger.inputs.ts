@@ -40,6 +40,9 @@ export const ExpenseInput = z
       .max(20)
       .optional()
       .meta({ description: 'E12: two or more parts, each with its category.' }),
+    goalId: Uuid.optional().meta({
+      description: 'E19: spending from a goal earmark. Budget activity ignores this expense (TECH-SPEC 6.6).',
+    }),
     ...common,
   })
   .meta({ id: 'ExpenseInput', description: 'E2, E3, E5 and E12: spending, counted in the month it happens.' });

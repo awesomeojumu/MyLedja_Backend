@@ -39,6 +39,9 @@ export const Allocation = z
       .nullable()
       .meta({ description: 'When different from the goal account, an E6 transfer is posted.' }),
     transactionId: z.string().nullable(),
+    kind: z
+      .enum(['allocate', 'spend'])
+      .meta({ description: 'allocate = E18 earmark; spend = E19 spending from the goal.' }),
     version: z.number().int(),
   })
   .meta({ id: 'GoalAllocation' });
@@ -164,6 +167,37 @@ export const goalRoutes = {
       .meta({ id: 'SetGoalScheduleBody' }),
     status: 200,
     response: Goal,
+    errors: [400, 401, 403, 404, 409],
+  }),
+  spend: defineRoute({
+    name: 'spendFromGoal',
+    method: 'POST',
+    path: `${base}/:goalId/spend`,
+    tag,
+    summary: 'Spend from a goal earmark (E19)',
+    description:
+      'Posts an expense linked by goalId and lowers the earmark. Budget category activity ignores this spend (TECH-SPEC 6.2 E19, 6.6).',
+    access: editor,
+    params: GoalParams,
+    body: z
+      .object({
+        id: Uuid.optional(),
+        date: LocalDate,
+        amount: MinorAmount,
+        categoryId: Uuid,
+        accountId: Uuid.optional().meta({ description: 'Defaults to the goal account.' }),
+        payeeId: Uuid.nullable().optional(),
+        notes: z.string().trim().max(500).nullable().optional(),
+      })
+      .meta({ id: 'SpendFromGoalBody' }),
+    status: 201,
+    response: z
+      .object({
+        goal: Goal,
+        allocation: Allocation,
+        transactionId: z.string(),
+      })
+      .meta({ id: 'SpendFromGoalResult' }),
     errors: [400, 401, 403, 404, 409],
   }),
 };

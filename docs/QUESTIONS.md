@@ -344,12 +344,13 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Task: B2.4
 - Raised by: backend agent
 - Context and decision:
-  - `goals` and `goal_allocations` collections; saved amount = sum of allocations (E19 spending not wired yet).
+  - `goals` and `goal_allocations` collections; saved amount denormalised on the goal (allocate adds, spend subtracts).
   - **Allocate:** same account → allocation row only (E18 earmark); different account → E6 transfer then allocation.
+  - **Spend (E19):** `POST .../goals/:goalId/spend` posts an expense with `links.goalId`, inserts a `kind: spend` allocation, lowers `savedAmount`. Budget category activity excludes those expenses; envelope `left_to_plan` subtracts E18 earmarks made in the month (TECH-SPEC 6.6).
   - `neededPerMonth` computed on read from target, saved and target date.
-  - Sync: `goal.create`, `goal.update`, `goal.allocate`; change feed `goals`, `goal_allocations`.
-- Answer:
-- Status: open
+  - Sync: `goal.create`, `goal.update`, `goal.allocate`, `goal.spend`; change feed `goals`, `goal_allocations`.
+- Answer: E19 via spend route + `links.goalId` on the expense; budget formulas exclude goal spend and subtract earmarks from left_to_plan (28 Oct 2026).
+- Status: answered
 
 ## Q-B31: Worker B stack merged onto Worker A (#59)
 

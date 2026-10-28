@@ -138,6 +138,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   );
   transactions.onUnlock = (ctx, reconciliationId, transactionId, session) =>
     reconcile.recordUnlock(ctx, reconciliationId, transactionId, session);
+  const goalAllocationsRepo = new GoalAllocationsRepository(db);
   const budget = new BudgetService(
     database,
     new BudgetMonthsRepository(db),
@@ -147,6 +148,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     categoriesRepo,
     workspacesRepo,
     transactions,
+    goalAllocationsRepo,
     audit,
     now,
   );
@@ -184,7 +186,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const goals = new GoalsService(
     database,
     new GoalsRepository(db),
-    new GoalAllocationsRepository(db),
+    goalAllocationsRepo,
     ledger,
     audit,
     now,

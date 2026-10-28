@@ -189,7 +189,10 @@ export class LedgerService {
       tagIds: [...new Set(input.tagIds ?? [])],
       receiptFileIds: [],
       lines: built.lines,
-      links: built.refundOf ? { refundOf: built.refundOf } : {},
+      links: {
+        ...(built.refundOf ? { refundOf: built.refundOf } : {}),
+        ...(input.type === 'expense' && 'goalId' in input && input.goalId ? { goalId: input.goalId } : {}),
+      },
       fxRate: built.fxRate ? Decimal128.fromString(built.fxRate) : null,
       reconciliationId: null,
       clearedAccountIds: [],

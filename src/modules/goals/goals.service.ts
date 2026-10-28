@@ -67,8 +67,11 @@ const toAllocation = (d: GoalAllocationDoc): z.input<typeof Allocation> => ({
   amount: d.amountMinor,
   fromAccountId: d.fromAccountId,
   transactionId: d.transactionId,
+  kind: d.kind ?? 'allocate',
   version: d.version,
 });
+
+type SpendBody = z.output<NonNullable<(typeof goalRouteDefs)['spend']['body']>>;
 
 export class GoalsService {
   constructor(
@@ -238,6 +241,7 @@ export class GoalsService {
           amountMinor: body.amount,
           fromAccountId: from !== goal.accountId ? from : null,
           transactionId: txId,
+          kind: 'allocate',
           createdAt: now,
           updatedAt: now,
           version: 1,
@@ -271,5 +275,100 @@ export class GoalsService {
       return { goal: after, alloc };
     });
     return { allocation: toAllocation(result.alloc), goal: toGoal(result.goal) };
+  }
+
+  /** E19: expense linked by goalId; earmark down; not category overspend (TECH-SPEC 6.6). */
+  async spend(
+    ctx: WorkspaceContext,
+    goalId: string,
+    body: SpendBody,
+    operationId: string,
+  ): Promise<{
+    goal: z.input<typeof Goal>;
+    allocation: z.input<typeof Allocation>;
+    transactionId: string;
+  }> {
+    const amount = parseMinor(body.amount);
+    if (amount <= 0n) throw Errors.validation('amount', 'Enter an amount above ₦0.00');
+    const result = await this.database.transaction(async (session) => {
+      const goal = await this.goals.findOne(ctx, { _id: goalId, status: 'in_progress' }, { session });
+      if (!goal) throw Errors.notFound();
+      if (body.id) {
+        const same = await this.allocations.findOne(ctx, { _id: body.id }, { session });
+        if (same) {
+          return {
+            goal,
+            alloc: same,
+            transactionId: same.transactionId ?? '',
+          };
+        }
+      }
+      const saved = parseMinor(goal.savedAmountMinor);
+      if (amount > saved) {
+        throw Errors.validation('amount', 'There is not that much saved in this goal.');
+      }
+      const accountId = body.accountId ?? goal.accountId;
+      const tx = await this.ledger.postIn(
+        ctx,
+        {
+          type: 'expense',
+          accountId,
+          categoryId: body.categoryId,
+          amount: body.amount,
+          date: body.date,
+          payeeId: body.payeeId ?? null,
+          notes: body.notes ?? null,
+          goalId,
+        },
+        { operationId },
+        session,
+      );
+      const now = this.now();
+      const alloc = await this.allocations.insertOne(
+        ctx,
+        {
+          _id: body.id ?? newId(),
+          goalId,
+          date: body.date,
+          amountMinor: body.amount,
+          fromAccountId: accountId,
+          transactionId: tx._id,
+          kind: 'spend',
+          createdAt: now,
+          updatedAt: now,
+          version: 1,
+        },
+        { session },
+      );
+      const after = await this.goals.findOneAndUpdate(
+        ctx,
+        { _id: goalId },
+        {
+          $set: { savedAmountMinor: toMinorString(saved - amount), updatedAt: now },
+          $inc: { version: 1 },
+        },
+        { session },
+      );
+      if (!after) throw Errors.notFound();
+      await this.ledger.feed(
+        ctx,
+        [
+          { collection: 'goals', docId: goalId, op: 'upsert' },
+          { collection: 'goal_allocations', docId: alloc._id, op: 'upsert' },
+        ],
+        session,
+      );
+      await this.audit.record(
+        ctx,
+        { action: 'goal.spent', target: { collection: 'goals', id: goalId } },
+        { session },
+      );
+      return { goal: after, alloc, transactionId: tx._id };
+    });
+    return {
+      goal: toGoal(result.goal),
+      allocation: toAllocation(result.alloc),
+      transactionId: result.transactionId,
+    };
   }
 }

@@ -64,6 +64,11 @@ export type EventLinks = {
   reversalOf?: string | null;
   reversedBy?: string | null;
   correctionOf?: string | null;
+  /** E19: expense taken from a goal earmark (TECH-SPEC 6.2 / 6.6). */
+  goalId?: string | null;
+  debtId?: string | null;
+  scheduleId?: string | null;
+  holdingId?: string | null;
 };
 
 export type EventStatus = 'posted' | 'reversed';
