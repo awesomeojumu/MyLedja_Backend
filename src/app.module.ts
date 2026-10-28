@@ -5,6 +5,7 @@ import { ConfigModule } from './config/config.module.js';
 import { AccessGuard, AUTHENTICATOR, MEMBERSHIPS } from './common/auth/access.guard.js';
 import { COOKIE_WRITER, ContractInterceptor, CRYPTO, IDEMPOTENCY } from './common/http/contract.interceptor.js';
 import { ErrorFilter } from './common/http/error.filter.js';
+import { AccountsController, InstitutionsController } from './modules/accounts/accounts.controller.js';
 import { AuthController } from './modules/auth/auth.controller.js';
 import { CategoriesController, PayeesController, TagsController } from './modules/categories/categories.controller.js';
 import { HealthController } from './modules/health/health.controller.js';
@@ -23,6 +24,8 @@ export class AppModule {
         CategoriesController,
         TagsController,
         PayeesController,
+        AccountsController,
+        InstitutionsController,
       ],
       providers: [
         { provide: SERVICES, useValue: services },
