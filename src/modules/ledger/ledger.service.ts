@@ -1,4 +1,5 @@
 import { type ClientSession, Decimal128, MongoServerError } from 'mongodb';
+import { AppError } from '../../common/errors/errors.js';
 import { newId } from '../../common/ids/ids.js';
 import { toMinorString } from '../../common/money/money.js';
 import type { WorkspaceContext } from '../../common/workspace/workspace-context.js';
@@ -104,6 +105,16 @@ export class LedgerService {
       { session },
     );
     return res.modifiedCount === 1;
+  }
+
+  /** Welcome may change the workspace currency; allowed only while no money is recorded. */
+  async changeCurrency(ctx: WorkspaceContext, currency: string, session: ClientSession) {
+    if ((await this.transactions.count(ctx, {}, { session })) > 0) {
+      throw new AppError(409, 'currency_locked', 'The currency can\u2019t change once money is recorded.', {
+        field: 'currency',
+      });
+    }
+    await this.accounts.updateMany(ctx, {}, { $set: { currency, updatedAt: this.now() } }, { session });
   }
 
   /** A person's own account: bank, card, loan and so on. The accounts module adds its opening balance. */

@@ -8,6 +8,7 @@ import type { Database } from '../../db/client.js';
 import type { AuditRepository } from '../audit/audit.repository.js';
 import type { User } from '../auth/auth.contract.js';
 import type { UserDoc } from '../auth/auth.repository.js';
+import type { AccountsService } from '../accounts/accounts.service.js';
 import type { CategoriesService } from '../categories/categories.service.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
 import type { SetupBody, Workspace } from './workspaces.contract.js';
@@ -31,6 +32,7 @@ export class WorkspacesService {
     private readonly audit: AuditRepository,
     private readonly ledger: LedgerService,
     private readonly categories: CategoriesService,
+    private readonly accounts: AccountsService,
   ) {}
 
   /** The Personal workspace made at sign-up (B0.9). Runs inside the caller's transaction. */
@@ -128,7 +130,14 @@ export class WorkspacesService {
         { session },
       );
       if (!after) throw Errors.notFound();
+      if (after.currency !== before.currency) await this.ledger.changeCurrency(ctx, after.currency, session);
       await this.categories.ensureFromSetup(ctx, body.categories, after.currency, session);
+      const existing = await this.ledger.accounts.find(ctx, { accountType: { $ne: null } }, { session });
+      for (const a of body.accounts) {
+        if (!a.id && existing.some((x) => x.name.toLowerCase() === a.name.toLowerCase())) continue;
+        const id = a.id ?? newId();
+        await this.accounts.createIn(ctx, { ...a, id }, `setup:${id}:opening`, session);
+      }
       await this.audit.record(
         ctx,
         {

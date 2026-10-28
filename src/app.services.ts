@@ -1,4 +1,7 @@
 import type { FastifyReply } from 'fastify';
+import type { ClientSession } from 'mongodb';
+import type { WorkspaceContext } from './common/workspace/workspace-context.js';
+import { AccountsService } from './modules/accounts/accounts.service.js';
 import type { AppConfig } from './config/config.schema.js';
 import { Crypto } from './common/crypto/crypto.js';
 import { IdempotencyRepository } from './common/http/idempotency.repository.js';
@@ -90,6 +93,9 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     async (ctx, session) => (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN',
     now,
   );
+  const currencyOf = async (ctx: WorkspaceContext, session?: ClientSession) =>
+    (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN';
+  const accounts = new AccountsService(database, ledger, audit, currencyOf, now);
   const workspaces = new WorkspacesService(
     database,
     workspacesRepo,
@@ -99,6 +105,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     ledger,
     categories,
+    accounts,
   );
   const google =
     o.google !== undefined ? o.google : config.google ? new JoseGoogleVerifier(config.google.clientId) : null;
@@ -157,6 +164,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     workspaces,
     ledger,
     categories,
+    accounts,
     balanceCheck,
     auth,
     idempotency,

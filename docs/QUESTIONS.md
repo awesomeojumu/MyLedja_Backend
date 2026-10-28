@@ -176,3 +176,17 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Currency:** default categories use the workspace currency at sign-up (NGN). Changing currency in Welcome before any money is recorded is handled with accounts (B1.6).
 - Answer:
 - Status: open
+
+## Q-B16: Accounts and institutions (B1.6)
+
+- Task: B1.6
+- Raised by: backend agent
+- Context and decision:
+  - **Groups and kinds:** cards, loans and "other liability" are liabilities; everything else is an asset. Investments, property, pensions, fixed deposits and loans start off budget ("Tracking"); the person can switch them.
+  - **Archiving with a balance:** if `moveBalanceTo` is given, the balance moves first as a transfer (paying off a card or loan when it's owed). Otherwise the account is archived as "closed with balance" and still counts in net worth.
+  - **Update value (E10):** posts the difference to equity:Revaluation. If the value hasn't changed, nothing is posted.
+  - **Net worth:** only accounts in the workspace currency count until exchange rates arrive; other currencies are listed under `partial`.
+  - **Welcome:** setup creates each account (matched by id, then by name) and its opening balance, with the operation id `setup:<accountId>:opening`, so sending setup again posts nothing new. The currency can change only while no money is recorded (`409 currency_locked`).
+  - **Institutions:** a starter list of 43 Nigerian banks, microfinance banks, wallets and savings apps, served from code. A logo URL is built from `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_FOLDER` once an entry is marked as having a logo; until then `logoUrl` is null.
+- Answer:
+- Status: open
