@@ -12,7 +12,9 @@ describe('goals E19 spend (B2.4 / P06-08)', () => {
   it('spending from a goal does not overspend the category and lowers the earmark', async () => {
     const w = await newWorkspace(t);
     const s = t.services;
-    await t.db.collection('workspaces').updateOne({ _id: w.workspaceId as never }, { $set: { budgetStyle: 'envelope' } });
+    await t.db
+      .collection('workspaces')
+      .updateOne({ _id: w.workspaceId as never }, { $set: { budgetStyle: 'envelope' } });
     const bank = await s.accounts.create(
       w.ctx,
       { type: 'bank', name: 'GTBank', openingBalance: '20000000', openingDate: '2026-10-01' } as never,

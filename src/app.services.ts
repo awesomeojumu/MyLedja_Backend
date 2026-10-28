@@ -183,14 +183,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     currencyOf,
     now,
   );
-  const goals = new GoalsService(
-    database,
-    new GoalsRepository(db),
-    goalAllocationsRepo,
-    ledger,
-    audit,
-    now,
-  );
+  const goals = new GoalsService(database, new GoalsRepository(db), goalAllocationsRepo, ledger, audit, now);
   const income = new IncomeService(
     database,
     new IncomeStreamsRepository(db),
