@@ -231,3 +231,15 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Templates:** Phase 2 (B2.7).
 - Answer:
 - Status: open
+
+## Q-B20: Dashboard (B1.10)
+
+- Task: B1.10
+- Raised by: backend agent
+- Context and decision:
+  - **Tiles** (income, spent, net cash, budget left) come from `period_totals` via `monthFigures` and the budget month; transfers, loans, savings and investing never move Income or Spent.
+  - **Income tile** is budgetable income only.
+  - **getStarted** stubs: account / transaction / budget from real data; bill, income_stream and two_factor stay false until later phases; `hidden: false`.
+  - Implemented on `BudgetService.dashboard` and a separate `DashboardController`.
+- Answer:
+- Status: open
