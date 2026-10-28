@@ -119,6 +119,7 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Options: none stated for where replayed answers, rate limits and migration records live.
 - Recommendation: `idempotency` (replayed answers, encrypted, 24-hour TTL, keyed by caller and operationId), `rate_limits` (one document per limit key with a TTL), and `migrations` (applied migration names). `jobs`, `counters` and `rate_limits` use natural string keys as `_id` so claims are a single atomic write.
 - Answer:
+
 ## Q-B12: Bank and wallet logos (answers the frontend's Q-8)
 
 - Task: B1.6 (DESIGN.md page 4, P08-03)
