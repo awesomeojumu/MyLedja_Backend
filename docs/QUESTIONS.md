@@ -129,3 +129,19 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Recommendation: B. `GET /v1/institutions` (public, cached for a day) returns each bank or wallet's slug, name, kind, aliases and a public Cloudinary `logoUrl` (null until uploaded; show initials). Accounts store the slug in `institution`. Uses the existing `CLOUDINARY_*` variables; no new ones. The contract ships now; the endpoint is built with the accounts module (B1.6). Logo files come from the user later.
 - Answer: B (user decision)
 - Status: decided
+
+## Q-B13: Ledger decisions where TECH-SPEC 6 leaves room
+
+- Task: B1.1 to B1.5
+- Raised by: backend agent
+- Documents: TECH-SPEC 5.4, 5.7, 6.1 to 6.3, 6.11
+- Options and recommendations (all in effect):
+  - **System income and expense accounts as categories.** Interest and charges, Fees, Taxes, Interest earned, Investment income and Investment gain are system accounts; each gets a category linked to it, so people can pick them and they show in spending reports (case 6).
+  - **Reversal date.** A reversal is dated like the original, so a correction takes the old amount out of the original's month (6.4).
+  - **Change feed.** A reversed original is sent as an `upsert` with `status: "reversed"`, not a tombstone, because its history stays visible. Tombstones are for records that are really removed (categories, tags, payees).
+  - **Deleting or correcting a purchase with live refunds** is refused ("Delete them first"), so refunds never point at a removed purchase.
+  - **Pending events** aren't used in Phase 1; everything posts at once. They arrive with bank sync (Phase 4).
+  - **One operationId per correction.** The new event takes the operationId sent; its reversal takes `<operationId>:reversal`. Sending the same correction again returns both.
+  - **`ledger-cases.json`** lives in `test/fixtures/` with its sha256. The app copies both files byte for byte.
+- Answer:
+- Status: open

@@ -7,6 +7,16 @@ import type { Database } from './db/client.js';
 import { JobRunner } from './jobs/runner.js';
 import { cleanExpiredJob } from './jobs/clean-expired.job.js';
 import { JobsRepository } from './jobs/jobs.repository.js';
+import {
+  AccountBalancesRepository,
+  ChangesRepository,
+  LedgerAccountsRepository,
+  PeriodTotalsRepository,
+  TransactionsRepository,
+  WorkspaceIndex,
+} from './modules/ledger/ledger.repository.js';
+import { LedgerService } from './modules/ledger/ledger.service.js';
+import { BalanceCheck, balanceCheckJob, BalanceChecksRepository } from './modules/ledger/balance-check.js';
 import { AuditRepository } from './modules/audit/audit.repository.js';
 import { CodesRepository, SessionsRepository, UsersRepository } from './modules/auth/auth.repository.js';
 import { AuthService, COOKIE_ABSOLUTE_MS } from './modules/auth/auth.service.js';
@@ -47,13 +57,26 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const mailer = new Mailer(o.emailSender ?? pickSender(config), webAppUrl);
   const audit = new AuditRepository(db);
   const memberships = new MembershipLookup(db);
+  const counters = new CountersRepository(db);
+  const ledger = new LedgerService(
+    database,
+    new LedgerAccountsRepository(db),
+    new TransactionsRepository(db),
+    new AccountBalancesRepository(db),
+    new PeriodTotalsRepository(db),
+    new ChangesRepository(db),
+    counters,
+    audit,
+    now,
+  );
   const workspaces = new WorkspacesService(
     database,
     new WorkspacesRepository(db),
     new MembershipsRepository(db),
     memberships,
-    new CountersRepository(db),
+    counters,
     audit,
+    ledger,
   );
   const google =
     o.google !== undefined ? o.google : config.google ? new JoseGoogleVerifier(config.google.clientId) : null;
@@ -92,6 +115,15 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   };
   const jobs = new JobRunner(new JobsRepository(db), mailer, config.contactEmail, now);
   jobs.register(cleanExpiredJob({ sessions, codes, limits }));
+  const balanceCheck = new BalanceCheck(
+    new WorkspaceIndex(db),
+    ledger,
+    new BalanceChecksRepository(db),
+    mailer,
+    config.contactEmail,
+    now,
+  );
+  jobs.register(balanceCheckJob(balanceCheck));
 
   return {
     config,
@@ -101,6 +133,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     memberships,
     workspaces,
+    ledger,
+    balanceCheck,
     auth,
     idempotency,
     limits,

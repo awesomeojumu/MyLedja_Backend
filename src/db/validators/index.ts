@@ -5,6 +5,8 @@ const date = { bsonType: 'date' };
 const int = { bsonType: ['int', 'long'] };
 const nullable = (t: Document) => ({ bsonType: [...[t.bsonType].flat(), 'null'] });
 const uuid = { bsonType: 'string', pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' };
+const currency = { bsonType: 'string', pattern: '^[A-Z]{3}$' };
+const localDate = { bsonType: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' };
 const roles = { enum: ['owner', 'admin', 'editor', 'viewer'] };
 
 const record = (required: string[], properties: Record<string, Document>, workspaced = true): Document => ({
@@ -120,6 +122,100 @@ export const VALIDATORS: Record<string, Document> = {
     bsonType: 'object',
     required: ['_id', 'count', 'expiresAt'],
     properties: { _id: str, count: int, level: int, lockedUntil: nullable(date), expiresAt: date },
+  },
+  ledger_accounts: record(['kind', 'name', 'currency', 'onBudget', 'sortOrder'], {
+    kind: { enum: ['asset', 'liability', 'income', 'expense', 'equity', 'loss'] },
+    name: str,
+    currency: currency,
+    systemKey: nullable(str),
+    categoryId: nullable(uuid),
+    accountType: nullable(str),
+    institution: nullable(str),
+    last4: { bsonType: ['string', 'null'], pattern: '^\\d{4}$' },
+    onBudget: { bsonType: 'bool' },
+    archivedAt: nullable(date),
+    sortOrder: int,
+    operationId: nullable(str),
+  }),
+  transactions: record(['operationId', 'type', 'status', 'date', 'recordedAt', 'lines', 'links'], {
+    operationId: str,
+    type: str,
+    status: { enum: ['posted', 'reversed'] },
+    date: localDate,
+    recordedAt: date,
+    payeeId: nullable(uuid),
+    notes: nullable(str),
+    tagIds: { bsonType: 'array', items: uuid },
+    receiptFileIds: { bsonType: 'array', items: str },
+    lines: {
+      bsonType: 'array',
+      minItems: 2,
+      items: {
+        bsonType: 'object',
+        required: ['ledgerAccountId', 'amountMinor', 'currency'],
+        properties: {
+          ledgerAccountId: uuid,
+          amountMinor: { bsonType: 'long' },
+          currency: currency,
+          categoryId: nullable(uuid),
+        },
+      },
+    },
+    links: { bsonType: 'object' },
+    fxRate: { bsonType: ['decimal', 'null'] },
+    reconciliationId: nullable(uuid),
+    clearedAccountIds: { bsonType: 'array', items: uuid },
+    importId: nullable(uuid),
+  }),
+  account_balances: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'ledgerAccountId', 'currency', 'balanceMinor'],
+    properties: {
+      _id: str,
+      workspaceId: uuid,
+      ledgerAccountId: uuid,
+      currency: currency,
+      balanceMinor: { bsonType: 'long' },
+      updatedAt: date,
+    },
+  },
+  period_totals: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'ledgerAccountId', 'currency', 'month', 'debitsMinor', 'creditsMinor', 'count'],
+    properties: {
+      _id: str,
+      workspaceId: uuid,
+      ledgerAccountId: uuid,
+      currency: currency,
+      month: { bsonType: 'string', pattern: '^\\d{4}-\\d{2}$' },
+      debitsMinor: { bsonType: 'long', minimum: 0 },
+      creditsMinor: { bsonType: 'long', minimum: 0 },
+      count: int,
+    },
+  },
+  changes: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'seq', 'collection', 'docId', 'op', 'at'],
+    properties: {
+      _id: uuid,
+      workspaceId: uuid,
+      seq: int,
+      collection: str,
+      docId: str,
+      op: { enum: ['upsert', 'tombstone'] },
+      at: date,
+    },
+  },
+  balance_checks: {
+    bsonType: 'object',
+    required: ['_id', 'workspaceId', 'at', 'ok', 'mismatches'],
+    properties: {
+      _id: uuid,
+      workspaceId: uuid,
+      at: date,
+      ok: { bsonType: 'bool' },
+      mismatches: { bsonType: 'array' },
+    },
   },
   idempotency: {
     bsonType: 'object',
