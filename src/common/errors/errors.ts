@@ -16,13 +16,13 @@ export class AppError extends Error {
     readonly status: number,
     readonly code: string,
     readonly userMessage: string,
-    readonly extra: { field?: string; retryAfterSeconds?: number } = {},
+    readonly extra: { field?: string; retryAfterSeconds?: number; [key: string]: unknown } = {},
   ) {
     super(code);
     this.name = 'AppError';
   }
 
-  body(): ErrorBody {
+  body(): ErrorBody & Record<string, unknown> {
     return { code: this.code, message: this.userMessage, ...this.extra };
   }
 }

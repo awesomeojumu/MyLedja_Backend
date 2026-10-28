@@ -67,7 +67,7 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Raised by: backend agent
 - Documents: DESIGN.md P01-04 (web "Stay signed in": up to 30 days, or 7 days without use); TECH-SPEC 10 (15-minute access token, rotating refresh)
 - Options: phone and in-memory web sessions have no stated limit.
-- Recommendation: web cookie sessions as DESIGN.md says (30 days, 7 idle). Phone sessions end after 90 days without use and have no fixed end, so people aren't signed out of a daily app. Web sessions without the tick live only in memory, so a refresh of the page ends them; on the server they end after 12 hours.
+- Recommendation: web cookie sessions as DESIGN.md says (30 days, 7 idle). Phone sessions end after 90 days without use and have no fixed end, so people aren't signed out of a daily app. Web sessions without the tick keep the refresh token only in memory, so reloading the page ends them. The server can't tell a phone from a browser tab using a token, so every token session (phone or untick web) ends after 90 days without use.
 - Answer:
 - Status: open
 
@@ -100,6 +100,25 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Recommendation: the lockfile is written with npm 11 (`npx npm@11 install`). CI uses `npm ci`, which is unaffected.
 - Answer:
 - Status: open
+
+## Q-B10: The web app and the API must share a site for the sign-in cookie
+
+- Task: B0.7
+- Raised by: backend agent
+- Documents: TECH-SPEC 10 (refresh cookie HttpOnly, SameSite=Strict, path /v1/auth/refresh)
+- Options: a browser only sends a SameSite=Strict cookie when the page and the API are on the same site. `myledja.vercel.app` and `myledja-api.onrender.com` are different sites, so "Stay signed in" won't survive a reload there. A, put both under one domain (for example `app.myledja.com` and `api.myledja.com`). B, loosen the cookie to SameSite=None (weaker CSRF protection; refresh already checks Origin and the `X-MyLedja-Client` header).
+- Recommendation: A. Until a domain exists, staging web sessions behave like untick sessions. **Needs the user: which domain.**
+- Answer:
+- Status: open
+
+## Q-B11: Collections added beyond TECH-SPEC 5
+
+- Task: B0.3, B0.5, B0.10
+- Raised by: backend agent
+- Documents: TECH-SPEC 5, 6 (operationId replay)
+- Options: none stated for where replayed answers, rate limits and migration records live.
+- Recommendation: `idempotency` (replayed answers, encrypted, 24-hour TTL, keyed by caller and operationId), `rate_limits` (one document per limit key with a TTL), and `migrations` (applied migration names). `jobs`, `counters` and `rate_limits` use natural string keys as `_id` so claims are a single atomic write.
+- Answer:
 
 ## Q-B12: Bank and wallet logos (answers the frontend's Q-8)
 

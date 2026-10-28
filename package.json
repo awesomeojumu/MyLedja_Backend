@@ -13,8 +13,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project unit",
-    "test:int": "vitest run --project int --passWithNoTests",
-    "test:e2e": "vitest run --project e2e --passWithNoTests",
+    "test:int": "vitest run --project int",
+    "test:e2e": "vitest run --project e2e",
     "test:cov": "vitest run --coverage",
     "build": "tsc -p tsconfig.build.json",
     "openapi": "tsx scripts/openapi.ts",
@@ -22,7 +22,7 @@
     "migrate": "tsx --env-file-if-exists=.env.development scripts/migrate.ts",
     "seed:dev": "tsx --env-file=.env.development scripts/seed-dev.ts",
     "cases:check": "node scripts/cases-check.mjs",
-    "check": "npm run lint && npm run typecheck && npm test && npm run test:int && npm run build && npm run cases:check && npm run openapi:check"
+    "check": "npm run lint && npm run typecheck && npm test && npm run test:int && npm run test:e2e && npm run build && npm run cases:check && npm run openapi:check"
   },
   "dependencies": {
     "@fastify/cookie": "11.1.3",
