@@ -55,4 +55,20 @@ export class DebtsController {
   settle(@In() i: Input<typeof r.settle>, @Req() req: Req): Promise<Output<typeof r.settle>> {
     return this.s.debts.settle(req.ctx!, i.params.debtId, i.body.baseVersion);
   }
+
+  @Route(r.moneyBackSuggestions)
+  moneyBackSuggestions(
+    @In() i: Input<typeof r.moneyBackSuggestions>,
+    @Req() req: Req,
+  ): Promise<Output<typeof r.moneyBackSuggestions>> {
+    return this.s.debts.listMoneyBackSuggestions(req.ctx!, i.query);
+  }
+
+  @Route(r.confirmMoneyBack)
+  confirmMoneyBack(
+    @In() i: Input<typeof r.confirmMoneyBack>,
+    @Req() req: Req,
+  ): Promise<Output<typeof r.confirmMoneyBack>> {
+    return this.s.debts.confirmMoneyBack(req.ctx!, i.params.suggestionId, i.body, req.operationId!);
+  }
 }

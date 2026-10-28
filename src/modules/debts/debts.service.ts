@@ -12,12 +12,36 @@ import type { LedgerService } from '../ledger/ledger.service.js';
 import { daysInMonth, formatLocalDate, parseLocalDate } from '../schedules/recurrence.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import { debtRoutes as debtRouteDefs } from './debts.contract.js';
-import type { Debt, DebtPaymentSplit, InstalmentSchedule, InterestTerms } from './debts.contract.js';
+import type {
+  Debt,
+  DebtPaymentSplit,
+  InstalmentSchedule,
+  InterestTerms,
+  MoneyBackSuggestion,
+} from './debts.contract.js';
 import { type DebtDoc, DebtsRepository } from './debts.repository.js';
 
 type LendBody = z.output<NonNullable<(typeof debtRouteDefs)['lend']['body']>>;
 type UpdateBody = z.output<NonNullable<(typeof debtRouteDefs)['update']['body']>>;
 type PaymentBody = z.output<NonNullable<(typeof debtRouteDefs)['recordPayment']['body']>>;
+type ConfirmBody = z.output<NonNullable<(typeof debtRouteDefs)['confirmMoneyBack']['body']>>;
+
+type SuggestionPayload = {
+  debtId: string;
+  transactionId: string | null;
+  draft: { date: string; amount: string; accountId: string; payeeId: string | null } | null;
+  direction: 'incoming' | 'outgoing';
+};
+
+const encodeSuggestionId = (p: SuggestionPayload) => Buffer.from(JSON.stringify(p)).toString('base64url');
+
+const decodeSuggestionId = (id: string): SuggestionPayload => {
+  try {
+    return JSON.parse(Buffer.from(id, 'base64url').toString('utf8')) as SuggestionPayload;
+  } catch {
+    throw Errors.validation('suggestionId', 'This suggestion has expired. Refresh and try again.');
+  }
+};
 
 const DebtsErrors = {
   stale: (current: z.input<typeof Debt>) =>
@@ -413,6 +437,146 @@ export class DebtsService {
       return after;
     });
     return toDebt(doc);
+  }
+
+  async listMoneyBackSuggestions(
+    ctx: WorkspaceContext,
+    q: {
+      transactionId?: string;
+      importRowId?: string;
+      accountId?: string;
+      payeeId?: string;
+      amount?: string;
+      date?: string;
+    },
+  ): Promise<{ suggestions: z.input<typeof MoneyBackSuggestion>[] }> {
+    void q.importRowId;
+    let payeeId = q.payeeId ?? null;
+    let amount = q.amount ? parseMinor(q.amount) : null;
+    let date = q.date ?? null;
+    let accountId = q.accountId ?? null;
+    let transactionId: string | null = q.transactionId ?? null;
+    if (q.transactionId) {
+      const { transaction } = await this.transactions.get(ctx, q.transactionId);
+      transactionId = transaction.id;
+      payeeId = transaction.payeeId ?? payeeId;
+      amount = parseMinor(transaction.amount);
+      date = transaction.date;
+      accountId = transaction.accountIds[0] ?? accountId;
+    }
+    if (!amount || !date || !accountId) {
+      return { suggestions: [] };
+    }
+    const open = await this.debts.find(ctx, { status: 'open' });
+    const suggestions: z.input<typeof MoneyBackSuggestion>[] = [];
+    for (const debt of open) {
+      const direction = debt.direction === 'they_owe_me' ? 'incoming' : 'outgoing';
+      let reason: 'payee_match' | 'instalment_amount' | 'both' | null = null;
+      if (payeeId && debt.payeeId === payeeId) reason = 'payee_match';
+      const meta = instalmentMeta(
+        debt.instalments,
+        debt.paymentTransactionIds.length,
+        parseMinor(debt.outstandingMinor),
+      );
+      if (meta.nextInstalmentAmount && parseMinor(meta.nextInstalmentAmount) === amount) {
+        reason = reason === 'payee_match' ? 'both' : 'instalment_amount';
+      }
+      if (!reason) continue;
+      const split = defaultSplit(amount, parseMinor(debt.outstandingMinor), debt.interest);
+      const payload: SuggestionPayload = {
+        debtId: debt._id,
+        transactionId,
+        draft: transactionId ? null : { date, amount: toMinorString(amount), accountId, payeeId },
+        direction,
+      };
+      suggestions.push({
+        id: encodeSuggestionId(payload),
+        debtId: debt._id,
+        direction,
+        transactionId,
+        draft: payload.draft,
+        personName: debt.personName,
+        outstanding: debt.outstandingMinor,
+        suggestedSplit: { principal: toMinorString(split.principal), interest: toMinorString(split.interest) },
+        reason,
+      });
+    }
+    return { suggestions };
+  }
+
+  async confirmMoneyBack(
+    ctx: WorkspaceContext,
+    suggestionId: string,
+    body: ConfirmBody,
+    operationId: string,
+  ): Promise<{
+    debt: z.input<typeof Debt> | null;
+    transaction: Awaited<ReturnType<TransactionsService['get']>>['transaction'];
+  }> {
+    const payload = decodeSuggestionId(suggestionId);
+    const debtDoc = await this.debts.findOne(ctx, { _id: payload.debtId, status: 'open' });
+    if (!debtDoc) throw Errors.notFound();
+
+    if (body.choice === 'money_back') {
+      if (payload.transactionId) {
+        const { transaction } = await this.transactions.get(ctx, payload.transactionId);
+        if (transaction.type === 'income') {
+          await this.transactions.reverse(
+            ctx,
+            payload.transactionId,
+            { baseVersion: transaction.version },
+            `${operationId}:reverse`,
+          );
+        }
+      }
+      const amount =
+        payload.draft?.amount ??
+        (payload.transactionId ? (await this.transactions.get(ctx, payload.transactionId)).transaction.amount : null);
+      const date = payload.draft?.date ?? (await this.transactions.get(ctx, payload.transactionId!)).transaction.date;
+      const accountId =
+        payload.draft?.accountId ??
+        (await this.transactions.get(ctx, payload.transactionId!)).transaction.accountIds[0]!;
+      if (!amount || !date || !accountId)
+        throw Errors.validation('suggestionId', 'This suggestion is missing payment details.');
+      const split =
+        body.split ??
+        (
+          await this.listMoneyBackSuggestions(ctx, {
+            transactionId: payload.transactionId ?? undefined,
+            amount,
+            date,
+            accountId,
+            payeeId: debtDoc.payeeId,
+          })
+        ).suggestions.find((s) => s.debtId === debtDoc._id)?.suggestedSplit;
+      const { debt, transaction } = await this.recordPayment(
+        ctx,
+        debtDoc._id,
+        { date, accountId, amount, split: split ?? undefined },
+        operationId,
+      );
+      return { debt, transaction };
+    }
+
+    if (payload.transactionId) {
+      const { transaction } = await this.transactions.get(ctx, payload.transactionId);
+      return { debt: toDebt(debtDoc), transaction };
+    }
+    if (!payload.draft) throw Errors.validation('suggestionId', 'This suggestion is missing payment details.');
+    if (!body.categoryId) throw Errors.validation('categoryId', 'Choose an income category.');
+    const tx = await this.transactions.create(
+      ctx,
+      {
+        type: 'income',
+        accountId: payload.draft.accountId,
+        categoryId: body.categoryId,
+        amount: payload.draft.amount,
+        date: payload.draft.date,
+        payeeId: payload.draft.payeeId ?? debtDoc.payeeId,
+      },
+      operationId,
+    );
+    return { debt: toDebt(debtDoc), transaction: tx };
   }
 
   private async requireOpenable(ctx: WorkspaceContext, id: string): Promise<DebtDoc> {
