@@ -25,6 +25,8 @@ import type { SchedulesService } from '../schedules/schedules.service.js';
 import { scheduleRoutes } from '../schedules/schedules.contract.js';
 import type { DebtsService } from '../debts/debts.service.js';
 import { debtRoutes } from '../debts/debts.contract.js';
+import type { GoalsService } from '../goals/goals.service.js';
+import { goalRoutes } from '../goals/goals.contract.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
@@ -36,6 +38,9 @@ const LendBody = debtRoutes.lend.body!;
 const BorrowBody = debtRoutes.borrow.body!;
 const DebtPaymentBody = debtRoutes.recordPayment.body!;
 const WriteOffBody = debtRoutes.writeOff.body!;
+const CreateGoalBody = goalRoutes.create.body!;
+const UpdateGoalBody = goalRoutes.update.body!;
+const AllocateGoalBody = goalRoutes.allocate.body!;
 const TagCreateBody = z.object({ id: Uuid.optional(), name: z.string().trim().min(1).max(40) });
 
 type PushBody = {
@@ -57,6 +62,7 @@ export class SyncService {
     private readonly budget: BudgetService,
     private readonly schedules: SchedulesService,
     private readonly debts: DebtsService,
+    private readonly goals: GoalsService,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -303,9 +309,20 @@ export class SyncService {
         const body = UpdateScheduleBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
         return { result: await this.schedules.update(ctx, targetId, body), duplicate: false };
       }
-      case 'goal.create':
-      case 'goal.update':
-      case 'goal.allocate':
+      case 'goal.create': {
+        const body = CreateGoalBody.parse(payload);
+        return { result: await this.goals.create(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'goal.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the goal to update.');
+        const body = UpdateGoalBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.goals.update(ctx, targetId, body), duplicate: false };
+      }
+      case 'goal.allocate': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the goal to fund.');
+        const body = AllocateGoalBody.parse(payload);
+        return { result: await this.goals.allocate(ctx, targetId, body, op.operationId), duplicate: false };
+      }
       case 'debt.lend': {
         const body = LendBody.parse(payload);
         return { result: await this.debts.lend(ctx, body, op.operationId), duplicate: false };
@@ -379,6 +396,18 @@ export class SyncService {
             return null;
           }
         }
+        case 'goals':
+          try {
+            return (await this.goals.get(ctx, row.docId)).goal;
+          } catch {
+            return null;
+          }
+        case 'goal_allocations':
+          try {
+            return await this.goals.getAllocation(ctx, row.docId);
+          } catch {
+            return null;
+          }
         default:
           return null;
       }

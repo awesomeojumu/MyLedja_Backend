@@ -202,7 +202,22 @@ const m0009: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009];
+const m0010: Migration = {
+  name: '0010-goals',
+  async up(db) {
+    await installValidators(db);
+    await db.collection('goals').createIndex({ workspaceId: 1, status: 1 });
+    await db
+      .collection('goals')
+      .createIndex(
+        { workspaceId: 1, operationId: 1 },
+        { unique: true, partialFilterExpression: { operationId: { $type: 'string' } } },
+      );
+    await db.collection('goal_allocations').createIndex({ workspaceId: 1, goalId: 1, date: -1 });
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006, m0007, m0008, m0009, m0010];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {

@@ -338,3 +338,15 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **income:** post E1 from draft, or no-op when the transaction is already income (case 27).
 - Answer:
 - Status: open
+
+## Q-B28: Goals API (B2.4)
+
+- Task: B2.4
+- Raised by: backend agent
+- Context and decision:
+  - `goals` and `goal_allocations` collections; saved amount = sum of allocations (E19 spending not wired yet).
+  - **Allocate:** same account → allocation row only (E18 earmark); different account → E6 transfer then allocation.
+  - `neededPerMonth` computed on read from target, saved and target date.
+  - Sync: `goal.create`, `goal.update`, `goal.allocate`; change feed `goals`, `goal_allocations`.
+- Answer:
+- Status: open

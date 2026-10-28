@@ -52,6 +52,8 @@ import { SchedulesRepository, OccurrencesRepository } from './modules/schedules/
 import { SchedulesService } from './modules/schedules/schedules.service.js';
 import { DebtsRepository } from './modules/debts/debts.repository.js';
 import { DebtsService } from './modules/debts/debts.service.js';
+import { GoalsRepository, GoalAllocationsRepository } from './modules/goals/goals.repository.js';
+import { GoalsService } from './modules/goals/goals.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -171,6 +173,14 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     currencyOf,
     now,
   );
+  const goals = new GoalsService(
+    database,
+    new GoalsRepository(db),
+    new GoalAllocationsRepository(db),
+    ledger,
+    audit,
+    now,
+  );
   const sync = new SyncService(
     counters,
     changes,
@@ -181,6 +191,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     budget,
     schedules,
     debts,
+    goals,
     now,
   );
   const workspaces = new WorkspacesService(
@@ -258,6 +269,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     imports,
     schedules,
     debts,
+    goals,
     sync,
     balanceCheck,
     auth,

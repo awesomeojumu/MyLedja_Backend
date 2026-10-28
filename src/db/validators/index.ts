@@ -335,6 +335,27 @@ export const VALIDATORS: Record<string, Document> = {
       operationId: nullable(str),
     },
   ),
+  goals: record(['name', 'targetAmountMinor', 'accountId', 'savedAmountMinor', 'status'], {
+    name: str,
+    icon: nullable(str),
+    targetAmountMinor: str,
+    targetDate: nullable(localDate),
+    accountId: uuid,
+    categoryId: nullable(uuid),
+    savedAmountMinor: str,
+    status: { enum: ['in_progress', 'paused', 'completed'] },
+    notes: nullable(str),
+    schedule: { bsonType: ['object', 'null'] },
+    completedAt: nullable(date),
+    operationId: nullable(str),
+  }),
+  goal_allocations: record(['goalId', 'date', 'amountMinor'], {
+    goalId: uuid,
+    date: localDate,
+    amountMinor: str,
+    fromAccountId: nullable(uuid),
+    transactionId: nullable(uuid),
+  }),
 };
 
 /** Creates each collection with its validator, or updates the validator if it exists. Safe to run twice. */
