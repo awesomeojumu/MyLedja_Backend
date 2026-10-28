@@ -9,6 +9,7 @@ import { AccountsController, InstitutionsController } from './modules/accounts/a
 import { AuthController } from './modules/auth/auth.controller.js';
 import { CategoriesController, PayeesController, TagsController } from './modules/categories/categories.controller.js';
 import { HealthController } from './modules/health/health.controller.js';
+import { TransactionsController } from './modules/transactions/transactions.controller.js';
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
 
 @Module({})
@@ -26,6 +27,7 @@ export class AppModule {
         PayeesController,
         AccountsController,
         InstitutionsController,
+        TransactionsController,
       ],
       providers: [
         { provide: SERVICES, useValue: services },

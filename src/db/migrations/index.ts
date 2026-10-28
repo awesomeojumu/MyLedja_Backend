@@ -127,7 +127,18 @@ const m0003: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003];
+/**
+ * Transfer-suggestion dismissals (B1.8). A dismissed pair won't be suggested again.
+ */
+const m0004: Migration = {
+  name: '0004-transfer-dismissals',
+  async up(db) {
+    await installValidators(db);
+    await db.collection('transfer_dismissals').createIndex({ workspaceId: 1, outId: 1, inId: 1 }, { unique: true });
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {

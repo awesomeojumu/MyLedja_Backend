@@ -190,3 +190,18 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - **Institutions:** a starter list of 43 Nigerian banks, microfinance banks, wallets and savings apps, served from code. A logo URL is built from `CLOUDINARY_CLOUD_NAME` and `CLOUDINARY_FOLDER` once an entry is marked as having a logo; until then `logoUrl` is null.
 - Answer:
 - Status: open
+
+## Q-B17: Transactions API (B1.8)
+
+- Task: B1.8
+- Raised by: backend agent
+- Context and decision:
+  - **Headline amount:** money out is negative, money in positive, a transfer its size. Filters `minAmount` / `maxAmount` use the absolute size of that headline.
+  - **Live list:** `status=live` (default) hides reversals and replaced versions (`status=reversed`).
+  - **Uncategorized filter:** transactions whose category is the workspace's Uncategorized or Other income starter.
+  - **Transfer matching:** same absolute amount, different accounts, within 3 days; link reverses both and posts one transfer dated like the money out. Dismissals are stored in `transfer_dismissals` and never suggested again.
+  - **Bulk categorize** saves each row as a correction. Bulk tag/payee changes patch in place; delete reverses.
+  - **Unlock** clears `reconciliationId` and writes an audit entry. Recording the unlock on the reconciliation document lands with B1.13.
+  - **Fix:** the contract interceptor now sets `req.operationId` from `X-Operation-Id` so HTTP writes reach the ledger with the real id (accounts had been posting openings as `undefined:opening`).
+- Answer:
+- Status: open

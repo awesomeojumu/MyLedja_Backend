@@ -40,6 +40,7 @@ import {
   TokenService,
 } from './modules/auth/tokens.js';
 import { type EmailSender, Mailer, pickSender } from './modules/notifications/email/email.js';
+import { TransferDismissalsRepository, TransactionsService } from './modules/transactions/transactions.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -81,12 +82,14 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     now,
   );
   const workspacesRepo = new WorkspacesRepository(db);
+  const categoriesRepo = new CategoriesRepository(db);
+  const payeesRepo = new PayeesRepository(db);
   const categories = new CategoriesService(
     database,
-    new CategoriesRepository(db),
+    categoriesRepo,
     new GroupsRepository(db),
     new TagsRepository(db),
-    new PayeesRepository(db),
+    payeesRepo,
     new PayeeMergesRepository(db),
     ledger,
     audit,
@@ -96,6 +99,15 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const currencyOf = async (ctx: WorkspaceContext, session?: ClientSession) =>
     (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN';
   const accounts = new AccountsService(database, ledger, audit, currencyOf, now);
+  const transactions = new TransactionsService(
+    database,
+    ledger,
+    new TransferDismissalsRepository(db),
+    categoriesRepo,
+    payeesRepo,
+    audit,
+    now,
+  );
   const workspaces = new WorkspacesService(
     database,
     workspacesRepo,
@@ -165,6 +177,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     ledger,
     categories,
     accounts,
+    transactions,
     balanceCheck,
     auth,
     idempotency,
