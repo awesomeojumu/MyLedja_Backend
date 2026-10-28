@@ -47,6 +47,7 @@ import { ReconciliationsRepository } from './modules/reconcile/reconcile.reposit
 import { ReconcileService } from './modules/reconcile/reconcile.service.js';
 import { ImportsRepository } from './modules/imports/imports.repository.js';
 import { ImportsService } from './modules/imports/imports.service.js';
+import { SyncService } from './modules/sync/sync.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -76,13 +77,14 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const audit = new AuditRepository(db);
   const memberships = new MembershipLookup(db);
   const counters = new CountersRepository(db);
+  const changes = new ChangesRepository(db);
   const ledger = new LedgerService(
     database,
     new LedgerAccountsRepository(db),
     new TransactionsRepository(db),
     new AccountBalancesRepository(db),
     new PeriodTotalsRepository(db),
-    new ChangesRepository(db),
+    changes,
     counters,
     audit,
     now,
@@ -146,6 +148,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     config,
     now,
   );
+  const sync = new SyncService(counters, changes, ledger, transactions, accounts, categories, budget, now);
   const workspaces = new WorkspacesService(
     database,
     workspacesRepo,
@@ -219,6 +222,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     reconcile,
     budget,
     imports,
+    sync,
     balanceCheck,
     auth,
     idempotency,
