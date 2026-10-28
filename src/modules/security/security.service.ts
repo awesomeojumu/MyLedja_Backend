@@ -16,6 +16,8 @@ import type { AuditRepository } from '../audit/audit.repository.js';
 import type { SessionsRepository, UserDoc, UsersRepository } from '../auth/auth.repository.js';
 import { type AuthService, type RequestMeta, type SessionResult, waitMessage } from '../auth/auth.service.js';
 import type { PasswordHasher } from '../auth/tokens.js';
+import type { ClientSession } from 'mongodb';
+import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { WorkspacesService } from '../workspaces/workspaces.service.js';
 import {
   type ActivityEvent,
@@ -69,8 +71,38 @@ export class SecurityService {
     private readonly audit: AuditRepository,
     private readonly workspaces: WorkspacesService,
     private readonly now: () => Date = () => new Date(),
+    private readonly notifications: NotificationsService | null = null,
   ) {
     auth.secondStep = (user, body) => this.secondStep(user, body);
+    auth.afterSignIn = (user, deviceName, session) => this.noticeSignIn(user, deviceName, session);
+  }
+
+  /* ---------- Security notices: can't be muted, always ask "Was this you?" (DESIGN page 27) ---------- */
+
+  private async notice(userId: string, title: string, session?: ClientSession) {
+    if (!this.notifications) return;
+    const ctx = await this.workspaces.personalContext(userId, null, session).catch(() => null);
+    if (!ctx) return;
+    await this.notifications.createOnce(
+      ctx,
+      {
+        userId,
+        kind: 'security',
+        title,
+        body: 'Was this you? If not, change your password and sign out other devices.',
+        security: true,
+        actions: [{ key: 'security_review', label: 'Review', target: { path: '/settings/security' } }],
+        dedupeKey: `security:${userId}:${title}:${this.now().getTime()}`,
+      },
+      session,
+    );
+  }
+
+  /** A sign-in while the person is already signed in somewhere else is a new device worth telling them about. */
+  private async noticeSignIn(user: UserDoc, deviceName: string | null, session: ClientSession) {
+    const others = (await this.sessions.listForUser(user._id, this.now())).length;
+    if (others <= 1) return;
+    await this.notice(user._id, deviceName ? `New sign-in on ${deviceName}` : 'New sign-in on another device', session);
   }
 
   /* ---------- Challenges: opaque, encrypted and short-lived, so nothing is stored for them ---------- */
@@ -297,6 +329,7 @@ export class SecurityService {
       passkeys: [...(user.passkeys ?? []).filter((p) => p.id !== cred.id), passkey],
     });
     await this.record(userId, sessionId, 'security.passkey_added');
+    await this.notice(userId, 'A passkey was added');
     return { id: passkey.id, name: passkey.name, createdAt: now.toISOString(), lastUsedAt: null };
   }
 
@@ -427,6 +460,7 @@ export class SecurityService {
     await this.requireRecent(sessionId);
     await this.users.setFields(userId, { twoFactor: null, twoFactorPending: null });
     await this.record(userId, sessionId, 'security.two_factor_off');
+    await this.notice(userId, 'Two-factor was turned off');
   }
 
   async listSessions(userId: string, currentId: string): Promise<{ sessions: z.input<typeof DeviceSession>[] }> {
@@ -464,6 +498,7 @@ export class SecurityService {
     await this.users.setFields(userId, { passwordHash: await this.hasher.hash(body.newPassword) });
     await this.sessions.revokeAllForUser(userId, 'password_changed', sessionId);
     await this.record(userId, sessionId, 'user.password_changed');
+    await this.notice(userId, 'Your password was changed');
   }
 
   /* ---------- Activity log (B3.9) ---------- */

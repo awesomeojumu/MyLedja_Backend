@@ -84,6 +84,8 @@ export type SecondStep = (
 
 export class AuthService {
   secondStep: SecondStep | null = null;
+  /** Called inside the sign-in transaction; the security module uses it for "New sign-in. Was this you?". */
+  afterSignIn: ((user: UserDoc, deviceName: string | null, session: ClientSession) => Promise<void>) | null = null;
 
   constructor(
     private readonly config: AppConfig,
@@ -396,6 +398,7 @@ export class AuthService {
       revokedReason: null,
     };
     await this.sessions.insert(doc, { session });
+    await this.afterSignIn?.(user, doc.deviceName, session);
     const refreshToken = `${doc._id}.${secret}`;
     const accessToken = await this.tokens.access({ userId: user._id, sessionId: doc._id });
     const userView = await this.workspaces.userView(user, doc._id, session);

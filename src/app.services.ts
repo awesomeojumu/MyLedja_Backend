@@ -283,7 +283,19 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   jobs.register(billRemindersJob({ workspaces: workspaceIndex, workspaceDocs: workspacesRepo, schedules, now }));
   jobs.register(recurringDailyJob({ workspaces: workspaceIndex, schedules, now }));
   const files = fileStoreFor(config);
-  const security = new SecurityService(config, users, sessions, auth, hasher, crypto, limits, audit, workspaces, now);
+  const security = new SecurityService(
+    config,
+    users,
+    sessions,
+    auth,
+    hasher,
+    crypto,
+    limits,
+    audit,
+    workspaces,
+    now,
+    notifications,
+  );
   const exports = new ExportsService(
     database,
     new ExportsRepository(db),
