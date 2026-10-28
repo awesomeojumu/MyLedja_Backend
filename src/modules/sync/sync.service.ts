@@ -23,6 +23,8 @@ import {
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import type { SchedulesService } from '../schedules/schedules.service.js';
 import { scheduleRoutes } from '../schedules/schedules.contract.js';
+import type { DebtsService } from '../debts/debts.service.js';
+import { debtRoutes } from '../debts/debts.contract.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
@@ -30,6 +32,10 @@ const PREVIOUS_SCHEMA_VERSION = 0;
 const REVERSAL_SUFFIX = ':reversal';
 const CreateScheduleBody = scheduleRoutes.create.body!;
 const UpdateScheduleBody = scheduleRoutes.update.body!;
+const LendBody = debtRoutes.lend.body!;
+const BorrowBody = debtRoutes.borrow.body!;
+const DebtPaymentBody = debtRoutes.recordPayment.body!;
+const WriteOffBody = debtRoutes.writeOff.body!;
 const TagCreateBody = z.object({ id: Uuid.optional(), name: z.string().trim().min(1).max(40) });
 
 type PushBody = {
@@ -50,6 +56,7 @@ export class SyncService {
     private readonly categories: CategoriesService,
     private readonly budget: BudgetService,
     private readonly schedules: SchedulesService,
+    private readonly debts: DebtsService,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -299,10 +306,25 @@ export class SyncService {
       case 'goal.create':
       case 'goal.update':
       case 'goal.allocate':
-      case 'debt.lend':
-      case 'debt.borrow':
-      case 'debt.payment':
-      case 'debt.write_off':
+      case 'debt.lend': {
+        const body = LendBody.parse(payload);
+        return { result: await this.debts.lend(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'debt.borrow': {
+        const body = BorrowBody.parse(payload);
+        return { result: await this.debts.borrow(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'debt.payment': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the debt to update.');
+        const body = DebtPaymentBody.parse(payload);
+        return { result: await this.debts.recordPayment(ctx, targetId, body, op.operationId), duplicate: false };
+      }
+      case 'debt.write_off': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the debt to write off.');
+        const body = WriteOffBody.parse(payload);
+        const { debt } = await this.debts.writeOff(ctx, targetId, body.date, body.baseVersion, op.operationId);
+        return { result: debt, duplicate: false };
+      }
       case 'income.stream.create':
       case 'income.stream.update':
         throw Errors.validation('type', 'This app version cannot sync that change yet. Update MyLedja.');
@@ -350,6 +372,13 @@ export class SyncService {
           } catch {
             return null;
           }
+        case 'debts': {
+          try {
+            return (await this.debts.get(ctx, row.docId)).debt;
+          } catch {
+            return null;
+          }
+        }
         default:
           return null;
       }

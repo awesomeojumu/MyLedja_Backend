@@ -295,3 +295,33 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - E18/E19 (goals) still no ledger event for same-account earmarks; goal spending adds `goalId` on expenses in a later PR.
 - Answer:
 - Status: open
+
+## Q-B25: Schedules recurrence and occurrences (B2.1)
+
+- Task: B2.1
+- Raised by: backend agent
+- Context and decision:
+  - Occurrences materialized on read for a calendar month (`ensureMonth`), stored in `occurrences` with unique `{ scheduleId, date }`.
+  - Month-end clamping in `recurrence.ts` (TECH-SPEC 6.4); unit tests for Feb 31 → 28 and last-day option.
+  - Mark paid/received posts via `TransactionsService` or links `matchTransactionId`; second mark → `409 already_paid`.
+  - Sync: `schedule.create` / `schedule.update` wired; change feed collections `schedules`, `occurrences`.
+  - Find recurring: heuristic on expense payees (≥3 txns); v1 returns payee id as name until payee lookup added.
+- Answer:
+- Status: open
+
+## Q-B26: People debts API (B2.5)
+
+- Task: B2.5
+- Raised by: backend agent
+- Documents: TECH-SPEC 6.9, 6.14 cases 9–11; build plan B2.5
+- Context and decision:
+  - Each debt gets a dedicated person ledger account (`personDebt` receivable or payable); payee auto-created or matched by name.
+  - **Lend** E15, **borrow from person** E13 via `loan_proceeds` on payable account (ledger builders accept `personDebt: payable`).
+  - **Payments:** they owe me → E16 `collect`; I owe them → E14 `loan_repayment` with interest split (cases 8/10 pattern).
+  - Default interest split: none → all principal; fixed/percent use TECH-SPEC 6.9 cap to outstanding.
+  - **Write-off** E17 only for `they_owe_me`; **settle** when outstanding is zero.
+  - Instalment metadata computed on read (`nextInstalmentDate` / `nextInstalmentAmount`); `setDebtInstalmentSchedule` stores plan only.
+  - Money-back suggestions (`listMoneyBackSuggestions`, `confirmMoneyBack`) deferred to B2.6 PR (routes stay contract-only until then).
+  - Sync: `debt.lend`, `debt.borrow`, `debt.payment`, `debt.write_off` wired; change feed collection `debts`.
+- Answer:
+- Status: open

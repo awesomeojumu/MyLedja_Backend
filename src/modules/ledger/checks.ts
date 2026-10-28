@@ -85,7 +85,10 @@ export function checkLines(
     }
     case 'loan_proceeds': {
       const assets = lines.filter((_, i) => accounts[i]!.kind === 'asset' && !accounts[i]!.personDebt);
-      const loans = lines.filter((_, i) => accounts[i]!.kind === 'liability' && !accounts[i]!.personDebt);
+      const loans = lines.filter(
+        (_, i) =>
+          accounts[i]!.kind === 'liability' && (accounts[i]!.personDebt === 'payable' || !accounts[i]!.personDebt),
+      );
       if (assets.length !== 1 || loans.length !== 1) throw new IntegrityError(3, 'loan proceeds needs cash and a loan');
       return;
     }
