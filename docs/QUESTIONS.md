@@ -357,7 +357,7 @@ Format and rules: build plan section 14. The owner asked for the best profession
 - Raised by: backend agent (Worker A)
 - Context and decision:
   - Worker B (`-c89a`) notifications/templates/jobs rebased onto `cursor/phase-2-income-e790` as `-e790` branches with migrations **0012-notifications**, **0013-templates** (Worker A keeps 0008–0011).
-  - Open PRs stacked on #59 chain: **#61** notifications → **#62** templates → **#63** jobs scaffold → **#64** B2.2 wiring (`deliverReminders` + `autoPostDueOccurrences`, `NotificationsService.createOnce`).
+  - Open PRs stacked on #59 chain: **#61** notifications → **#62** templates → **#63** jobs scaffold → **#66** B2.2 wiring (`deliverReminders` + `autoPostDueOccurrences`, `NotificationsService.createOnce`).
   - Original #46/#45/#47 remain on `-c89a` for history; canonical merge path is `-e790` only.
 - Answer:
 - Status: open
