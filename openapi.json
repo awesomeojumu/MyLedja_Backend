@@ -4770,6 +4770,16 @@
               }
             ]
           },
+          "transactionIds": {
+            "description": "Ids the device made for the transactions this operation posts, in posting order (a correction: reversal, then new).",
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -6371,6 +6381,31 @@
               "null"
             ]
           },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "opening_balances",
+                  "adjustments",
+                  "revaluation",
+                  "fx_clearing",
+                  "interest_earned",
+                  "investment_income",
+                  "investment_gain",
+                  "interest_and_charges",
+                  "fees",
+                  "taxes",
+                  "written_off",
+                  "investment_loss"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when the line is on a system account, such as opening_balances."
+          },
           "amount": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
@@ -6384,6 +6419,7 @@
           "ledgerAccountId",
           "accountId",
           "categoryId",
+          "system",
           "amount",
           "currency"
         ],

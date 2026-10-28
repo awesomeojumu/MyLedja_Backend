@@ -136,7 +136,7 @@ export class SyncService {
       return this.rejected(op.operationId, Errors.validation('schemaVersion', 'Update the app and try again.'));
     }
     try {
-      const outcome = await this.apply(ctx, op, deviceId);
+      const outcome = await this.ledger.withClientIds(op.transactionIds, () => this.apply(ctx, op, deviceId));
       return {
         operationId: op.operationId,
         status: outcome.duplicate ? 'duplicate' : 'applied',

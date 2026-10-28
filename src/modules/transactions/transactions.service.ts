@@ -544,6 +544,7 @@ export class TransactionsService {
           ledgerAccountId: l.ledgerAccountId,
           accountId: isReal(a) ? l.ledgerAccountId : null,
           categoryId: l.categoryId ?? null,
+          system: a?.systemKey ?? null,
           amount: toMinorString(l.amountMinor),
           currency: l.currency,
         };

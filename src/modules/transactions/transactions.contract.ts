@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { defineRoute } from '../../common/http/contract.js';
 import { BaseVersion, LocalDate, MinorAmount, PageQuery, Uuid } from '../../common/http/schemas.js';
 import { EventInput } from '../ledger/ledger.inputs.js';
-import { EVENT_TYPES } from '../ledger/ledger.types.js';
+import { EVENT_TYPES, SYSTEM_KEYS } from '../ledger/ledger.types.js';
 import { WorkspaceParams } from '../workspaces/workspaces.contract.js';
 
 export const TransactionLine = z
@@ -10,6 +10,10 @@ export const TransactionLine = z
     ledgerAccountId: z.string(),
     accountId: z.string().nullable().meta({ description: 'Set when the line is on one of your accounts.' }),
     categoryId: z.string().nullable().meta({ description: 'Set when the line is on a category.' }),
+    system: z
+      .enum(SYSTEM_KEYS)
+      .nullable()
+      .meta({ description: 'Set when the line is on a system account, such as opening_balances.' }),
     amount: MinorAmount.meta({ description: 'Positive is a debit, negative a credit (TECH-SPEC 6.1).' }),
     currency: z.string(),
   })
