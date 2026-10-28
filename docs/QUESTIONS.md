@@ -243,3 +243,18 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - Implemented on `BudgetService.dashboard` and a separate `DashboardController`.
 - Answer:
 - Status: open
+
+## Q-B21: CSV import (B1.12)
+
+- Task: B1.12
+- Raised by: backend agent
+- Context and decision:
+  - **Phase 1 = CSV text in the body** (≤ 2 MB). Excel, PDF and AI reading stay Phase 4. The raw CSV is kept on the `imports` document so map/post can re-parse without Cloudinary.
+  - **Cloudinary optional:** when `CLOUDINARY_*` is set, upload records `stored: true` after a no-op/stub store attempt; otherwise `stored: false`. Real private Cloudinary upload can replace the stub later without changing the contract.
+  - **Suggest mapping:** reuse `account.importMapping` when present; otherwise guess from the header row (date / amount or money in+out / description).
+  - **Duplicates:** same account, same signed amount, date within 3 days, similar description (lowercase, strip non-alnum, equality or includes). Marked `include: false` with `duplicateOf` = existing transaction id.
+  - **Post:** only `include: true` and `error: null` rows, all-or-nothing via `ledger.postIn` in one Mongo transaction. Positive amount → income (Other income if no category); negative → expense (Uncategorized if no category). Each event gets `importId`. Mapping is saved on the account at map time.
+  - **Undo:** `ledger.reverseIn` every posted row of this import only; status `undone`. Prior transactions are untouched.
+  - **Broken rows** carry an `error` string and are never posted, even if the client ticks them.
+- Answer:
+- Status: open

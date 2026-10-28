@@ -160,7 +160,18 @@ const m0006: Migration = {
   },
 };
 
-export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006];
+/** CSV statement imports (B1.12). Content is kept on the doc for Phase 1; Cloudinary is optional. */
+const m0007: Migration = {
+  name: '0007-imports',
+  async up(db) {
+    await installValidators(db);
+    const ix = db.collection('imports');
+    await ix.createIndex({ workspaceId: 1, accountId: 1, createdAt: -1 });
+    await ix.createIndex({ workspaceId: 1, status: 1 });
+  },
+};
+
+export const MIGRATIONS: Migration[] = [m0001, m0002, m0003, m0004, m0005, m0006, m0007];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
 export async function migrate(db: Db, migrations: Migration[] = MIGRATIONS): Promise<string[]> {
