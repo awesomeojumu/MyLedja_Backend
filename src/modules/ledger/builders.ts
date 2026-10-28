@@ -34,9 +34,10 @@ function receivable(r: Resolver, id: string, field: string): AccountRef {
   return a;
 }
 
-function loanAccount(r: Resolver, id: string, field: string): AccountRef {
+function loanLiability(r: Resolver, id: string, field: string): AccountRef {
   const a = r.account(id);
-  if (!a || a.kind !== 'liability' || a.personDebt) throw LedgerErrors.wrongAccountKind(field);
+  if (!a || a.kind !== 'liability') throw LedgerErrors.wrongAccountKind(field);
+  if (a.personDebt && a.personDebt !== 'payable') throw LedgerErrors.wrongAccountKind(field);
   if (a.archived) throw LedgerErrors.archived(field);
   return a;
 }
@@ -183,7 +184,7 @@ function buildRefund(input: Extract<EventInput, { type: 'refund' }>, r: Resolver
 /** E13: Dr cash · Cr loan liability. */
 function buildLoanProceeds(input: Extract<EventInput, { type: 'loan_proceeds' }>, r: Resolver): Built {
   const cash = real(r, input.accountId, 'accountId');
-  const loan = loanAccount(r, input.loanAccountId, 'loanAccountId');
+  const loan = loanLiability(r, input.loanAccountId, 'loanAccountId');
   const amount = parseMinor(input.amount);
   if (cash.currency !== loan.currency) throw LedgerErrors.currencyMismatch('loanAccountId');
   return { type: 'loan_proceeds', lines: [line(cash, amount), line(loan, -amount, cash.currency)] };
@@ -191,7 +192,7 @@ function buildLoanProceeds(input: Extract<EventInput, { type: 'loan_proceeds' }>
 
 /** E14: Dr loan (principal) · Dr interest expense · Cr cash. */
 function buildLoanRepayment(input: Extract<EventInput, { type: 'loan_repayment' }>, r: Resolver): Built {
-  const loan = loanAccount(r, input.loanAccountId, 'loanAccountId');
+  const loan = loanLiability(r, input.loanAccountId, 'loanAccountId');
   const cash = real(r, input.accountId, 'accountId');
   const principal = parseMinor(input.principal);
   const interest = parseMinor(input.interest ?? '0');

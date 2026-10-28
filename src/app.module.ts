@@ -13,6 +13,7 @@ import { HealthController } from './modules/health/health.controller.js';
 import { ImportsController } from './modules/imports/imports.controller.js';
 import { ReconcileController } from './modules/reconcile/reconcile.controller.js';
 import { SchedulesController } from './modules/schedules/schedules.controller.js';
+import { DebtsController } from './modules/debts/debts.controller.js';
 import { SyncController } from './modules/sync/sync.controller.js';
 import { TransactionsController } from './modules/transactions/transactions.controller.js';
 import { WorkspacesController } from './modules/workspaces/workspaces.controller.js';
@@ -38,6 +39,7 @@ export class AppModule {
         DashboardController,
         ImportsController,
         SchedulesController,
+        DebtsController,
         SyncController,
       ],
       providers: [

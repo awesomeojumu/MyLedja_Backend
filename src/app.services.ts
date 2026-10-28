@@ -50,6 +50,8 @@ import { ImportsService } from './modules/imports/imports.service.js';
 import { SyncService } from './modules/sync/sync.service.js';
 import { SchedulesRepository, OccurrencesRepository } from './modules/schedules/schedules.repository.js';
 import { SchedulesService } from './modules/schedules/schedules.service.js';
+import { DebtsRepository } from './modules/debts/debts.repository.js';
+import { DebtsService } from './modules/debts/debts.service.js';
 import {
   CountersRepository,
   MembershipLookup,
@@ -159,7 +161,28 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
-  const sync = new SyncService(counters, changes, ledger, transactions, accounts, categories, budget, schedules, now);
+  const debts = new DebtsService(
+    database,
+    new DebtsRepository(db),
+    payeesRepo,
+    ledger,
+    transactions,
+    audit,
+    currencyOf,
+    now,
+  );
+  const sync = new SyncService(
+    counters,
+    changes,
+    ledger,
+    transactions,
+    accounts,
+    categories,
+    budget,
+    schedules,
+    debts,
+    now,
+  );
   const workspaces = new WorkspacesService(
     database,
     workspacesRepo,
@@ -234,6 +257,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     budget,
     imports,
     schedules,
+    debts,
     sync,
     balanceCheck,
     auth,
