@@ -291,10 +291,10 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - New `EventInput` types: `loan_proceeds`, `loan_repayment`, `lend`, `collect`, `write_off`, `salary_gross` (E24).
   - Person receivables use `ledger_accounts.personDebt: receivable` (payable later for borrow-from-person).
   - `ledger-cases.json` extended with cases 7–11, 18, 26, 27; sha256 updated.
-  - Case 24 (pension rounding on ₦800,000.01) stays a money helper test — deferred to income module PR.
+  - Case 24 (pension rounding on ₦800,000.01) is in `ledger-cases.json` as `salary_gross` with pension `6400000` (8% of ₦800,000.01 half away from zero); `percentOf` / `allocate` stay covered in `money.test.ts` too.
   - E18/E19 (goals) still no ledger event for same-account earmarks; goal spending adds `goalId` on expenses in a later PR.
-- Answer:
-- Status: open
+- Answer: Agent decision under the owner's delegation, 28 Oct 2026: case 24 lives in the shared fixture (salary_gross with the rounded pension) and in the money helper tests. Frontend copies the same bytes (Q-13 option B).
+- Status: answered
 
 ## Q-B25: Schedules recurrence and occurrences (B2.1)
 

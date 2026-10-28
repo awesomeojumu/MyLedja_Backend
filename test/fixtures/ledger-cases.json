@@ -714,6 +714,42 @@
       }
     },
     {
+      "id": 24,
+      "title": "8% pension on ₦800,000.01",
+      "steps": [
+        {
+          "ref": "e1",
+          "post": {
+            "type": "salary_gross",
+            "accountId": "@gtbank",
+            "categoryId": "@salary",
+            "gross": "80000001",
+            "takeHome": "62000001",
+            "paye": "9600000",
+            "pensionAccountId": "@pension",
+            "pension": "6400000",
+            "nhfAccountId": "@nhf",
+            "nhf": "2000000",
+            "date": "2026-10-27"
+          },
+          "expectLines": [
+            { "account": "@gtbank", "amount": "62000001" },
+            { "account": "@taxes", "amount": "9600000" },
+            { "account": "@pension", "amount": "6400000" },
+            { "account": "@nhf", "amount": "2000000" },
+            { "account": "@salary", "amount": "-80000001" }
+          ]
+        }
+      ],
+      "expect": {
+        "balances": { "gtbank": "62000001", "pension": "6400000", "nhf": "2000000" },
+        "months": {
+          "2026-10": { "income": "80000001", "spent": "9600000", "spentByCategory": { "taxes": "9600000" } }
+        },
+        "netWorth": "70400001"
+      }
+    },
+    {
       "id": 26,
       "title": "Record as money back: ₦40,000.00 against ₦100,000.00 lent",
       "steps": [
