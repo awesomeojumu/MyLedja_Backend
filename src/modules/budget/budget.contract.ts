@@ -193,7 +193,7 @@ export const Dashboard = z
       .meta({ description: 'Cumulative spending by day of month.' }),
     budgetProgress: z.array(BudgetCategory).meta({ description: 'The five fullest categories.' }),
     whereItWent: z.array(z.object({ categoryId: z.string(), amount: MinorAmount })),
-    recent: z.array(Transaction).meta({ description: 'The latest five.' }),
+    recent: z.array(Transaction).meta({ description: 'The latest eight (DESIGN.md page 5).' }),
     getStarted: z.object({
       hidden: z.boolean(),
       steps: z.array(z.object({ key: z.string(), done: z.boolean() })),

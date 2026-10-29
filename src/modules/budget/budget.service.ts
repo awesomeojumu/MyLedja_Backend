@@ -281,7 +281,7 @@ export class BudgetService {
       this.categories.tree(ctx),
       this.ledger.totals.months(ctx, historyStart, month),
       this.ledger.accounts.find(ctx, { accountType: { $ne: null }, systemKey: null } as never),
-      this.transactions.list(ctx, { status: 'live', limit: 5 } as never),
+      this.transactions.list(ctx, { status: 'live', limit: 8 } as never),
       this.compute(ctx, month, month),
       this.compute(ctx, last, last),
       this.getStarted(ctx),
