@@ -55,7 +55,12 @@ const toOccurrence = (d: OccurrenceDoc): z.input<typeof Occurrence> => ({
   version: d.version,
 });
 
-const reminderCopy = (name: string, occDate: string, daysBefore: string) => {
+const reminderCopy = (name: string, occDate: string, daysBefore: string, kind: 'income' | 'bill' = 'bill') => {
+  if (kind === 'income') {
+    if (daysBefore === '0') return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate}.` };
+    if (daysBefore === '1') return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected tomorrow (${occDate}).` };
+    return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate} (${daysBefore} days).` };
+  }
   if (daysBefore === '0') return { title: `${name} due today`, body: `Due on ${occDate}.` };
   if (daysBefore === '1') return { title: `${name} due tomorrow`, body: `Due on ${occDate}.` };
   return { title: `${name} coming up`, body: `Due on ${occDate} (${daysBefore} days).` };
@@ -347,7 +352,27 @@ export class SchedulesService {
         const { grossSplitFromStream } = await import('../income/gross-split.js');
         const split = stream ? grossSplitFromStream(stream) : null;
         const createAmount = parseMinor(amount);
-        if (split && createAmount >= parseMinor(split.takeHome)) {
+        // Never run full E24 after same-month partials already linked for this stream.
+        let priorSameMonth = false;
+        if (stream && split) {
+          const month = date.slice(0, 7);
+          for (const tid of stream.linkedTransactionIds ?? []) {
+            try {
+              const linked = (await this.transactions.get(ctx, tid)).transaction;
+              if (
+                (linked.type === 'income' || linked.type === 'salary_gross') &&
+                linked.date.startsWith(month) &&
+                !linked.oneOff
+              ) {
+                priorSameMonth = true;
+                break;
+              }
+            } catch {
+              /* missing link — skip */
+            }
+          }
+        }
+        if (split && createAmount >= parseMinor(split.takeHome) && !priorSameMonth) {
           tx = await this.transactions.create(
             ctx,
             {
@@ -470,7 +495,11 @@ export class SchedulesService {
           const fireOn = addCalendarDays(occ.date, -parseInt(daysBefore, 10));
           if (fireOn !== input.localDate) continue;
           const kind = s.kind === 'income' ? 'income' : 'bill';
-          const copy = reminderCopy(s.name, occ.date, daysBefore);
+          const copy = reminderCopy(s.name, occ.date, daysBefore, kind);
+          const incomeStream =
+            kind === 'income' && this.incomeStreams
+              ? await this.incomeStreams.findOne(ctx, { scheduleId: s._id })
+              : null;
           await this.notifications.createOnce(ctx, {
             userId: input.ownerUserId,
             kind,
@@ -479,10 +508,23 @@ export class SchedulesService {
             amountMinor: occ.amountMinor,
             hideAmount: s.reminder.hideAmountOnLockScreen,
             dedupeKey: `reminder:${s._id}:${occ.date}:before:${daysBefore}`,
-            actions: [
-              { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
-              { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
-            ],
+            actions:
+              kind === 'income'
+                ? [
+                    {
+                      key: 'mark_received',
+                      label: 'Mark received',
+                      target: {
+                        path: '/income',
+                        params: { occurrence: incomeStream?._id ?? s._id },
+                      },
+                    },
+                    { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
+                  ]
+                : [
+                    { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
+                    { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
+                  ],
           });
         }
       }
