@@ -414,25 +414,34 @@ export class BudgetService {
   }
 
   private async getStarted(ctx: WorkspaceContext) {
-    const [accountCount, assignedCount, nonOpening] = await Promise.all([
+    const [accountCount, assignedCount, nonOpening, ws] = await Promise.all([
       this.ledger.accounts.count(ctx, { accountType: { $ne: null }, systemKey: null } as never),
       this.repos.count(ctx, { assignedMinor: { $gt: 0n } } as never),
       this.ledger.transactions.count(ctx, {
         status: 'posted',
         type: { $nin: ['opening_balance', 'reversal'] },
       } as never),
+      this.workspaces.get(ctx),
     ]);
-    return {
-      hidden: false,
-      steps: [
-        { key: 'account', done: accountCount > 0 },
-        { key: 'transaction', done: nonOpening > 0 },
-        { key: 'budget', done: assignedCount > 0 },
-        { key: 'bill', done: false },
-        { key: 'income_stream', done: false },
-        { key: 'two_factor', done: false },
-      ],
-    };
+    // Welcome skippedSteps 3→account, 4/5→budget (P04-02); incomplete pickups float first.
+    const skipKeys = new Set<'account' | 'budget'>();
+    for (const s of ws?.skippedSteps ?? []) {
+      if (s === 3) skipKeys.add('account');
+      if (s === 4 || s === 5) skipKeys.add('budget');
+    }
+    const steps = [
+      { key: 'account' as const, done: accountCount > 0 },
+      { key: 'transaction' as const, done: nonOpening > 0 },
+      { key: 'budget' as const, done: assignedCount > 0 },
+      { key: 'bill' as const, done: false },
+      { key: 'income_stream' as const, done: false },
+      { key: 'two_factor' as const, done: false },
+    ].sort((a, b) => {
+      const aSkip = (a.key === 'account' || a.key === 'budget') && skipKeys.has(a.key) && !a.done ? 1 : 0;
+      const bSkip = (b.key === 'account' || b.key === 'budget') && skipKeys.has(b.key) && !b.done ? 1 : 0;
+      return bSkip - aSkip || Number(a.done) - Number(b.done);
+    });
+    return { hidden: false, steps };
   }
 
   private async spendingByDay(
