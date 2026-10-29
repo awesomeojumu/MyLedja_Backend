@@ -36,7 +36,7 @@ Both repos: branch `claude/app-study-o8lpl5`. Build documents (DESIGN.md, TECH-S
 ## State of checks (run after Phase 5)
 
 - Frontend `npm run check`: lint, typecheck, 2,663 tests, web build, cases and API checks all pass.
-- Backend: lint, typecheck, 180 unit tests and the OpenAPI and cases checks pass here. Integration and e2e tests need MongoDB binaries that this container can't download; they run in CI (green on the Phase 5 PR).
+- Backend: lint, typecheck, 180 unit tests and the OpenAPI and cases checks pass here. Integration and e2e tests need MongoDB binaries that this container can't download; they run in CI. The backend Phase 5 work was merged into `dev` as PR #8.
 
 ## Open decisions for the owner
 
