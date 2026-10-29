@@ -14,6 +14,7 @@ import type { PayeesRepository } from '../categories/categories.repository.js';
 import { scheduleRoutes as scheduleRouteDefs } from './schedules.contract.js';
 import type { Occurrence, PlanMonthSummary, RecurringCandidate, Schedule } from './schedules.contract.js';
 import { firstNextDate, occurrencesInMonth } from './recurrence.js';
+import type { IncomeStreamsRepository } from '../income/income.repository.js';
 import {
   type OccurrenceDoc,
   OccurrencesRepository,
@@ -56,7 +57,12 @@ const toOccurrence = (d: OccurrenceDoc): z.input<typeof Occurrence> => ({
   version: d.version,
 });
 
-const reminderCopy = (name: string, occDate: string, daysBefore: string) => {
+const reminderCopy = (name: string, occDate: string, daysBefore: string, kind: 'income' | 'bill' = 'bill') => {
+  if (kind === 'income') {
+    if (daysBefore === '0') return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate}.` };
+    if (daysBefore === '1') return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected tomorrow (${occDate}).` };
+    return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate} (${daysBefore} days).` };
+  }
   if (daysBefore === '0') return { title: `${name} due today`, body: `Due on ${occDate}.` };
   if (daysBefore === '1') return { title: `${name} due tomorrow`, body: `Due on ${occDate}.` };
   return { title: `${name} coming up`, body: `Due on ${occDate} (${daysBefore} days).` };
@@ -72,6 +78,7 @@ export class SchedulesService {
     private readonly audit: AuditRepository,
     private readonly notifications: NotificationsService,
     private readonly payees: PayeesRepository,
+    private readonly incomeStreams: IncomeStreamsRepository | null = null,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -370,18 +377,65 @@ export class SchedulesService {
       if (income || sched.kind === 'income') {
         if (!sched.accountId || !sched.categoryId)
           throw Errors.validation('categoryId', 'Choose an account and category.');
-        tx = await this.transactions.create(
-          ctx,
-          {
-            type: 'income',
-            accountId: sched.accountId,
-            categoryId: sched.categoryId,
-            amount,
-            date,
-            notes: body.create.notes,
-          },
-          `${operationId}:tx`,
-        );
+        const stream = this.incomeStreams
+          ? await this.incomeStreams.findOne(ctx, { scheduleId: sched._id })
+          : null;
+        const { grossSplitFromStream } = await import('../income/gross-split.js');
+        const split = stream ? grossSplitFromStream(stream) : null;
+        const createAmount = parseMinor(amount);
+        // Never run full E24 after same-month partials already linked for this stream.
+        let priorSameMonth = false;
+        if (stream && split) {
+          const month = date.slice(0, 7);
+          for (const tid of stream.linkedTransactionIds ?? []) {
+            try {
+              const linked = (await this.transactions.get(ctx, tid)).transaction;
+              if (
+                (linked.type === 'income' || linked.type === 'salary_gross') &&
+                linked.date.startsWith(month) &&
+                !linked.oneOff
+              ) {
+                priorSameMonth = true;
+                break;
+              }
+            } catch {
+              /* missing link — skip */
+            }
+          }
+        }
+        if (split && createAmount >= parseMinor(split.takeHome) && !priorSameMonth) {
+          tx = await this.transactions.create(
+            ctx,
+            {
+              type: 'salary_gross',
+              accountId: sched.accountId,
+              categoryId: sched.categoryId,
+              gross: split.gross,
+              takeHome: split.takeHome,
+              paye: split.paye,
+              pensionAccountId: split.pensionAccountId,
+              pension: split.pension,
+              nhfAccountId: split.nhfAccountId,
+              nhf: split.nhf,
+              date,
+              notes: body.create.notes,
+            },
+            `${operationId}:tx`,
+          );
+        } else {
+          tx = await this.transactions.create(
+            ctx,
+            {
+              type: 'income',
+              accountId: sched.accountId,
+              categoryId: sched.categoryId,
+              amount,
+              date,
+              notes: body.create.notes,
+            },
+            `${operationId}:tx`,
+          );
+        }
       } else if (sched.kind === 'transfer') {
         if (!sched.accountId || !sched.toAccountId)
           throw Errors.validation('toAccountId', 'Choose From and To accounts for a transfer.');
@@ -530,7 +584,11 @@ export class SchedulesService {
           const fireOn = addCalendarDays(occ.date, -parseInt(daysBefore, 10));
           if (fireOn !== input.localDate) continue;
           const kind = s.kind === 'income' ? 'income' : 'bill';
-          const copy = reminderCopy(s.name, occ.date, daysBefore);
+          const copy = reminderCopy(s.name, occ.date, daysBefore, kind);
+          const incomeStream =
+            kind === 'income' && this.incomeStreams
+              ? await this.incomeStreams.findOne(ctx, { scheduleId: s._id })
+              : null;
           await this.notifications.createOnce(ctx, {
             userId: input.ownerUserId,
             kind,
@@ -539,10 +597,23 @@ export class SchedulesService {
             amountMinor: occ.amountMinor,
             hideAmount: s.reminder.hideAmountOnLockScreen,
             dedupeKey: `reminder:${s._id}:${occ.date}:before:${daysBefore}`,
-            actions: [
-              { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
-              { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
-            ],
+            actions:
+              kind === 'income'
+                ? [
+                    {
+                      key: 'mark_received',
+                      label: 'Mark received',
+                      target: {
+                        path: '/income',
+                        params: { occurrence: incomeStream?._id ?? s._id },
+                      },
+                    },
+                    { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
+                  ]
+                : [
+                    { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
+                    { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
+                  ],
           });
         }
       }

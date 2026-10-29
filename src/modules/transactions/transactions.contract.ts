@@ -64,6 +64,10 @@ export const Transaction = z
     reconciliationId: z.string().nullable().meta({ description: 'Finished reconcile that locked this transaction, if any.' }),
     clearedAccountIds: z.array(z.string()),
     importId: z.string().nullable(),
+    oneOff: z
+      .boolean()
+      .optional()
+      .meta({ description: 'Income marked one-off; excluded from steadiness (DESIGN page 13).' }),
     runningBalance: MinorAmount.nullable().meta({ description: 'Only when the list is filtered to one account.' }),
     recordedAt: z.string(),
     version: z.number().int(),
@@ -125,6 +129,7 @@ export const UpdateTransactionBody = z.object({
   tagIds: z.array(Uuid).max(20).optional(),
   payeeId: Uuid.nullable().optional(),
   receiptFileIds: z.array(z.string().max(100)).max(10).optional(),
+  oneOff: z.boolean().optional(),
 });
 
 export const BulkBody = z.object({

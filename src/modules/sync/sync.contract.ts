@@ -38,6 +38,7 @@ export const OPERATION_TYPES = [
   'debt.write_off',
   'income.stream.create',
   'income.stream.update',
+  'income.mark_one_off',
   'rule.upsert',
   'rule.delete',
   'holding.create',
