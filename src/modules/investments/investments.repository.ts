@@ -1,70 +1,42 @@
-import type { Collection, Db } from 'mongodb';
-
-export type HoldingType = 'stock' | 'fund' | 'pension' | 'crypto' | 'fixed_deposit' | 'other';
+import type { Db } from 'mongodb';
+import { BaseRepository } from '../../common/repository/base.repository.js';
 
 export type HoldingDoc = {
+  /** Also the id of the holding's ledger account. */
   _id: string;
   workspaceId: string;
   name: string;
   symbol: string | null;
-  type: HoldingType;
+  type: 'stock' | 'fund' | 'pension' | 'crypto' | 'fixed_deposit' | 'other';
   accountId: string;
   currency: string;
-  ledgerAccountId: string;
-  version: number;
+  archivedAt: Date | null;
+  operationId: string | null;
   createdAt: Date;
   updatedAt: Date;
-};
-
-export type LotDoc = {
-  _id: string;
-  workspaceId: string;
-  holdingId: string;
-  date: string;
-  units: string;
-  soldUnits: string;
-  costMinor: string;
-  pricePerUnitMinor: string;
-  feesMinor: string;
-  buyEventId: string | null;
   version: number;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
+/** A price typed in for one holding on one day (TECH-SPEC 6.8). Not a ledger event. */
 export type PriceDoc = {
   _id: string;
   workspaceId: string;
   holdingId: string;
   date: string;
   priceMinor: string;
-  version: number;
   createdAt: Date;
   updatedAt: Date;
-};
-
-export type RateDoc = {
-  _id: string;
-  workspaceId: string;
-  currency: string;
-  date: string;
-  rate: string;
-  source: 'manual' | 'download';
   version: number;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
-export class InvestmentsRepository {
-  readonly holdings: Collection<HoldingDoc>;
-  readonly lots: Collection<LotDoc>;
-  readonly prices: Collection<PriceDoc>;
-  readonly rates: Collection<RateDoc>;
-
+export class HoldingsRepository extends BaseRepository<HoldingDoc> {
   constructor(db: Db) {
-    this.holdings = db.collection('holdings');
-    this.lots = db.collection('lots');
-    this.prices = db.collection('prices');
-    this.rates = db.collection('exchange_rates');
+    super(db, 'holdings');
+  }
+}
+
+export class PricesRepository extends BaseRepository<PriceDoc> {
+  constructor(db: Db) {
+    super(db, 'prices');
   }
 }
