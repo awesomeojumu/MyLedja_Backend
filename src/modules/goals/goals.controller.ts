@@ -45,4 +45,9 @@ export class GoalsController {
   spend(@In() i: Input<typeof r.spend>, @Req() req: Req): Promise<Output<typeof r.spend>> {
     return this.s.goals.spend(req.ctx!, i.params.goalId, i.body, req.operationId!);
   }
+
+  @Route(r.remove)
+  remove(@In() i: Input<typeof r.remove>, @Req() req: Req): Promise<Output<typeof r.remove>> {
+    return this.s.goals.remove(req.ctx!, i.params.goalId, i.body.baseVersion);
+  }
 }

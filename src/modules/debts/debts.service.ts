@@ -322,8 +322,13 @@ export class DebtsService {
       } else {
         ({ principal, interest } = defaultSplit(amount, outstanding, before.interest));
       }
-      if (principal > outstanding) throw Errors.validation('split', 'Principal cannot exceed what is still owed.');
-      if (principal + interest > outstanding) interest = outstanding - principal;
+      // TECH-SPEC 6.9: anything beyond outstanding needs an explicit overpayment choice.
+      const over = amount > outstanding ? amount - outstanding : principal > outstanding ? principal - outstanding : 0n;
+      if (over > 0n && !body.overpayment) {
+        throw Errors.validation('amount', 'Payment is more than owed. Choose gift or keep as credit.');
+      }
+      if (interest > outstanding) interest = outstanding;
+      if (principal > outstanding - interest) principal = outstanding - interest;
       const input: EventInput =
         before.direction === 'they_owe_me'
           ? {
@@ -344,14 +349,21 @@ export class DebtsService {
             };
       const tx = await this.ledger.postIn(ctx, input, { operationId }, session);
       const newOutstanding = outstanding - principal;
+      const creditAdd = over > 0n && body.overpayment === 'credit' ? over : 0n;
+      // Gift overpayment is posted by the client as income/expense; server only clears the debt here.
+      const set: Record<string, unknown> = {
+        outstandingMinor: toMinorString(newOutstanding > 0n ? newOutstanding : 0n),
+        updatedAt: this.now(),
+      };
+      if (creditAdd > 0n) {
+        const priorCredit = parseMinor((before as { creditMinor?: string }).creditMinor ?? '0');
+        set.creditMinor = toMinorString(priorCredit + creditAdd);
+      }
       const after = await this.debts.findOneAndUpdate(
         ctx,
         { _id: id },
         {
-          $set: {
-            outstandingMinor: toMinorString(newOutstanding > 0n ? newOutstanding : 0n),
-            updatedAt: this.now(),
-          },
+          $set: set,
           $push: { paymentTransactionIds: tx._id },
           $inc: { version: 1 },
         },
