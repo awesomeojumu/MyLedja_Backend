@@ -14,6 +14,7 @@ export type ScheduleDoc = {
   payeeId: string | null;
   accountId: string | null;
   categoryId: string | null;
+  toAccountId: string | null;
   amountMinor: string;
   amountApproximate: boolean;
   recurrence: z.output<typeof RecurrenceRule>;

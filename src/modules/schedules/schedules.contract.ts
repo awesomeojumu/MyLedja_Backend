@@ -37,6 +37,7 @@ export const Schedule = z
     payeeId: z.string().nullable(),
     accountId: z.string().nullable().meta({ description: 'Account money leaves or enters.' }),
     categoryId: z.string().nullable(),
+    toAccountId: z.string().nullable().optional().meta({ description: 'Transfer destination account.' }),
     amount: MinorAmount.meta({ description: 'Positive; exact or the midpoint when approximate.' }),
     amountApproximate: z.boolean(),
     recurrence: RecurrenceRule,
@@ -90,7 +91,10 @@ export const PlanMonthSummary = z
   .meta({ id: 'PlanMonthSummary' });
 
 export const ScheduleParams = WorkspaceParams.extend({ scheduleId: Uuid });
-export const OccurrenceParams = WorkspaceParams.extend({ occurrenceId: Uuid });
+/** UUID or FE composite `scheduleId:date` (sync mark-paid). */
+export const OccurrenceParams = WorkspaceParams.extend({
+  occurrenceId: z.string().min(1).max(80),
+});
 export const PlanMonthParams = WorkspaceParams.extend({ month: Month });
 
 const tag = 'Plan';
@@ -132,6 +136,7 @@ export const scheduleRoutes = {
         payeeId: Uuid.nullable().optional(),
         accountId: Uuid.nullable().optional(),
         categoryId: Uuid.nullable().optional(),
+        toAccountId: Uuid.nullable().optional(),
         amount: MinorAmount,
         amountApproximate: z.boolean().default(false),
         recurrence: RecurrenceRule,
@@ -172,6 +177,7 @@ export const scheduleRoutes = {
         payeeId: Uuid.nullable().optional(),
         accountId: Uuid.nullable().optional(),
         categoryId: Uuid.nullable().optional(),
+        toAccountId: Uuid.nullable().optional(),
         amount: MinorAmount.optional(),
         amountApproximate: z.boolean().optional(),
         recurrence: RecurrenceRule.optional(),
@@ -267,6 +273,26 @@ export const scheduleRoutes = {
     response: z
       .object({ occurrence: Occurrence, transaction: Transaction.nullable() })
       .meta({ id: 'MarkOccurrenceReceivedResult' }),
+    errors: [400, 401, 403, 404, 409],
+  }),
+  unmark: defineRoute({
+    name: 'unmarkOccurrence',
+    method: 'POST',
+    path: '/v1/workspaces/:workspaceId/plan/occurrences/:occurrenceId/unmark',
+    tag,
+    summary: 'Undo mark paid / received (PU-26)',
+    description:
+      'Unlinks the occurrence from its matched transaction and returns it to due/scheduled. Keeps the transaction.',
+    access: editor,
+    params: OccurrenceParams,
+    body: z
+      .object({
+        scheduleId: Uuid.optional().meta({ description: 'When occurrenceId is a composite key, optional.' }),
+        date: LocalDate.optional(),
+      })
+      .meta({ id: 'UnmarkOccurrenceBody' }),
+    status: 200,
+    response: z.object({ occurrence: Occurrence }).meta({ id: 'UnmarkOccurrenceResult' }),
     errors: [400, 401, 403, 404, 409],
   }),
   findRecurring: defineRoute({

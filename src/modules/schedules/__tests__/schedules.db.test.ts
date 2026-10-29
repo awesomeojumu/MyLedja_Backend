@@ -49,6 +49,18 @@ describe('schedules (B2.1)', () => {
     await expect(
       s.schedules.markPaid(w.ctx, occ.id, { create: { date: '2026-10-28' } } as never, uuidv7()),
     ).rejects.toMatchObject({ code: 'already_paid' });
+    const undone = await s.schedules.unmark(w.ctx, occ.id);
+    expect(undone.occurrence.status).not.toBe('paid');
+    expect(undone.occurrence.matchedTransactionId).toBeNull();
+    // Composite scheduleId:date also works (FE sync key).
+    await s.schedules.markPaid(
+      w.ctx,
+      `${schedule.id}:2026-10-28`,
+      { create: { date: '2026-10-28', amount: '12000000' } } as never,
+      uuidv7(),
+    );
+    const undoneComposite = await s.schedules.unmark(w.ctx, `${schedule.id}:2026-10-28`);
+    expect(undoneComposite.occurrence.matchedTransactionId).toBeNull();
   });
 
   it('plan summary counts expected outflows', async () => {

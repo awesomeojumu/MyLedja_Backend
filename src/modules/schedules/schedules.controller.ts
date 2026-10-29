@@ -54,6 +54,11 @@ export class SchedulesController {
     return this.s.schedules.markReceived(req.ctx!, i.params.occurrenceId, i.body, req.operationId!);
   }
 
+  @Route(r.unmark)
+  unmark(@In() i: Input<typeof r.unmark>, @Req() req: Req): Promise<Output<typeof r.unmark>> {
+    return this.s.schedules.unmark(req.ctx!, i.params.occurrenceId);
+  }
+
   @Route(r.findRecurring)
   findRecurring(@In() i: Input<typeof r.findRecurring>, @Req() req: Req): Promise<Output<typeof r.findRecurring>> {
     return this.s.schedules.findRecurring(req.ctx!, i.body);

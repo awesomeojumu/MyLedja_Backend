@@ -223,6 +223,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     transactions,
     audit,
     notifications,
+    payeesRepo,
     now,
   );
   const debts = new DebtsService(

@@ -10,6 +10,7 @@ import type { AuditRepository } from '../audit/audit.repository.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
+import type { PayeesRepository } from '../categories/categories.repository.js';
 import { scheduleRoutes as scheduleRouteDefs } from './schedules.contract.js';
 import type { Occurrence, PlanMonthSummary, RecurringCandidate, Schedule } from './schedules.contract.js';
 import { firstNextDate, occurrencesInMonth } from './recurrence.js';
@@ -30,6 +31,7 @@ const toSchedule = (d: ScheduleDoc): z.input<typeof Schedule> => ({
   payeeId: d.payeeId,
   accountId: d.accountId,
   categoryId: d.categoryId,
+  toAccountId: d.toAccountId ?? null,
   amount: d.amountMinor,
   amountApproximate: d.amountApproximate,
   recurrence: d.recurrence,
@@ -69,6 +71,7 @@ export class SchedulesService {
     private readonly transactions: TransactionsService,
     private readonly audit: AuditRepository,
     private readonly notifications: NotificationsService,
+    private readonly payees: PayeesRepository,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -119,6 +122,7 @@ export class SchedulesService {
           payeeId: body.payeeId ?? null,
           accountId: body.accountId ?? null,
           categoryId: body.categoryId ?? null,
+          toAccountId: body.toAccountId ?? null,
           amountMinor: toMinorString(amountMinor),
           amountApproximate: body.amountApproximate ?? false,
           recurrence: body.recurrence,
@@ -161,6 +165,7 @@ export class SchedulesService {
     if (body.payeeId !== undefined) patch.payeeId = body.payeeId;
     if (body.accountId !== undefined) patch.accountId = body.accountId;
     if (body.categoryId !== undefined) patch.categoryId = body.categoryId;
+    if (body.toAccountId !== undefined) patch.toAccountId = body.toAccountId;
     if (body.amount !== undefined) patch.amountMinor = toMinorString(parseMinor(body.amount));
     if (body.amountApproximate !== undefined) patch.amountApproximate = body.amountApproximate;
     if (body.recurrence !== undefined) patch.recurrence = body.recurrence;
@@ -266,6 +271,19 @@ export class SchedulesService {
     return { occurrences: occ.map(toOccurrence), schedules: schedRows.map(toSchedule) };
   }
 
+  /** Resolve occurrence by UUID or by FE composite `scheduleId:date`. */
+  private async findOccurrence(ctx: WorkspaceContext, occurrenceId: string): Promise<OccurrenceDoc | null> {
+    const byId = await this.occurrences.findOne(ctx, { _id: occurrenceId });
+    if (byId) return byId;
+    const colon = occurrenceId.indexOf(':');
+    if (colon <= 0) return null;
+    const scheduleId = occurrenceId.slice(0, colon);
+    const date = occurrenceId.slice(colon + 1);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    await this.database.transaction((session) => this.ensureMonth(ctx, date.slice(0, 7), session));
+    return this.occurrences.byScheduleDate(ctx, scheduleId, date);
+  }
+
   async planSummary(ctx: WorkspaceContext, month: string): Promise<z.input<typeof PlanMonthSummary>> {
     const { occurrences } = await this.listOccurrences(ctx, month);
     let comingIn = 0n;
@@ -280,13 +298,26 @@ export class SchedulesService {
       else goingOut += amt;
       if (o.status === 'missed' || o.status === 'overdue') missedCount += 1;
     }
+    // Rough match-banner: unpaid bill/subscription occurrences that have a same-payee expense this month.
+    let matchBannerCount = 0;
+    const txs = await this.ledger.transactions.find(ctx, {
+      date: { $gte: `${month}-01`, $lte: `${month}-31` },
+      type: 'expense',
+    });
+    for (const o of occurrences) {
+      if (o.status === 'paid' || o.status === 'received' || o.status === 'skipped') continue;
+      const sched = await this.schedules.findOne(ctx, { _id: o.scheduleId });
+      if (!sched || sched.kind === 'income' || !sched.payeeId) continue;
+      const hit = txs.some((t) => t.payeeId === sched.payeeId);
+      if (hit) matchBannerCount += 1;
+    }
     return {
       month,
       comingIn: toMinorString(comingIn),
       goingOut: toMinorString(goingOut),
       leftAfterBills: toMinorString(comingIn - goingOut),
       missedCount,
-      matchBannerCount: 0,
+      matchBannerCount,
     };
   }
 
@@ -315,7 +346,7 @@ export class SchedulesService {
     operationId: string,
     income: boolean,
   ) {
-    const occ = await this.occurrences.findOne(ctx, { _id: occurrenceId });
+    const occ = await this.findOccurrence(ctx, occurrenceId);
     if (!occ) throw Errors.notFound();
     const done = income ? 'received' : 'paid';
     if (occ.status === done) {
@@ -351,6 +382,21 @@ export class SchedulesService {
           },
           `${operationId}:tx`,
         );
+      } else if (sched.kind === 'transfer') {
+        if (!sched.accountId || !sched.toAccountId)
+          throw Errors.validation('toAccountId', 'Choose From and To accounts for a transfer.');
+        tx = await this.transactions.create(
+          ctx,
+          {
+            type: 'transfer',
+            fromAccountId: sched.accountId,
+            toAccountId: sched.toAccountId,
+            amount,
+            date,
+            notes: body.create.notes,
+          },
+          `${operationId}:tx`,
+        );
       } else {
         if (!sched.accountId || !sched.categoryId)
           throw Errors.validation('categoryId', 'Choose an account and category.');
@@ -374,7 +420,7 @@ export class SchedulesService {
     const updated = await this.database.transaction(async (session) => {
       const row = await this.occurrences.findOneAndUpdate(
         ctx,
-        { _id: occurrenceId, status: { $nin: [done] } },
+        { _id: occ._id, status: { $nin: [done] } },
         {
           $set: {
             status: done,
@@ -387,10 +433,44 @@ export class SchedulesService {
         { session },
       );
       if (!row) throw new AppError(409, 'already_paid', `Already ${done}.`);
-      await this.feed(ctx, [{ collection: 'occurrences', docId: occurrenceId, op: 'upsert' }], session);
+      await this.feed(ctx, [{ collection: 'occurrences', docId: occ._id, op: 'upsert' }], session);
       return row;
     });
     return { occurrence: toOccurrence(updated), transaction: tx };
+  }
+
+  /** PU-26 Undo mark paid / received — unlink transaction; keep the money event. */
+  async unmark(ctx: WorkspaceContext, occurrenceId: string): Promise<{ occurrence: z.input<typeof Occurrence> }> {
+    const occ = await this.findOccurrence(ctx, occurrenceId);
+    if (!occ) throw Errors.notFound();
+    if (occ.status !== 'paid' && occ.status !== 'received') {
+      throw new AppError(409, 'not_paid', 'This occurrence is not marked paid or received.');
+    }
+    const today = this.now().toISOString().slice(0, 10);
+    let status: OccurrenceDoc['status'] = 'scheduled';
+    if (occ.date < today) status = 'overdue';
+    else if (occ.date === today) status = 'due';
+    const now = this.now();
+    const updated = await this.database.transaction(async (session) => {
+      const row = await this.occurrences.findOneAndUpdate(
+        ctx,
+        { _id: occ._id, status: { $in: ['paid', 'received'] } },
+        {
+          $set: {
+            status,
+            matchedTransactionId: null,
+            paidAt: null,
+            updatedAt: now,
+          },
+          $inc: { version: 1 },
+        },
+        { session },
+      );
+      if (!row) throw new AppError(409, 'not_paid', 'This occurrence is not marked paid or received.');
+      await this.feed(ctx, [{ collection: 'occurrences', docId: occ._id, op: 'upsert' }], session);
+      return row;
+    });
+    return { occurrence: toOccurrence(updated) };
   }
 
   async findRecurring(
@@ -405,22 +485,31 @@ export class SchedulesService {
       list.push(t);
       byPayee.set(t.payeeId, list);
     }
+    const scheduled = await this.schedules.find(ctx, { status: { $in: ['active', 'paused'] } });
+    const scheduledPayees = new Set(scheduled.map((s) => s.payeeId).filter(Boolean) as string[]);
+    const payeeIds = [...byPayee.keys()];
+    const payeeDocs = payeeIds.length > 0 ? await this.payees.find(ctx, { _id: { $in: payeeIds } }) : [];
+    const payeeName = new Map(payeeDocs.map((p) => [p._id, p.name]));
     const candidates: z.input<typeof RecurringCandidate>[] = [];
     for (const [payeeId, list] of byPayee) {
+      if (scheduledPayees.has(payeeId)) continue;
       if (list.length < 3) continue;
+      const months = new Set(list.map((t) => t.date.slice(0, 7)));
+      if (months.size < 3) continue;
       const slice = list.slice(0, 6);
       const total = slice.reduce((s, t) => {
         const spent = t.lines.filter((l) => l.amountMinor < 0n).reduce((a, l) => a - l.amountMinor, 0n);
         return s + spent;
       }, 0n);
       const avg = total / BigInt(slice.length || 1);
+      const day = parseInt(list[0]!.date.slice(8, 10), 10);
       candidates.push({
         payeeId,
-        payeeName: payeeId,
-        recurrence: { every: 1, unit: 'month', dayOfMonth: parseInt(list[0]!.date.slice(8, 10), 10), weekday: null },
+        payeeName: payeeName.get(payeeId) ?? payeeId,
+        recurrence: { every: 1, unit: 'month', dayOfMonth: day, weekday: null },
         averageAmount: toMinorString(avg),
         lastDate: list[0]!.date,
-        confidence: list.length >= 5 ? 'strong' : 'likely',
+        confidence: months.size >= 3 ? 'strong' : 'likely',
         sampleTransactionIds: list.slice(0, 5).map((t) => t._id),
       });
     }
@@ -464,7 +553,10 @@ export class SchedulesService {
   async autoPostDueOccurrences(ctx: WorkspaceContext, localDate: string): Promise<number> {
     const month = localDate.slice(0, 7);
     await this.database.transaction((session) => this.ensureMonth(ctx, month, session));
-    const due = await this.occurrences.find(ctx, { date: localDate, status: { $in: ['scheduled', 'due'] } });
+    const due = await this.occurrences.find(ctx, {
+      date: { $lte: localDate },
+      status: { $in: ['scheduled', 'due', 'overdue'] },
+    });
     let posted = 0;
     for (const occ of due) {
       const sched = await this.schedules.findOne(ctx, { _id: occ.scheduleId, status: 'active', autoPost: true });
