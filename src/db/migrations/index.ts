@@ -284,7 +284,6 @@ const m0015: Migration = {
   },
 };
 
-
 const m0016: Migration = {
   name: '0016-change-email-code',
   async up(db) {
