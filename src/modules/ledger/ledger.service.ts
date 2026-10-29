@@ -9,6 +9,7 @@ import type { AuditRepository } from '../audit/audit.repository.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
 import { buildEvent, buildReversal, type Resolver } from './builders.js';
 import { checkLines } from './checks.js';
+import { lotsFrom, type OpenLot } from './investments.js';
 import { LedgerErrors } from './ledger.errors.js';
 import type { EventInput } from './ledger.inputs.js';
 import {
@@ -152,6 +153,7 @@ export class LedgerService {
       sortOrder?: number;
       operationId?: string | null;
       personDebt?: 'receivable' | 'payable' | null;
+      holdingOf?: string | null;
     },
     session?: ClientSession,
   ): Promise<LedgerAccountDoc> {
@@ -165,6 +167,7 @@ export class LedgerService {
       sortOrder: a.sortOrder ?? 0,
       operationId: a.operationId ?? null,
       personDebt: a.personDebt ?? null,
+      ...(a.holdingOf ? { holdingOf: a.holdingOf } : {}),
     };
     return this.accounts.insertOne(ctx, doc, { session });
   }
@@ -212,7 +215,9 @@ export class LedgerService {
       links: {
         ...(built.refundOf ? { refundOf: built.refundOf } : {}),
         ...(input.type === 'expense' && 'goalId' in input && input.goalId ? { goalId: input.goalId } : {}),
+        ...(built.holdingId ? { holdingId: built.holdingId } : {}),
       },
+      ...(built.investment ? { investment: built.investment } : {}),
       fxRate: built.fxRate ? Decimal128.fromString(built.fxRate) : null,
       reconciliationId: null,
       clearedAccountIds: [],
@@ -293,6 +298,10 @@ export class LedgerService {
     if (original.type === 'expense' && (await this.transactions.refundedAgainst(ctx, id, { session })) > 0n) {
       throw LedgerErrors.hasRefunds();
     }
+    if (original.investment?.kind === 'buy' || original.investment?.kind === 'reinvest') {
+      const sale = await this.transactions.findOne(ctx, { status: 'posted', 'investment.lots.lotId': id }, { session });
+      if (sale) throw LedgerErrors.lotSold();
+    }
     const now = this.now();
     const reversalId = this.idFor(opts.operationId);
     const marked = await this.transactions.markReversed(ctx, id, reversalId, original.version, now, { session });
@@ -312,6 +321,7 @@ export class LedgerService {
       receiptFileIds: [],
       lines,
       links: { reversalOf: id },
+      investment: null,
       reconciliationId: null,
       clearedAccountIds: [],
       importId: opts.importId ?? null,
@@ -454,6 +464,20 @@ export class LedgerService {
     await this.changes.record(ctx, first, items, this.now(), { session });
   }
 
+  /** A holding's lots still held, rebuilt from its posted investment events (TECH-SPEC 6.8). */
+  async openLots(ctx: WorkspaceContext, holdingId: string, session?: ClientSession): Promise<OpenLot[]> {
+    const events = await this.transactions.find(
+      ctx,
+      { 'links.holdingId': holdingId, status: 'posted', investment: { $ne: null } },
+      { session },
+    );
+    return (
+      lotsOf(events)
+        .get(holdingId)
+        ?.filter((l) => l.units > 0n) ?? []
+    );
+  }
+
   /** Loads every account the input can touch, so the builders stay pure and synchronous. */
   private async resolverFor(
     ctx: WorkspaceContext,
@@ -464,6 +488,8 @@ export class LedgerService {
     const categoryIds = new Set<string>();
     let original: TransactionDoc | null = null;
     let refunded = 0n;
+    let holdingId: string | null = null;
+    let open: OpenLot[] = [];
     switch (input.type) {
       case 'transfer':
         realIds.add(input.fromAccountId).add(input.toAccountId);
@@ -508,9 +534,13 @@ export class LedgerService {
         break;
       case 'investment_buy':
       case 'investment_sell':
-        realIds.add(input.holdingAccountId).add(input.cashAccountId);
+      case 'dividend':
+        holdingId = input.holdingId;
+        if (input.accountId) realIds.add(input.accountId);
+        if (input.type === 'investment_sell') open = await this.openLots(ctx, input.holdingId, session);
         break;
     }
+    if (holdingId) realIds.add(holdingId);
     // One session can run only one operation at a time, so these run in turn.
     const reals = await this.accounts.byIds(ctx, [...realIds], { session });
     const cats = categoryIds.size ? await this.accounts.byCategories(ctx, [...categoryIds], { session }) : [];
@@ -522,7 +552,9 @@ export class LedgerService {
     for (const a of cats) if (a.categoryId) byCategory.set(a.categoryId, toRef(a));
     for (const a of system) if (a.systemKey) bySystem.set(a.systemKey, toRef(a));
     return {
-      account: (id) => (realIds.has(id) ? (byId.get(id) ?? null) : null),
+      account: (id) => (realIds.has(id) && id !== holdingId ? (byId.get(id) ?? null) : null),
+      holding: (id) => (id === holdingId ? (byId.get(id) ?? null) : null),
+      lots: (id) => (id === holdingId ? open : []),
       category: (id) => byCategory.get(id) ?? null,
       system: (key) => {
         const a = bySystem.get(key);
@@ -536,6 +568,20 @@ export class LedgerService {
       any: (id) => byId.get(id) ?? null,
     };
   }
+}
+
+/** Lots per holding from transaction documents. */
+export function lotsOf(events: readonly TransactionDoc[]) {
+  return lotsFrom(
+    events.map((e) => ({
+      id: e._id,
+      date: e.date,
+      status: e.status,
+      holdingId: e.links.holdingId ?? null,
+      investment: e.investment ?? null,
+      lines: e.lines,
+    })),
+  );
 }
 
 function blankAccount(

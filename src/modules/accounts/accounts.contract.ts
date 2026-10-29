@@ -23,6 +23,10 @@ export const Account = z
     closedWithBalance: z.boolean(),
     sortOrder: z.number().int(),
     balance: MinorAmount.meta({ description: 'As shown: what you have, or for a card or loan what you owe.' }),
+    holdingsValue: MinorAmount.meta({
+      description:
+        'Investment accounts: market value of the holdings in it, in its currency (TECH-SPEC 6.8). Net worth adds it to the balance. "0" for others.',
+    }),
     clearedBalance: MinorAmount,
     unclearedBalance: MinorAmount,
     lastReconciledAt: z.string().nullable().meta({ description: 'Date of the last finished reconcile.' }),

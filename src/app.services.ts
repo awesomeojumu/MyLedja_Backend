@@ -79,8 +79,12 @@ import { RulesService } from './modules/rules/rules.service.js';
 import { BankLinkIndex, BankLinksRepository } from './modules/banking/banking.repository.js';
 import { BankingService } from './modules/banking/banking.service.js';
 import { MonoProvider } from './modules/banking/mono.js';
-import { InvestmentsRepository } from './modules/investments/investments.repository.js';
+import { HoldingsRepository, PricesRepository } from './modules/investments/investments.repository.js';
 import { InvestmentsService } from './modules/investments/investments.service.js';
+import { ExchangeRatesRepository } from './modules/currencies/currencies.repository.js';
+import { CurrenciesService } from './modules/currencies/currencies.service.js';
+import { ReportDashboardsRepository, SavedReportsRepository } from './modules/reports/reports.repository.js';
+import { ReportsService } from './modules/reports/reports.service.js';
 
 export const SERVICES = Symbol('SERVICES');
 export const REFRESH_COOKIE = 'myledja_refresh';
@@ -132,7 +136,33 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   );
   const currencyOf = async (ctx: WorkspaceContext, session?: ClientSession) =>
     (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN';
+  const workspaceInfo = async (ctx: WorkspaceContext) => {
+    const ws = await workspacesRepo.get(ctx);
+    return { currency: ws?.currency ?? 'NGN', timeZone: ws?.timeZone ?? 'Africa/Lagos' };
+  };
+  const investments = new InvestmentsService(
+    database,
+    new HoldingsRepository(db),
+    new PricesRepository(db),
+    ledger,
+    audit,
+    workspaceInfo,
+    now,
+  );
+  const currencies = new CurrenciesService(
+    database,
+    new ExchangeRatesRepository(db),
+    ledger,
+    audit,
+    (ctx) => currencyOf(ctx),
+    now,
+  );
+  investments.converterFor = (ctx) => currencies.converterFor(ctx);
   const accounts = new AccountsService(database, ledger, audit, currencyOf, now);
+  accounts.wealthFor = async (ctx) => ({
+    convert: await currencies.converterFor(ctx),
+    holdings: await investments.valuation(ctx),
+  });
   const transactions = new TransactionsService(
     database,
     ledger,
@@ -208,6 +238,34 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
+  const schedulesRepo = new SchedulesRepository(db);
+  const occurrencesRepo = new OccurrencesRepository(db);
+  const reports = new ReportsService({
+    database,
+    dashboards: new ReportDashboardsRepository(db),
+    saved: new SavedReportsRepository(db),
+    ledger,
+    categories: categoriesRepo,
+    groups: new GroupsRepository(db),
+    payees: payeesRepo,
+    tags: new TagsRepository(db),
+    workspaces: workspacesRepo,
+    budget,
+    investments,
+    currencies,
+    income,
+    schedules: schedulesRepo,
+    occurrences: occurrencesRepo,
+    goalAllocations: goalAllocationsRepo,
+    audit,
+    now,
+  });
+  budget.wealthFor = async (ctx, dates) => {
+    const convert = await currencies.converterFor(ctx);
+    const vals = await investments.valuationsOn(ctx, dates);
+    return { convert, holdings: vals };
+  };
+  budget.phase5Cards = (ctx, month) => reports.dashboardCards(ctx, month);
   const sync = new SyncService(
     counters,
     changes,
@@ -319,6 +377,9 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const rules = new RulesService(database, new RulesRepository(db), ledger, audit, now);
   imports.rules = rules;
   sync.rules = rules;
+  sync.investments = investments;
+  sync.currencies = currencies;
+  sync.reports = reports;
   const banking = new BankingService(
     config.mono ? new MonoProvider(config.mono) : null,
     config.mono?.webhookSecret ?? null,
@@ -336,7 +397,6 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     maxAttempts: 3,
     run: (job) => banking.runSync(job.payload),
   });
-  const investments = new InvestmentsService(new InvestmentsRepository(db), ledger);
 
   return {
     config,
@@ -369,6 +429,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     rules,
     banking,
     investments,
+    currencies,
+    reports,
     categoriesRepo,
     idempotency,
     limits,
