@@ -48,7 +48,14 @@ export class DebtsController {
 
   @Route(r.writeOff)
   writeOff(@In() i: Input<typeof r.writeOff>, @Req() req: Req): Promise<Output<typeof r.writeOff>> {
-    return this.s.debts.writeOff(req.ctx!, i.params.debtId, i.body.date, i.body.baseVersion, req.operationId!);
+    return this.s.debts.writeOff(
+      req.ctx!,
+      i.params.debtId,
+      i.body.date,
+      i.body.baseVersion,
+      req.operationId!,
+      i.body.reason,
+    );
   }
 
   @Route(r.settle)

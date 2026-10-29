@@ -48,6 +48,8 @@ const LendBody = debtRoutes.lend.body!;
 const BorrowBody = debtRoutes.borrow.body!;
 const DebtPaymentBody = debtRoutes.recordPayment.body!;
 const WriteOffBody = debtRoutes.writeOff.body!;
+const SetDebtScheduleBody = debtRoutes.setSchedule.body!;
+const SettleDebtBody = debtRoutes.settle.body!;
 const CreateGoalBody = goalRoutes.create.body!;
 const UpdateGoalBody = goalRoutes.update.body!;
 const AllocateGoalBody = goalRoutes.allocate.body!;
@@ -364,8 +366,28 @@ export class SyncService {
       case 'debt.write_off': {
         if (!targetId) throw Errors.validation('targetId', 'Choose the debt to write off.');
         const body = WriteOffBody.parse(payload);
-        const { debt } = await this.debts.writeOff(ctx, targetId, body.date, body.baseVersion, op.operationId);
+        const { debt } = await this.debts.writeOff(
+          ctx,
+          targetId,
+          body.date,
+          body.baseVersion,
+          op.operationId,
+          body.reason,
+        );
         return { result: debt, duplicate: false };
+      }
+      case 'debt.schedule': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the debt to schedule.');
+        const body = SetDebtScheduleBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return {
+          result: await this.debts.setSchedule(ctx, targetId, body.instalments, body.baseVersion),
+          duplicate: false,
+        };
+      }
+      case 'debt.settle': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the debt to settle.');
+        const body = SettleDebtBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.debts.settle(ctx, targetId, body.baseVersion), duplicate: false };
       }
       case 'income.stream.create': {
         const body = CreateIncomeStreamBody.parse(payload);
