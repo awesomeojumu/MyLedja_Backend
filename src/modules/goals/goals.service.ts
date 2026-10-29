@@ -249,11 +249,17 @@ export class GoalsService {
         { session },
       );
       const saved = parseMinor(goal.savedAmountMinor) + parseMinor(body.amount);
+      const target = parseMinor(goal.targetAmountMinor);
+      const reached = saved >= target;
       const after = await this.goals.findOneAndUpdate(
         ctx,
         { _id: goalId },
         {
-          $set: { savedAmountMinor: toMinorString(saved), updatedAt: now },
+          $set: {
+            savedAmountMinor: toMinorString(saved),
+            updatedAt: now,
+            ...(reached ? { status: 'completed' as const, completedAt: now } : {}),
+          },
           $inc: { version: 1 },
         },
         { session },
