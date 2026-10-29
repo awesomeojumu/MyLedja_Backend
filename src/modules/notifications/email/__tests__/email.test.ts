@@ -85,13 +85,18 @@ describe('email (B0.6)', () => {
     await mailer.recoverCode('ada@example.test', '771204');
     await mailer.alreadyRegistered('ada@example.test');
     await mailer.passwordChanged('ada@example.test');
+    await mailer.emailChangeCode('new@example.test', '654321');
+    await mailer.emailChangedNotice('ada@example.test', 'new@example.test');
     sender.fail = true;
     await mailer.signUpCode('ada@example.test', 'Ada', '555111');
     expect(sender.sent[0]?.text).toContain('482913');
     expect(sender.sent[2]?.text).toContain('https://app.myledja.test/sign-in');
+    expect(sender.sent[4]?.template).toBe('email_change_code');
+    expect(sender.sent[5]?.template).toBe('email_changed');
     const all = lines.join('\n');
-    expect(lines).toHaveLength(5);
-    for (const secret of ['482913', '771204', '555111', 'ada@example.test', 'Ada']) expect(all).not.toContain(secret);
+    expect(lines).toHaveLength(7);
+    for (const secret of ['482913', '771204', '555111', '654321', 'ada@example.test', 'new@example.test', 'Ada'])
+      expect(all).not.toContain(secret);
     expect(all).toContain('smtp_ECONNREFUSED');
   });
 
@@ -102,6 +107,8 @@ describe('email (B0.6)', () => {
     await mailer.alreadyRegistered('a@b.test');
     await mailer.recoverCode('a@b.test', '123456');
     await mailer.passwordChanged('a@b.test');
+    await mailer.emailChangeCode('a@b.test', '123456');
+    await mailer.emailChangedNotice('a@b.test', 'c@d.test');
     for (const m of sender.sent) expect(m.subject + m.text).not.toMatch(/[!—–…]/);
   });
 });

@@ -188,4 +188,32 @@ export class Mailer {
       ].join('\n'),
     });
   }
+
+  /** PU-61 step 2: 6-digit code sent to the NEW email. */
+  emailChangeCode(to: string, code: string) {
+    return this.deliver({
+      to,
+      template: 'email_change_code',
+      subject: `${code} is your MyLedja email change code`,
+      text: [
+        `Your MyLedja email change code is ${code}. It expires in 10 minutes.`,
+        '',
+        "If you didn't ask to change the email on a MyLedja account, you can ignore this email.",
+      ].join('\n'),
+    });
+  }
+
+  /** PU-61: notice to the OLD address after the email was changed. */
+  emailChangedNotice(to: string, newEmail: string) {
+    return this.deliver({
+      to,
+      template: 'email_changed',
+      subject: 'Your MyLedja email was changed',
+      text: [
+        `The email on your MyLedja account was changed to ${newEmail}.`,
+        '',
+        `If this wasn't you, recover your account now: ${this.webAppUrl}/recover`,
+      ].join('\n'),
+    });
+  }
 }

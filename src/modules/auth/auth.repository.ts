@@ -159,7 +159,7 @@ export class SessionsRepository extends GlobalRepository<SessionDoc> {
   }
 }
 
-export type CodePurpose = 'sign_up' | 'recover';
+export type CodePurpose = 'sign_up' | 'recover' | 'change_email';
 
 export type CodeDoc = {
   _id: string;

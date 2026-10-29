@@ -284,6 +284,13 @@ const m0015: Migration = {
   },
 };
 
+const m0016: Migration = {
+  name: '0016-change-email-code',
+  async up(db) {
+    await installValidators(db);
+  },
+};
+
 export const MIGRATIONS: Migration[] = [
   m0001,
   m0002,
@@ -300,6 +307,7 @@ export const MIGRATIONS: Migration[] = [
   m0013,
   m0014,
   m0015,
+  m0016,
 ];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */
