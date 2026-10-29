@@ -13,6 +13,7 @@ import type { NotificationsService } from '../notifications/notifications.servic
 import { scheduleRoutes as scheduleRouteDefs } from './schedules.contract.js';
 import type { Occurrence, PlanMonthSummary, RecurringCandidate, Schedule } from './schedules.contract.js';
 import { firstNextDate, occurrencesInMonth } from './recurrence.js';
+import type { IncomeStreamsRepository } from '../income/income.repository.js';
 import {
   type OccurrenceDoc,
   OccurrencesRepository,
@@ -69,6 +70,7 @@ export class SchedulesService {
     private readonly transactions: TransactionsService,
     private readonly audit: AuditRepository,
     private readonly notifications: NotificationsService,
+    private readonly incomeStreams: IncomeStreamsRepository | null = null,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -339,18 +341,45 @@ export class SchedulesService {
       if (income || sched.kind === 'income') {
         if (!sched.accountId || !sched.categoryId)
           throw Errors.validation('categoryId', 'Choose an account and category.');
-        tx = await this.transactions.create(
-          ctx,
-          {
-            type: 'income',
-            accountId: sched.accountId,
-            categoryId: sched.categoryId,
-            amount,
-            date,
-            notes: body.create.notes,
-          },
-          `${operationId}:tx`,
-        );
+        const stream = this.incomeStreams
+          ? await this.incomeStreams.findOne(ctx, { scheduleId: sched._id })
+          : null;
+        const { grossSplitFromStream } = await import('../income/gross-split.js');
+        const split = stream ? grossSplitFromStream(stream) : null;
+        const createAmount = parseMinor(amount);
+        if (split && createAmount >= parseMinor(split.takeHome)) {
+          tx = await this.transactions.create(
+            ctx,
+            {
+              type: 'salary_gross',
+              accountId: sched.accountId,
+              categoryId: sched.categoryId,
+              gross: split.gross,
+              takeHome: split.takeHome,
+              paye: split.paye,
+              pensionAccountId: split.pensionAccountId,
+              pension: split.pension,
+              nhfAccountId: split.nhfAccountId,
+              nhf: split.nhf,
+              date,
+              notes: body.create.notes,
+            },
+            `${operationId}:tx`,
+          );
+        } else {
+          tx = await this.transactions.create(
+            ctx,
+            {
+              type: 'income',
+              accountId: sched.accountId,
+              categoryId: sched.categoryId,
+              amount,
+              date,
+              notes: body.create.notes,
+            },
+            `${operationId}:tx`,
+          );
+        }
       } else {
         if (!sched.accountId || !sched.categoryId)
           throw Errors.validation('categoryId', 'Choose an account and category.');

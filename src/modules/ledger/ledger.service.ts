@@ -42,6 +42,7 @@ export type EventPatch = {
   tagIds?: string[];
   payeeId?: string | null;
   receiptFileIds?: string[];
+  oneOff?: boolean;
 };
 
 const REVERSAL_SUFFIX = ':reversal';
@@ -349,6 +350,7 @@ export class LedgerService {
       if (patch.tagIds !== undefined) set.tagIds = [...new Set(patch.tagIds)];
       if (patch.payeeId !== undefined) set.payeeId = patch.payeeId;
       if (patch.receiptFileIds !== undefined) set.receiptFileIds = [...new Set(patch.receiptFileIds)];
+      if (patch.oneOff !== undefined) set.oneOff = patch.oneOff;
       const after = await this.transactions.findOneAndUpdate(
         ctx,
         { _id: id, version: before.version },

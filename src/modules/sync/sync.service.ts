@@ -376,6 +376,10 @@ export class SyncService {
         const body = UpdateIncomeStreamBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
         return { result: await this.income.updateStream(ctx, targetId, body), duplicate: false };
       }
+      case 'income.mark_one_off': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the transaction to mark one-off.');
+        return { result: await this.income.markOneOff(ctx, targetId), duplicate: false };
+      }
       case 'rule.upsert': {
         if (!targetId) throw Errors.validation('targetId', 'Choose the rule to save.');
         return {

@@ -110,6 +110,8 @@ export type TransactionDoc = {
   /** Accounts on which this event is ticked as cleared. */
   clearedAccountIds: string[];
   importId: string | null;
+  /** Income one-off (DESIGN page 13); excluded from steadiness. */
+  oneOff?: boolean;
   /** E20 to E22: units, prices and the lots a sale took (TECH-SPEC 6.8). Absent on other events. */
   investment?: InvestmentMeta | null;
   createdAt: Date;

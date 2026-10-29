@@ -6849,6 +6849,7 @@
               "debt.write_off",
               "income.stream.create",
               "income.stream.update",
+              "income.mark_one_off",
               "rule.upsert",
               "rule.delete",
               "holding.create",
@@ -10172,6 +10173,10 @@
               "string",
               "null"
             ]
+          },
+          "oneOff": {
+            "description": "Income marked one-off; excluded from steadiness (DESIGN page 13).",
+            "type": "boolean"
           },
           "runningBalance": {
             "anyOf": [
@@ -28475,6 +28480,9 @@
                       "type": "string",
                       "maxLength": 100
                     }
+                  },
+                  "oneOff": {
+                    "type": "boolean"
                   }
                 },
                 "required": [

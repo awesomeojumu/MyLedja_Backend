@@ -574,6 +574,7 @@ export class TransactionsService {
       reconciled: doc.reconciliationId !== null,
       clearedAccountIds: doc.clearedAccountIds,
       importId: doc.importId,
+      oneOff: doc.oneOff === true ? true : undefined,
       runningBalance,
       recordedAt: doc.recordedAt.toISOString(),
       version: doc.version,

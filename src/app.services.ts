@@ -208,6 +208,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     now,
   );
   const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
+  const incomeStreamsRepo = new IncomeStreamsRepository(db);
   const schedules = new SchedulesService(
     database,
     new SchedulesRepository(db),
@@ -216,6 +217,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     transactions,
     audit,
     notifications,
+    incomeStreamsRepo,
     now,
   );
   const debts = new DebtsService(
@@ -231,7 +233,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const goals = new GoalsService(database, new GoalsRepository(db), goalAllocationsRepo, ledger, audit, now);
   const income = new IncomeService(
     database,
-    new IncomeStreamsRepository(db),
+    incomeStreamsRepo,
     schedules,
     transactions,
     ledger,
