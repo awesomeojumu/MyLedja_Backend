@@ -23,6 +23,7 @@ export const OPERATION_TYPES = [
   'schedule.cancel',
   'occurrence.mark_paid',
   'occurrence.mark_received',
+  'occurrence.unmark',
   'goal.create',
   'goal.update',
   'goal.allocate',

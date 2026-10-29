@@ -404,6 +404,22 @@ export class SyncService {
           duplicate: false,
         };
       }
+      case 'occurrence.unmark': {
+        const body = z
+          .object({
+            scheduleId: Uuid.optional(),
+            date: z.string().optional(),
+          })
+          .parse(payload);
+        const occurrenceKey =
+          targetId ??
+          (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
+        if (!occurrenceKey) throw Errors.validation('targetId', 'Choose the occurrence to unmark.');
+        return {
+          result: await this.schedules.unmark(ctx, occurrenceKey),
+          duplicate: false,
+        };
+      }
       case 'goal.create': {
         const body = CreateGoalBody.parse(payload);
         return { result: await this.goals.create(ctx, body, op.operationId), duplicate: false };

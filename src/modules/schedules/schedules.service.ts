@@ -439,6 +439,40 @@ export class SchedulesService {
     return { occurrence: toOccurrence(updated), transaction: tx };
   }
 
+  /** PU-26 Undo mark paid / received — unlink transaction; keep the money event. */
+  async unmark(ctx: WorkspaceContext, occurrenceId: string): Promise<{ occurrence: z.input<typeof Occurrence> }> {
+    const occ = await this.findOccurrence(ctx, occurrenceId);
+    if (!occ) throw Errors.notFound();
+    if (occ.status !== 'paid' && occ.status !== 'received') {
+      throw new AppError(409, 'not_paid', 'This occurrence is not marked paid or received.');
+    }
+    const today = this.now().toISOString().slice(0, 10);
+    let status: OccurrenceDoc['status'] = 'scheduled';
+    if (occ.date < today) status = 'overdue';
+    else if (occ.date === today) status = 'due';
+    const now = this.now();
+    const updated = await this.database.transaction(async (session) => {
+      const row = await this.occurrences.findOneAndUpdate(
+        ctx,
+        { _id: occ._id, status: { $in: ['paid', 'received'] } },
+        {
+          $set: {
+            status,
+            matchedTransactionId: null,
+            paidAt: null,
+            updatedAt: now,
+          },
+          $inc: { version: 1 },
+        },
+        { session },
+      );
+      if (!row) throw new AppError(409, 'not_paid', 'This occurrence is not marked paid or received.');
+      await this.feed(ctx, [{ collection: 'occurrences', docId: occ._id, op: 'upsert' }], session);
+      return row;
+    });
+    return { occurrence: toOccurrence(updated) };
+  }
+
   async findRecurring(
     ctx: WorkspaceContext,
     _body: { from?: string; to?: string },

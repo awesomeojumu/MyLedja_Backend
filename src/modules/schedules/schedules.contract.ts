@@ -275,6 +275,26 @@ export const scheduleRoutes = {
       .meta({ id: 'MarkOccurrenceReceivedResult' }),
     errors: [400, 401, 403, 404, 409],
   }),
+  unmark: defineRoute({
+    name: 'unmarkOccurrence',
+    method: 'POST',
+    path: '/v1/workspaces/:workspaceId/plan/occurrences/:occurrenceId/unmark',
+    tag,
+    summary: 'Undo mark paid / received (PU-26)',
+    description:
+      'Unlinks the occurrence from its matched transaction and returns it to due/scheduled. Keeps the transaction.',
+    access: editor,
+    params: OccurrenceParams,
+    body: z
+      .object({
+        scheduleId: Uuid.optional().meta({ description: 'When occurrenceId is a composite key, optional.' }),
+        date: LocalDate.optional(),
+      })
+      .meta({ id: 'UnmarkOccurrenceBody' }),
+    status: 200,
+    response: z.object({ occurrence: Occurrence }).meta({ id: 'UnmarkOccurrenceResult' }),
+    errors: [400, 401, 403, 404, 409],
+  }),
   findRecurring: defineRoute({
     name: 'findRecurringSchedules',
     method: 'POST',
