@@ -288,7 +288,10 @@ export class SyncService {
       case 'category.delete': {
         if (!targetId) throw Errors.validation('targetId', 'Choose the category to delete.');
         const body = DeleteCategoryBody.parse(payload);
-        return { result: await this.categories.remove(ctx, targetId, body.moveTo, op.operationId), duplicate: false };
+        return {
+          result: await this.categories.remove(ctx, targetId, body.moveTo, op.operationId, body.undoId),
+          duplicate: false,
+        };
       }
       case 'category.undo_delete': {
         const undoId = typeof payload.undoId === 'string' ? payload.undoId : null;

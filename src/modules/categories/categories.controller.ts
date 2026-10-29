@@ -28,7 +28,7 @@ export class CategoriesController {
 
   @Route(c.remove)
   remove(@In() i: Input<typeof c.remove>, @Req() req: Req): Promise<Output<typeof c.remove>> {
-    return this.s.categories.remove(req.ctx!, i.params.categoryId, i.body.moveTo, req.operationId!);
+    return this.s.categories.remove(req.ctx!, i.params.categoryId, i.body.moveTo, req.operationId!, i.body.undoId);
   }
 
   @Route(c.undoRemove)

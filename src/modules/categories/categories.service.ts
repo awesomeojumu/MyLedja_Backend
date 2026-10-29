@@ -327,7 +327,13 @@ export class CategoriesService {
    * amounts / rules / schedules, then removes the category. Moves happen first, so a failure
    * part-way leaves the category in place to try again.
    */
-  async remove(ctx: WorkspaceContext, id: string, moveTo: string | null, operationId: string) {
+  async remove(
+    ctx: WorkspaceContext,
+    id: string,
+    moveTo: string | null,
+    operationId: string,
+    clientUndoId?: string | null,
+  ) {
     const cat = await this.categories.byId(ctx, id);
     if (!cat) throw Errors.notFound();
     if (cat.system || cat.starterKey === 'uncategorized' || cat.starterKey === 'other_income')
@@ -344,7 +350,8 @@ export class CategoriesService {
     const budgetMoves = target ? await this.moveBudgetAmounts(ctx, id, target._id) : [];
     const ruleIds = target ? await this.rewriteRuleCategories(ctx, id, target._id) : [];
     const scheduleIds = target ? await this.rewriteScheduleCategories(ctx, id, target._id) : [];
-    const undoId = newId();
+    // Honor the device's undo token so offline toast Undo matches deletion.undoId after sync.
+    const undoId = clientUndoId || newId();
     await this.database.transaction(async (session) => {
       await this.categories.updateOne(
         ctx,

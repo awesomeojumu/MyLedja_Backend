@@ -115,6 +115,17 @@ describe('categories', () => {
     });
   });
 
+  it('honors a client-minted undoId so device toast Undo matches the server', async () => {
+    const w = await world();
+    await w.spend(w.food.id, '100000');
+    const clientUndoId = uuidv7();
+    const res = await w.s.categories.remove(w.ctx, w.food.id, w.eatOut.id, uuidv7(), clientUndoId);
+    expect(res.undoId).toBe(clientUndoId);
+    const back = await w.s.categories.undoRemove(w.ctx, clientUndoId, uuidv7());
+    expect(back.id).toBe(w.food.id);
+    expect(await w.s.categories.liveEventsIn(w.ctx, w.food.id)).toHaveLength(1);
+  });
+
   it('delete moves budget amounts and setCategory rules; undo restores them', async () => {
     const w = await world();
     await w.s.budget.assign(w.ctx, '2026-10', w.food.id, { assigned: '1200000' } as never);
