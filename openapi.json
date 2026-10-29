@@ -2323,6 +2323,18 @@
               }
             ]
           },
+          "toAccountId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "amount": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
@@ -5300,6 +5312,13 @@
               "null"
             ]
           },
+          "toAccountId": {
+            "description": "Transfer destination account.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "amount": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
@@ -6839,6 +6858,9 @@
               "budget.assign",
               "schedule.create",
               "schedule.update",
+              "schedule.cancel",
+              "occurrence.mark_paid",
+              "occurrence.mark_received",
               "goal.create",
               "goal.update",
               "goal.allocate",
@@ -9240,6 +9262,13 @@
               "null"
             ]
           },
+          "toAccountId": {
+            "description": "Transfer destination account.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "amount": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
@@ -11005,6 +11034,18 @@
             ]
           },
           "categoryId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "toAccountId": {
             "anyOf": [
               {
                 "type": "string",
@@ -24563,8 +24604,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "minLength": 1,
+              "maxLength": 80
             }
           },
           {
@@ -24682,8 +24723,8 @@
             "required": true,
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              "minLength": 1,
+              "maxLength": 80
             }
           },
           {

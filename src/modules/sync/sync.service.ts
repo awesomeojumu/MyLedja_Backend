@@ -329,6 +329,81 @@ export class SyncService {
         const body = UpdateScheduleBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
         return { result: await this.schedules.update(ctx, targetId, body), duplicate: false };
       }
+      case 'schedule.cancel': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the schedule to cancel.');
+        const bv =
+          typeof baseVersion === 'number'
+            ? baseVersion
+            : typeof payload.baseVersion === 'number'
+              ? payload.baseVersion
+              : null;
+        if (bv === null) throw Errors.validation('baseVersion', 'Send the schedule version.');
+        return { result: await this.schedules.cancel(ctx, targetId, bv), duplicate: false };
+      }
+      case 'occurrence.mark_paid': {
+        const body = z
+          .object({
+            scheduleId: Uuid.optional(),
+            date: z.string().optional(),
+            matchTransactionId: Uuid.optional(),
+            create: z
+              .object({
+                date: z.string(),
+                amount: z.string().optional(),
+                notes: z.string().nullable().optional(),
+              })
+              .optional(),
+          })
+          .parse(payload);
+        const occurrenceKey =
+          targetId ??
+          (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
+        if (!occurrenceKey) throw Errors.validation('targetId', 'Choose the occurrence to mark paid.');
+        return {
+          result: await this.schedules.markPaid(
+            ctx,
+            occurrenceKey,
+            {
+              matchTransactionId: body.matchTransactionId,
+              create: body.create,
+            },
+            op.operationId,
+          ),
+          duplicate: false,
+        };
+      }
+      case 'occurrence.mark_received': {
+        const body = z
+          .object({
+            scheduleId: Uuid.optional(),
+            date: z.string().optional(),
+            matchTransactionId: Uuid.optional(),
+            create: z
+              .object({
+                date: z.string(),
+                amount: z.string().optional(),
+                notes: z.string().nullable().optional(),
+              })
+              .optional(),
+          })
+          .parse(payload);
+        const occurrenceKey =
+          targetId ??
+          (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
+        if (!occurrenceKey) throw Errors.validation('targetId', 'Choose the occurrence to mark received.');
+        return {
+          result: await this.schedules.markReceived(
+            ctx,
+            occurrenceKey,
+            {
+              matchTransactionId: body.matchTransactionId,
+              create: body.create,
+            },
+            op.operationId,
+          ),
+          duplicate: false,
+        };
+      }
       case 'goal.create': {
         const body = CreateGoalBody.parse(payload);
         return { result: await this.goals.create(ctx, body, op.operationId), duplicate: false };
