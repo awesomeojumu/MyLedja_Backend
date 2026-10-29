@@ -122,6 +122,9 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const workspacesRepo = new WorkspacesRepository(db);
   const categoriesRepo = new CategoriesRepository(db);
   const payeesRepo = new PayeesRepository(db);
+  const budgetMonthsRepo = new BudgetMonthsRepository(db);
+  const rulesRepo = new RulesRepository(db);
+  const schedulesRepoEarly = new SchedulesRepository(db);
   const categories = new CategoriesService(
     database,
     categoriesRepo,
@@ -133,6 +136,9 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     async (ctx, session) => (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN',
     now,
+    budgetMonthsRepo,
+    rulesRepo,
+    schedulesRepoEarly,
   );
   const currencyOf = async (ctx: WorkspaceContext, session?: ClientSession) =>
     (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN';
@@ -186,7 +192,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const goalAllocationsRepo = new GoalAllocationsRepository(db);
   const budget = new BudgetService(
     database,
-    new BudgetMonthsRepository(db),
+    budgetMonthsRepo,
     new BudgetTemplatesRepository(db),
     ledger,
     categories,
@@ -210,7 +216,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
   const schedules = new SchedulesService(
     database,
-    new SchedulesRepository(db),
+    schedulesRepoEarly,
     new OccurrencesRepository(db),
     ledger,
     transactions,
@@ -238,7 +244,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     now,
   );
-  const schedulesRepo = new SchedulesRepository(db);
+  const schedulesRepo = schedulesRepoEarly;
   const occurrencesRepo = new OccurrencesRepository(db);
   const reports = new ReportsService({
     database,
@@ -374,7 +380,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   jobs.register(deleteAccountJob(exports));
   const ai = new AiService(providersFor(config), workspacesRepo, now);
   const statements = new StatementsService(imports, ai, users, categoriesRepo, files);
-  const rules = new RulesService(database, new RulesRepository(db), ledger, audit, now);
+  const rules = new RulesService(database, rulesRepo, ledger, audit, now);
   imports.rules = rules;
   sync.rules = rules;
   sync.investments = investments;

@@ -23,6 +23,9 @@ import type {
   UpdateGroupBody,
   UpdatePayeeBody,
 } from './categories.contract.js';
+import type { BudgetMonthsRepository } from '../budget/budget.repository.js';
+import type { RulesRepository } from '../rules/rules.repository.js';
+import type { SchedulesRepository } from '../schedules/schedules.repository.js';
 import {
   type CategoriesRepository,
   type CategoryDoc,
@@ -123,6 +126,9 @@ export class CategoriesService {
     private readonly audit: AuditRepository,
     private readonly currencyOf: (ctx: WorkspaceContext, session?: ClientSession) => Promise<string>,
     private readonly now: () => Date = () => new Date(),
+    private readonly budgetMonths: BudgetMonthsRepository | null = null,
+    private readonly rules: RulesRepository | null = null,
+    private readonly schedules: SchedulesRepository | null = null,
   ) {}
 
   /** The default groups and categories, each with its ledger account. Safe to run twice. */
@@ -317,8 +323,9 @@ export class CategoriesService {
   }
 
   /**
-   * Moves every live transaction to `moveTo` (each as a correction, TECH-SPEC 6.3), then removes the
-   * category. Moves happen first, so a failure part-way leaves the category in place to try again.
+   * Moves every live transaction to `moveTo` (each as a correction, TECH-SPEC 6.3), moves budget
+   * amounts / rules / schedules, then removes the category. Moves happen first, so a failure
+   * part-way leaves the category in place to try again.
    */
   async remove(ctx: WorkspaceContext, id: string, moveTo: string | null, operationId: string) {
     const cat = await this.categories.byId(ctx, id);
@@ -334,6 +341,9 @@ export class CategoriesService {
       if (target.kind !== cat.kind) throw CategoryErrors.moveToKind();
     } else if (events.length > 0) throw CategoryErrors.moveToNeeded(events.length);
     const moves = await this.recategorize(ctx, events, id, target?._id ?? null, operationId);
+    const budgetMoves = target ? await this.moveBudgetAmounts(ctx, id, target._id) : [];
+    const ruleIds = target ? await this.rewriteRuleCategories(ctx, id, target._id) : [];
+    const scheduleIds = target ? await this.rewriteScheduleCategories(ctx, id, target._id) : [];
     const undoId = newId();
     await this.database.transaction(async (session) => {
       await this.categories.updateOne(
@@ -342,7 +352,14 @@ export class CategoriesService {
         {
           $set: {
             deletedAt: this.now(),
-            deletion: { undoId, movedTo: target?._id ?? null, moves },
+            deletion: {
+              undoId,
+              movedTo: target?._id ?? null,
+              moves,
+              budgetMoves,
+              ruleIds,
+              scheduleIds,
+            },
             updatedAt: this.now(),
           },
           $inc: { version: 1 },
@@ -355,7 +372,13 @@ export class CategoriesService {
         {
           action: 'category.deleted',
           target: { collection: 'categories', id },
-          after: { movedTo: target?._id ?? null, moved: moves.length },
+          after: {
+            movedTo: target?._id ?? null,
+            moved: moves.length,
+            budgets: budgetMoves.length,
+            rules: ruleIds.length,
+            schedules: scheduleIds.length,
+          },
         },
         { session },
       );
@@ -367,10 +390,16 @@ export class CategoriesService {
     const cat = await this.categories.findOne(ctx, { 'deletion.undoId': undoId });
     if (!cat) throw Errors.notFound();
     if (!cat.deletedAt) throw CategoryErrors.undone();
-    const back: string[] = [];
-    for (const m of cat.deletion?.moves ?? []) back.push(m.to);
-    const moved = await this.ledger.transactions.find(ctx, { _id: { $in: back }, status: 'posted' });
-    await this.recategorize(ctx, moved, cat.deletion!.movedTo!, cat._id, `${operationId}:undo`, true);
+    const movedTo = cat.deletion?.movedTo;
+    if (movedTo) {
+      const back: string[] = [];
+      for (const m of cat.deletion?.moves ?? []) back.push(m.to);
+      const moved = await this.ledger.transactions.find(ctx, { _id: { $in: back }, status: 'posted' });
+      await this.recategorize(ctx, moved, movedTo, cat._id, `${operationId}:undo`, true);
+      await this.restoreBudgetAmounts(ctx, cat._id, movedTo, cat.deletion?.budgetMoves ?? []);
+      await this.rewriteRuleCategories(ctx, movedTo, cat._id, cat.deletion?.ruleIds);
+      await this.rewriteScheduleCategories(ctx, movedTo, cat._id, cat.deletion?.scheduleIds);
+    }
     return this.database.transaction(async (session) => {
       const after = await this.categories.findOneAndUpdate(
         ctx,
@@ -386,6 +415,129 @@ export class CategoriesService {
       );
       return categoryView(after!);
     });
+  }
+
+  /** Move assigned budget amounts from one category to another; returns what left the source. */
+  private async moveBudgetAmounts(
+    ctx: WorkspaceContext,
+    fromId: string,
+    toId: string,
+  ): Promise<{ month: string; amountMinor: string }[]> {
+    if (!this.budgetMonths) return [];
+    const rows = await this.budgetMonths.find(ctx, { categoryId: fromId });
+    const moved: { month: string; amountMinor: string }[] = [];
+    await this.database.transaction(async (session) => {
+      const now = this.now();
+      for (const row of rows) {
+        if (row.assignedMinor <= 0n) continue;
+        moved.push({ month: row.month, amountMinor: toMinorString(row.assignedMinor) });
+        const dest = await this.budgetMonths!.byCategoryMonth(ctx, toId, row.month, { session });
+        const next = (dest?.assignedMinor ?? 0n) + row.assignedMinor;
+        await this.budgetMonths!.setAssigned(ctx, row.month, toId, next, now, { session });
+        await this.budgetMonths!.setAssigned(ctx, row.month, fromId, 0n, now, { session });
+        await this.ledger.feed(
+          ctx,
+          [
+            { collection: 'budget_months', docId: `${toId}:${row.month}`, op: 'upsert' },
+            { collection: 'budget_months', docId: `${fromId}:${row.month}`, op: 'upsert' },
+          ],
+          session,
+        );
+      }
+    });
+    return moved;
+  }
+
+  private async restoreBudgetAmounts(
+    ctx: WorkspaceContext,
+    categoryId: string,
+    fromId: string,
+    budgetMoves: { month: string; amountMinor: string }[],
+  ) {
+    if (!this.budgetMonths || budgetMoves.length === 0) return;
+    await this.database.transaction(async (session) => {
+      const now = this.now();
+      for (const m of budgetMoves) {
+        const amount = BigInt(m.amountMinor);
+        const from = await this.budgetMonths!.byCategoryMonth(ctx, fromId, m.month, { session });
+        const fromNext = (from?.assignedMinor ?? 0n) > amount ? (from!.assignedMinor - amount) : 0n;
+        await this.budgetMonths!.setAssigned(ctx, m.month, fromId, fromNext, now, { session });
+        await this.budgetMonths!.setAssigned(ctx, m.month, categoryId, amount, now, { session });
+        await this.ledger.feed(
+          ctx,
+          [
+            { collection: 'budget_months', docId: `${fromId}:${m.month}`, op: 'upsert' },
+            { collection: 'budget_months', docId: `${categoryId}:${m.month}`, op: 'upsert' },
+          ],
+          session,
+        );
+      }
+    });
+  }
+
+  /** Rewrite setCategory actions (optionally only for `onlyIds`). */
+  private async rewriteRuleCategories(
+    ctx: WorkspaceContext,
+    fromId: string,
+    toId: string,
+    onlyIds?: string[],
+  ): Promise<string[]> {
+    if (!this.rules) return [];
+    const filter = onlyIds?.length
+      ? { _id: { $in: onlyIds }, deletedAt: null }
+      : { deletedAt: null };
+    const docs = await this.rules.find(ctx, filter);
+    const changed: string[] = [];
+    await this.database.transaction(async (session) => {
+      for (const doc of docs) {
+        let touched = false;
+        const actions = doc.actions.map((a) => {
+          if (a.kind === 'setCategory' && a.value === fromId) {
+            touched = true;
+            return { ...a, value: toId };
+          }
+          return a;
+        });
+        if (!touched) continue;
+        await this.rules!.updateOne(
+          ctx,
+          { _id: doc._id },
+          { $set: { actions, updatedAt: this.now() }, $inc: { version: 1 } },
+          { session },
+        );
+        await this.ledger.feed(ctx, [{ collection: 'rules', docId: doc._id, op: 'upsert' }], session);
+        changed.push(doc._id);
+      }
+    });
+    return changed;
+  }
+
+  private async rewriteScheduleCategories(
+    ctx: WorkspaceContext,
+    fromId: string,
+    toId: string,
+    onlyIds?: string[],
+  ): Promise<string[]> {
+    if (!this.schedules) return [];
+    const filter = onlyIds?.length
+      ? { _id: { $in: onlyIds } }
+      : { categoryId: fromId };
+    const docs = await this.schedules.find(ctx, filter);
+    const changed: string[] = [];
+    await this.database.transaction(async (session) => {
+      for (const doc of docs) {
+        if (doc.categoryId !== fromId) continue;
+        await this.schedules!.updateOne(
+          ctx,
+          { _id: doc._id },
+          { $set: { categoryId: toId, updatedAt: this.now() }, $inc: { version: 1 } },
+          { session },
+        );
+        await this.ledger.feed(ctx, [{ collection: 'schedules', docId: doc._id, op: 'upsert' }], session);
+        changed.push(doc._id);
+      }
+    });
+    return changed;
   }
 
   /** Corrects each event so lines on `from` land on `to`. Returns the old and new event ids. */

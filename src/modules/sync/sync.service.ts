@@ -7,7 +7,9 @@ import type { AccountsService } from '../accounts/accounts.service.js';
 import type { BudgetService } from '../budget/budget.service.js';
 import {
   CreateCategoryBody,
+  CreateGroupBody,
   CreatePayeeBody,
+  DeleteCategoryBody,
   UpdateCategoryBody,
   UpdatePayeeBody,
 } from '../categories/categories.contract.js';
@@ -282,6 +284,25 @@ export class SyncService {
         if (!targetId) throw Errors.validation('targetId', 'Choose the category to update.');
         const body = UpdateCategoryBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
         return { result: await this.categories.update(ctx, targetId, body), duplicate: false };
+      }
+      case 'category.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the category to delete.');
+        const body = DeleteCategoryBody.parse(payload);
+        return { result: await this.categories.remove(ctx, targetId, body.moveTo, op.operationId), duplicate: false };
+      }
+      case 'category.undo_delete': {
+        const undoId = typeof payload.undoId === 'string' ? payload.undoId : null;
+        if (!undoId) throw Errors.validation('undoId', 'Choose the delete to undo.');
+        return { result: await this.categories.undoRemove(ctx, undoId, op.operationId), duplicate: false };
+      }
+      case 'category_group.create': {
+        const body = CreateGroupBody.parse(payload);
+        if (body.id) {
+          const tree = await this.categories.tree(ctx);
+          const same = tree.groups.find((g) => g.id === body.id);
+          if (same) return { result: same, duplicate: true };
+        }
+        return { result: await this.categories.createGroup(ctx, body), duplicate: false };
       }
       case 'payee.create': {
         const body = CreatePayeeBody.parse(payload);
