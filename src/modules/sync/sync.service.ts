@@ -55,6 +55,8 @@ const CreateGoalBody = goalRoutes.create.body!;
 const UpdateGoalBody = goalRoutes.update.body!;
 const AllocateGoalBody = goalRoutes.allocate.body!;
 const SpendGoalBody = goalRoutes.spend.body!;
+const DeleteGoalBody = goalRoutes.remove.body!;
+const SetGoalScheduleBody = goalRoutes.setSchedule.body!;
 const CreateIncomeStreamBody = incomeRoutes.createStream.body!;
 const UpdateIncomeStreamBody = incomeRoutes.updateStream.body!;
 const TagCreateBody = z.object({ id: Uuid.optional(), name: z.string().trim().min(1).max(40) });
@@ -478,6 +480,22 @@ export class SyncService {
         if (!targetId) throw Errors.validation('targetId', 'Choose the goal to spend from.');
         const body = SpendGoalBody.parse(payload);
         return { result: await this.goals.spend(ctx, targetId, body, op.operationId), duplicate: false };
+      }
+      case 'goal.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the goal to delete.');
+        const body = DeleteGoalBody.parse({
+          baseVersion: baseVersion ?? payload.baseVersion,
+        });
+        await this.goals.remove(ctx, targetId, body.baseVersion);
+        return { result: null, duplicate: false };
+      }
+      case 'goal.schedule': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the goal to schedule.');
+        const body = SetGoalScheduleBody.parse({
+          ...payload,
+          baseVersion: baseVersion ?? payload.baseVersion,
+        });
+        return { result: await this.goals.setSchedule(ctx, targetId, body), duplicate: false };
       }
       case 'debt.lend': {
         const body = LendBody.parse(payload);
