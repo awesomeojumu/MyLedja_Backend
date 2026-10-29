@@ -216,4 +216,14 @@ export class Mailer {
       ].join('\n'),
     });
   }
+
+  /** B2.8: bill / income reminder when the email channel is on. */
+  billReminder(to: string, title: string, body: string) {
+    return this.deliver({
+      to,
+      template: 'bill_reminder',
+      subject: title,
+      text: [body, '', `Open MyLedja: ${this.webAppUrl}/notifications`].join('\n'),
+    });
+  }
 }

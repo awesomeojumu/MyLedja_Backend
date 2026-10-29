@@ -38,6 +38,7 @@ import type { CurrenciesService } from '../currencies/currencies.service.js';
 import type { ReportsService } from '../reports/reports.service.js';
 import { reportRoutes } from '../reports/reports.contract.js';
 import { SetExchangeRateBody } from '../currencies/currencies.contract.js';
+import type { NotificationsService } from '../notifications/notifications.service.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
 const PREVIOUS_SCHEMA_VERSION = 0;
@@ -70,6 +71,7 @@ export class SyncService {
   investments!: InvestmentsService;
   currencies!: CurrenciesService;
   reports!: ReportsService;
+  notifications!: NotificationsService;
 
   constructor(
     private readonly counters: CountersRepository,
@@ -530,6 +532,12 @@ export class SyncService {
         case 'income_streams':
           try {
             return await this.income.getStreamDoc(ctx, row.docId);
+          } catch {
+            return null;
+          }
+        case 'notifications':
+          try {
+            return await this.notifications.serialize(ctx, row.docId);
           } catch {
             return null;
           }

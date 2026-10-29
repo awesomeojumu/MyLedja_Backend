@@ -380,6 +380,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   sync.investments = investments;
   sync.currencies = currencies;
   sync.reports = reports;
+  sync.notifications = notifications;
   const banking = new BankingService(
     config.mono ? new MonoProvider(config.mono) : null,
     config.mono?.webhookSecret ?? null,

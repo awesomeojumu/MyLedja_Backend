@@ -451,7 +451,14 @@ export class SchedulesService {
             hideAmount: s.reminder.hideAmountOnLockScreen,
             dedupeKey: `reminder:${s._id}:${occ.date}:before:${daysBefore}`,
             actions: [
-              { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
+              {
+                key: 'mark_paid',
+                label: 'Mark paid',
+                target: {
+                  path: '/plan',
+                  params: { occurrenceId: occ._id, scheduleId: s._id, date: occ.date },
+                },
+              },
               { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
             ],
           });
