@@ -14,7 +14,11 @@ import type { GoalAllocationsRepository } from '../goals/goals.repository.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import type { WorkspacesRepository } from '../workspaces/workspaces.repository.js';
 import type { BudgetCategory, BudgetMonth, BudgetTemplate, Dashboard } from './budget.contract.js';
-import type { BudgetMonthsRepository, BudgetTemplateDoc, BudgetTemplatesRepository } from './budget.repository.js';
+import type {
+  BudgetMonthsRepository,
+  BudgetTemplateDoc,
+  BudgetTemplatesRepository,
+} from './budget.repository.js';
 
 export const BudgetErrors = {
   notSpending: () =>
@@ -86,13 +90,16 @@ export class BudgetService {
     ctx: WorkspaceContext,
     month: string,
     categoryId: string,
-    body: { assigned: string; carryOver?: boolean },
+    body: { assigned: string; carryOver?: boolean; note?: string },
   ): Promise<z.input<typeof BudgetMonth>> {
     const assigned = parseMinor(body.assigned);
     if (assigned < 0n) throw BudgetErrors.negativeAssigned();
     await this.database.transaction(async (session) => {
       const cat = await this.requireSpending(ctx, categoryId, session);
-      await this.repos.setAssigned(ctx, month, categoryId, assigned, this.now(), { session });
+      await this.repos.setAssigned(ctx, month, categoryId, assigned, this.now(), {
+        session,
+        note: body.note,
+      });
       if (body.carryOver !== undefined && body.carryOver !== cat.carryOver) {
         await this.categoriesRepo.updateOne(
           ctx,
@@ -112,7 +119,7 @@ export class BudgetService {
         {
           action: 'budget.assigned',
           target: { collection: 'budget_months', id: `${categoryId}:${month}` },
-          after: { month, categoryId, assigned: body.assigned, carryOver: body.carryOver },
+          after: { month, categoryId, assigned: body.assigned, carryOver: body.carryOver, note: body.note },
         },
         { session },
       );
@@ -165,20 +172,33 @@ export class BudgetService {
     month: string,
     body: { covers: { categoryId: string; fromCategoryId: string; amount: string }[] },
   ): Promise<z.input<typeof BudgetMonth>> {
+    const LEFT = '__left_to_plan__';
     await this.database.transaction(async (session) => {
       const deltas = new Map<string, bigint>();
+      let fromLeftToPlan = 0n;
       for (const c of body.covers) {
         if (c.categoryId === c.fromCategoryId) throw BudgetErrors.sameCategory();
         const amount = parseMinor(c.amount);
         if (amount <= 0n) throw Errors.validation('amount', 'Enter an amount greater than zero.');
         await this.requireSpending(ctx, c.categoryId, session);
+        if (c.fromCategoryId === LEFT) {
+          fromLeftToPlan += amount;
+          deltas.set(c.categoryId, (deltas.get(c.categoryId) ?? 0n) + amount);
+          continue;
+        }
         await this.requireSpending(ctx, c.fromCategoryId, session);
         deltas.set(c.fromCategoryId, (deltas.get(c.fromCategoryId) ?? 0n) - amount);
         deltas.set(c.categoryId, (deltas.get(c.categoryId) ?? 0n) + amount);
       }
       const snap = await this.compute(ctx, month, month, session);
-      const available = new Map(snap[0]!.categories.map((c) => [c.categoryId, parseMinor(c.available)]));
+      const monthView = snap[0]!;
+      if (fromLeftToPlan > 0n) {
+        const left = monthView.leftToPlan === null ? 0n : parseMinor(monthView.leftToPlan);
+        if (left < fromLeftToPlan) throw BudgetErrors.nothingToMove();
+      }
+      const available = new Map(monthView.categories.map((c) => [c.categoryId, parseMinor(c.available)]));
       for (const c of body.covers) {
+        if (c.fromCategoryId === LEFT) continue;
         const left = available.get(c.fromCategoryId) ?? 0n;
         const amount = parseMinor(c.amount);
         if (left < amount) throw BudgetErrors.nothingToMove();
@@ -220,12 +240,25 @@ export class BudgetService {
   async saveTemplate(
     ctx: WorkspaceContext,
     templateId: string,
-    body: { name: string; rules: { categoryId: string; assigned: string }[] },
+    body: {
+      name: string;
+      rules: { categoryId: string; assigned: string; kind?: string; meta?: Record<string, string> }[];
+    },
   ): Promise<z.input<typeof BudgetTemplate>> {
     return this.database.transaction(async (session) => {
-      for (const rule of body.rules) await this.requireSpending(ctx, rule.categoryId, session);
+      for (const rule of body.rules) {
+        if (rule.kind === 'none') continue;
+        await this.requireSpending(ctx, rule.categoryId, session);
+      }
       const now = this.now();
-      const rules = body.rules.map((r) => ({ categoryId: r.categoryId, assignedMinor: parseMinor(r.assigned) }));
+      const rules = body.rules
+        .filter((r) => r.kind !== 'none')
+        .map((r) => ({
+          categoryId: r.categoryId,
+          assignedMinor: parseMinor(r.assigned),
+          ...(r.kind ? { kind: r.kind as BudgetTemplateDoc['rules'][number]['kind'] } : {}),
+          ...(r.meta ? { meta: r.meta } : {}),
+        }));
       const after = await this.templates.findOneAndUpdate(
         ctx,
         { _id: templateId },
@@ -246,13 +279,17 @@ export class BudgetService {
     month: string,
     templateId: string,
     preview: boolean,
+    replace = true,
   ): Promise<z.input<typeof BudgetMonth>> {
     const tpl = await this.templates.findOne(ctx, { _id: templateId });
     if (!tpl) throw Errors.notFound();
     if (!preview) {
       await this.database.transaction(async (session) => {
         for (const rule of tpl.rules) {
+          if (rule.kind === 'none') continue;
           await this.requireSpending(ctx, rule.categoryId, session);
+          const current = await this.assignedOf(ctx, rule.categoryId, month, session);
+          if (!replace && current > 0n) continue;
           await this.repos.setAssigned(ctx, month, rule.categoryId, rule.assignedMinor, this.now(), { session });
           await this.ledger.feed(
             ctx,
@@ -262,7 +299,11 @@ export class BudgetService {
         }
         await this.audit.record(
           ctx,
-          { action: 'budget.template_applied', target: { collection: 'templates', id: templateId }, after: { month } },
+          {
+            action: 'budget.template_applied',
+            target: { collection: 'templates', id: templateId },
+            after: { month, replace },
+          },
           { session },
         );
       });
@@ -680,7 +721,12 @@ function templateView(doc: BudgetTemplateDoc): z.input<typeof BudgetTemplate> {
   return {
     id: doc._id,
     name: doc.name,
-    rules: doc.rules.map((r) => ({ categoryId: r.categoryId, assigned: toMinorString(r.assignedMinor) })),
+    rules: doc.rules.map((r) => ({
+      categoryId: r.categoryId,
+      assigned: toMinorString(r.assignedMinor),
+      ...(r.kind ? { kind: r.kind } : {}),
+      ...(r.meta ? { meta: r.meta } : {}),
+    })),
     version: doc.version,
   };
 }

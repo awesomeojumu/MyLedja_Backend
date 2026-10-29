@@ -156,4 +156,33 @@ describe('budget (B1.9)', () => {
     const food = month.categories.find((c) => c.categoryId === w.food.id)!;
     expect(food.assigned).toBe('8000000');
   });
+
+  it('cover from Left to plan raises assigned without draining another category (PU-10)', async () => {
+    const w = await world('envelope');
+    await w.earn('50000000', '2026-10-01');
+    await w.s.budget.assign(w.ctx, '2026-10', w.food.id, { assigned: '10000000' });
+    await w.spend('12000000', '2026-10-05');
+    const covered = await w.s.budget.cover(w.ctx, '2026-10', {
+      covers: [{ categoryId: w.food.id, fromCategoryId: '__left_to_plan__', amount: '2000000' }],
+    });
+    expect(covered.categories.find((c) => c.categoryId === w.food.id)!.assigned).toBe('12000000');
+  });
+
+  it('setPlanned stores optional note; template replace=false keeps existing plan', async () => {
+    const w = await world('envelope');
+    await w.earn('50000000', '2026-10-01');
+    await w.s.budget.assign(w.ctx, '2026-10', w.food.id, { assigned: '9000000', note: 'Weekly market' });
+    const doc = await w.s.budget['repos'].byCategoryMonth(w.ctx, w.food.id, '2026-10');
+    expect(doc?.note).toBe('Weekly market');
+
+    const tplId = uuidv7();
+    await w.s.budget.saveTemplate(w.ctx, tplId, {
+      name: 'Caps',
+      rules: [{ categoryId: w.food.id, assigned: '5000000', kind: 'monthly' }],
+    });
+    const kept = await w.s.budget.applyTemplate(w.ctx, '2026-10', tplId, false, false);
+    expect(kept.categories.find((c) => c.categoryId === w.food.id)!.assigned).toBe('9000000');
+    const replaced = await w.s.budget.applyTemplate(w.ctx, '2026-10', tplId, false, true);
+    expect(replaced.categories.find((c) => c.categoryId === w.food.id)!.assigned).toBe('5000000');
+  });
 });

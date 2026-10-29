@@ -10,6 +10,7 @@ export type BudgetMonthDoc = {
   month: string;
   categoryId: string;
   assignedMinor: bigint;
+  note?: string | null;
   updatedAt: Date;
   version: number;
 };
@@ -18,7 +19,12 @@ export type BudgetTemplateDoc = {
   _id: string;
   workspaceId: string;
   name: string;
-  rules: { categoryId: string; assignedMinor: bigint }[];
+  rules: {
+    categoryId: string;
+    assignedMinor: bigint;
+    kind?: 'monthly' | 'saveBy' | 'coverBill' | 'average' | 'cap' | 'none';
+    meta?: Record<string, string>;
+  }[];
   createdAt: Date;
   updatedAt: Date;
   version: number;
@@ -54,17 +60,20 @@ export class BudgetMonthsRepository extends BaseRepository<BudgetMonthDoc> {
     categoryId: string,
     assignedMinor: bigint,
     now: Date,
-    o: Opts = {},
+    o: Opts & { note?: string | null } = {},
   ): Promise<BudgetMonthDoc> {
+    const { note, ...findOpts } = o;
+    const $set: Record<string, unknown> = { assignedMinor, updatedAt: now };
+    if (note !== undefined) $set.note = note?.trim() ? note.trim() : null;
     const after = await this.findOneAndUpdate(
       ctx,
       { _id: `${categoryId}:${month}` },
       {
-        $set: { assignedMinor, updatedAt: now },
+        $set,
         $inc: { version: 1 },
         $setOnInsert: { month, categoryId },
       },
-      { ...o, upsert: true },
+      { ...findOpts, upsert: true },
     );
     return after!;
   }

@@ -44,14 +44,28 @@ export const BudgetMonth = z
 export const MonthParams = WorkspaceParams.extend({ month: Month });
 export const BudgetCategoryParams = MonthParams.extend({ categoryId: Uuid });
 
+export const BudgetTemplateRuleKind = z.enum(['monthly', 'saveBy', 'coverBill', 'average', 'cap', 'none']);
+
+export const BudgetTemplateRule = z
+  .object({
+    categoryId: z.string(),
+    assigned: MinorAmount,
+    kind: BudgetTemplateRuleKind.optional(),
+    meta: z.record(z.string(), z.string()).optional(),
+  })
+  .meta({ id: 'BudgetTemplateRule' });
+
 export const BudgetTemplate = z
   .object({
     id: z.string(),
     name: z.string(),
-    rules: z.array(z.object({ categoryId: z.string(), assigned: MinorAmount })),
+    rules: z.array(BudgetTemplateRule),
     version: z.number().int(),
   })
   .meta({ id: 'BudgetTemplate' });
+
+/** Sentinel for Cover overspending from envelope Left to plan (PU-10). */
+export const LEFT_TO_PLAN = '__left_to_plan__' as const;
 
 const tag = 'Budget';
 const base = '/v1/workspaces/:workspaceId/budget/:month';
@@ -81,7 +95,11 @@ export const budgetRoutes = {
     summary: 'Set the planned amount (or limit) for a category',
     access: editor,
     params: BudgetCategoryParams,
-    body: z.object({ assigned: MinorAmount, carryOver: z.boolean().optional() }),
+    body: z.object({
+      assigned: MinorAmount,
+      carryOver: z.boolean().optional(),
+      note: z.string().trim().max(500).optional(),
+    }),
     status: 200,
     response: BudgetMonth,
     errors: [400, 401, 403, 404],
@@ -105,11 +123,18 @@ export const budgetRoutes = {
     path: `${base}/cover`,
     tag,
     summary: 'Cover overspent categories from others',
+    description: 'fromCategoryId may be `__left_to_plan__` in envelope style (PU-10).',
     access: editor,
     params: MonthParams,
     body: z.object({
       covers: z
-        .array(z.object({ categoryId: Uuid, fromCategoryId: Uuid, amount: MinorAmount }))
+        .array(
+          z.object({
+            categoryId: Uuid,
+            fromCategoryId: z.union([Uuid, z.literal(LEFT_TO_PLAN)]),
+            amount: MinorAmount,
+          }),
+        )
         .min(1)
         .max(100),
     }),
@@ -135,15 +160,12 @@ export const budgetRoutes = {
     path: '/v1/workspaces/:workspaceId/budget/templates/:templateId',
     tag,
     summary: 'Create or replace a budget template',
-    description: 'Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates).',
+    description: 'Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates). Optional kind/meta keep sentence rules in sync.',
     access: editor,
     params: WorkspaceParams.extend({ templateId: Uuid }),
     body: z.object({
       name: z.string().trim().min(1).max(80),
-      rules: z
-        .array(z.object({ categoryId: Uuid, assigned: MinorAmount }))
-        .min(1)
-        .max(200),
+      rules: z.array(BudgetTemplateRule.extend({ categoryId: Uuid })).min(1).max(200),
     }),
     status: 200,
     response: BudgetTemplate,
@@ -155,9 +177,10 @@ export const budgetRoutes = {
     path: `${base}/templates/:templateId/apply`,
     tag,
     summary: 'Fill the month from a template',
+    description: 'When replace is false, categories that already have a plan keep it (PU-09).',
     access: editor,
     params: MonthParams.extend({ templateId: Uuid }),
-    body: z.object({ preview: z.boolean().default(false) }),
+    body: z.object({ preview: z.boolean().default(false), replace: z.boolean().default(true) }),
     status: 200,
     response: BudgetMonth,
     errors: [400, 401, 403, 404],

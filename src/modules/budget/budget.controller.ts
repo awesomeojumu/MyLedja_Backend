@@ -43,7 +43,13 @@ export class BudgetController {
 
   @Route(b.applyTemplate)
   applyTemplate(@In() i: Input<typeof b.applyTemplate>, @Req() req: Req): Promise<Output<typeof b.applyTemplate>> {
-    return this.s.budget.applyTemplate(req.ctx!, i.params.month, i.params.templateId, i.body.preview);
+    return this.s.budget.applyTemplate(
+      req.ctx!,
+      i.params.month,
+      i.params.templateId,
+      i.body.preview,
+      i.body.replace,
+    );
   }
 }
 

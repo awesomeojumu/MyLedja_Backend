@@ -837,22 +837,7 @@
           "rules": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "categoryId": {
-                  "type": "string"
-                },
-                "assigned": {
-                  "type": "string",
-                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                }
-              },
-              "required": [
-                "categoryId",
-                "assigned"
-              ],
-              "additionalProperties": false
+              "$ref": "#/components/schemas/BudgetTemplateRule"
             }
           },
           "version": {
@@ -881,6 +866,44 @@
         },
         "required": [
           "templates"
+        ],
+        "additionalProperties": false
+      },
+      "BudgetTemplateRule": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string"
+          },
+          "assigned": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "saveBy",
+              "coverBill",
+              "average",
+              "cap",
+              "none"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "categoryId",
+          "assigned"
         ],
         "additionalProperties": false
       },
@@ -6837,6 +6860,7 @@
               "payee.update",
               "tag.create",
               "budget.assign",
+              "budget.template.save",
               "schedule.create",
               "schedule.update",
               "goal.create",
@@ -16483,6 +16507,10 @@
                   },
                   "carryOver": {
                     "type": "boolean"
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 500
                   }
                 },
                 "required": [
@@ -16553,6 +16581,7 @@
           "Budget"
         ],
         "summary": "Cover overspent categories from others",
+        "description": "fromCategoryId may be `__left_to_plan__` in envelope style (PU-10).",
         "security": [
           {
             "bearer": []
@@ -16611,9 +16640,17 @@
                           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                         },
                         "fromCategoryId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            {
+                              "type": "string",
+                              "const": "__left_to_plan__"
+                            }
+                          ]
                         },
                         "amount": {
                           "type": "string",
@@ -16828,6 +16865,7 @@
           "Budget"
         ],
         "summary": "Fill the month from a template",
+        "description": "When replace is false, categories that already have a plan keep it (PU-09).",
         "security": [
           {
             "bearer": []
@@ -16885,6 +16923,10 @@
                 "properties": {
                   "preview": {
                     "default": false,
+                    "type": "boolean"
+                  },
+                  "replace": {
+                    "default": true,
                     "type": "boolean"
                   }
                 }
@@ -17022,7 +17064,7 @@
           "Budget"
         ],
         "summary": "Create or replace a budget template",
-        "description": "Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates).",
+        "description": "Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates). Optional kind/meta keep sentence rules in sync.",
         "security": [
           {
             "bearer": []
@@ -17089,6 +17131,26 @@
                           "type": "string",
                           "pattern": "^-?(0|[1-9]\\d{0,17})$",
                           "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "monthly",
+                            "saveBy",
+                            "coverBill",
+                            "average",
+                            "cap",
+                            "none"
+                          ]
+                        },
+                        "meta": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
