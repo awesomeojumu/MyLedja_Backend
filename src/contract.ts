@@ -23,6 +23,7 @@ import { bankingRoutes } from './modules/banking/banking.contract.js';
 import { investmentRoutes } from './modules/investments/investments.contract.js';
 import { currencyRoutes } from './modules/currencies/currencies.contract.js';
 import { reportRoutes } from './modules/reports/reports.contract.js';
+import { fileRoutes } from './modules/files/files.contract.js';
 
 /** Every route the API serves. `npm run openapi` writes openapi.json from this list. */
 export const ALL_ROUTES: RouteDef[] = [
@@ -48,6 +49,7 @@ export const ALL_ROUTES: RouteDef[] = [
   notificationRoutes,
   securityRoutes,
   exportRoutes,
+  fileRoutes,
   aiRoutes,
   ruleRoutes,
   bankingRoutes,

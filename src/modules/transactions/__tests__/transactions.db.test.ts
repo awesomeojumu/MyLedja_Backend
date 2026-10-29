@@ -224,6 +224,77 @@ describe('transactions (B1.8)', () => {
     expect(live.items.find((x) => x.id === bulk.results[0]!.transaction!.id)).toBeUndefined();
   });
 
+  it('bulk set_account corrects the money account', async () => {
+    const w = await world();
+    const a = await w.s.transactions.create(
+      w.ctx,
+      {
+        type: 'expense',
+        accountId: w.bank.id,
+        categoryId: w.food.id,
+        amount: '100000',
+        date: '2026-10-11',
+      } as never,
+      uuidv7(),
+    );
+    const bulk = await w.s.transactions.bulk(
+      w.ctx,
+      { transactionIds: [a.id], action: { kind: 'set_account', accountId: w.cash.id } } as never,
+      uuidv7(),
+    );
+    expect(bulk.results[0]).toMatchObject({ status: 'changed' });
+    expect(bulk.results[0]!.transaction?.accountIds).toContain(w.cash.id);
+  });
+
+  it('lists with hasReceipt and edited filters', async () => {
+    const w = await world();
+    const plain = await w.s.transactions.create(
+      w.ctx,
+      {
+        type: 'expense',
+        accountId: w.bank.id,
+        categoryId: w.food.id,
+        amount: '50000',
+        date: '2026-10-11',
+      } as never,
+      uuidv7(),
+    );
+    const withReceipt = await w.s.transactions.create(
+      w.ctx,
+      {
+        type: 'expense',
+        accountId: w.bank.id,
+        categoryId: w.food.id,
+        amount: '60000',
+        date: '2026-10-11',
+        notes: 'receipt:mem/workspaces/x/receipt/1',
+      } as never,
+      uuidv7(),
+    );
+    const receiptPage = await w.s.transactions.list(w.ctx, { status: 'live', hasReceipt: 'true', limit: 50 } as never);
+    expect(receiptPage.items.map((x) => x.id)).toContain(withReceipt.id);
+    expect(receiptPage.items.map((x) => x.id)).not.toContain(plain.id);
+
+    const corrected = await w.s.transactions.correct(
+      w.ctx,
+      withReceipt.id,
+      {
+        baseVersion: withReceipt.version,
+        input: {
+          type: 'expense',
+          accountId: w.bank.id,
+          categoryId: w.food.id,
+          amount: '61000',
+          date: '2026-10-11',
+          notes: 'receipt:mem/workspaces/x/receipt/1',
+        },
+      } as never,
+      uuidv7(),
+    );
+    const editedPage = await w.s.transactions.list(w.ctx, { status: 'live', edited: 'true', limit: 50 } as never);
+    expect(editedPage.items.map((x) => x.id)).toContain(corrected.transaction.id);
+  });
+
   it('suggests, links and dismisses a transfer pair', async () => {
     const w = await world();
     const out = await w.s.transactions.create(

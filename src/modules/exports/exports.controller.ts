@@ -12,8 +12,8 @@ export class ExportsController {
   constructor(@Inject(SERVICES) private readonly s: Services) {}
 
   @Route(r.exportCsv)
-  exportCsv(@Req() req: Req): Promise<Output<typeof r.exportCsv>> {
-    return this.s.exports.exportCsv(req.ctx!, req.auth!.sessionId);
+  exportCsv(@In() i: Input<typeof r.exportCsv>, @Req() req: Req): Promise<Output<typeof r.exportCsv>> {
+    return this.s.exports.exportCsv(req.ctx!, req.auth!.sessionId, i.body ?? {});
   }
 
   @Route(r.backup)

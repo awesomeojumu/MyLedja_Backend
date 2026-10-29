@@ -70,6 +70,7 @@ import { SecurityService } from './modules/security/security.service.js';
 import { ExportsRepository } from './modules/exports/exports.repository.js';
 import { ExportsService } from './modules/exports/exports.service.js';
 import { fileStoreFor } from './modules/files/cloudinary.js';
+import { FilesService } from './modules/files/files.service.js';
 import { deleteAccountJob, nightlyBackupJob } from './jobs/trust.jobs.js';
 import { AiService } from './modules/ai/ai.service.js';
 import { providersFor } from './modules/ai/ai.providers.js';
@@ -349,6 +350,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   jobs.register(billRemindersJob({ workspaces: workspaceIndex, workspaceDocs: workspacesRepo, schedules, now }));
   jobs.register(recurringDailyJob({ workspaces: workspaceIndex, schedules, now }));
   const files = fileStoreFor(config);
+  const filesHttp = new FilesService(files, now);
   const security = new SecurityService(
     config,
     users,
@@ -431,6 +433,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     security,
     exports,
     files,
+    filesHttp,
     ai,
     statements,
     rules,
