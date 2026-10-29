@@ -36,6 +36,32 @@ type CatView = {
 
 /** Budgets (B1.9) and the Phase 1 Dashboard (B1.10), reading period_totals and budget_months. */
 export class BudgetService {
+  /**
+   * Phase 5: exchange rates and holdings for net worth (TECH-SPEC 6.7), so the Dashboard's figure matches
+   * Accounts: other currencies converted at the date's rate, holdings at market value.
+   */
+  wealthFor?: (
+    ctx: WorkspaceContext,
+    dates: string[],
+  ) => Promise<{
+    convert: (amount: bigint, from: string, date: string) => bigint | null;
+    holdings: Map<string, { holding: { currency: string }; position: { value: bigint } }[]>;
+  }>;
+
+  /** Phase 5: the Health and Investments cards (DESIGN.md page 5). */
+  phase5Cards?: (
+    ctx: WorkspaceContext,
+    month: string,
+  ) => Promise<{
+    health: {
+      ready: boolean;
+      score: number | null;
+      band: 'strong' | 'okay' | 'needs_attention' | null;
+      change: number | null;
+    } | null;
+    investments: { value: string; unrealised: string; change: string } | null;
+  }>;
+
   constructor(
     private readonly database: Database,
     private readonly repos: BudgetMonthsRepository,
@@ -305,8 +331,16 @@ export class BudgetService {
       }
       return map;
     };
-    const worthAt = (endMonth: string) =>
-      netWorth(
+    const today = this.now().toISOString().slice(0, 10);
+    const dateOf = (m: string) => {
+      const end = `${m}-${String(daysInMonth(m)).padStart(2, '0')}`;
+      return end < today ? end : today;
+    };
+    const wealth = await this.wealthFor?.(ctx, monthRange(seriesStart, month).map(dateOf));
+    const worthAt = (endMonth: string) => {
+      const date = dateOf(endMonth);
+      const partial = new Set<string>();
+      const w = netWorth(
         balanceThrough(endMonth),
         accountDocs.map((a) => ({
           id: a._id,
@@ -315,7 +349,18 @@ export class BudgetService {
           systemKey: null,
         })),
         currency,
+        (amount, from) => wealth?.convert(amount, from, date) ?? null,
       );
+      w.partial.forEach((c) => partial.add(c));
+      let amount = w.amount;
+      for (const { holding, position } of wealth?.holdings.get(date) ?? []) {
+        const v =
+          holding.currency === currency ? position.value : wealth!.convert(position.value, holding.currency, date);
+        if (v === null) partial.add(holding.currency);
+        else amount += v;
+      }
+      return { amount, partial: [...partial].sort() };
+    };
     const currentWorth = worthAt(month);
     const series = monthRange(seriesStart, month).map((m) => ({
       month: m,
@@ -364,6 +409,7 @@ export class BudgetService {
       whereItWent,
       recent: recent.items,
       getStarted,
+      ...((await this.phase5Cards?.(ctx, month)) ?? { health: null, investments: null }),
     };
   }
 

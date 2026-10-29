@@ -247,7 +247,45 @@ const m0013: Migration = {
 };
 
 const m0014: Migration = {
-  name: '0014-change-email-code',
+  name: '0014-investments-and-rates',
+  async up(db) {
+    await installValidators(db);
+    await db
+      .collection('holdings')
+      .createIndex(
+        { workspaceId: 1, operationId: 1 },
+        { unique: true, partialFilterExpression: { operationId: { $type: 'string' } } },
+      );
+    await db.collection('holdings').createIndex({ workspaceId: 1, accountId: 1 });
+    await db.collection('prices').createIndex({ workspaceId: 1, holdingId: 1, date: 1 }, { unique: true });
+    await db.collection('exchange_rates').createIndex({ workspaceId: 1, currency: 1, date: 1 }, { unique: true });
+    await db
+      .collection('transactions')
+      .createIndex(
+        { workspaceId: 1, 'links.holdingId': 1, date: 1 },
+        { partialFilterExpression: { 'links.holdingId': { $type: 'string' } } },
+      );
+  },
+};
+
+const m0015: Migration = {
+  name: '0015-reports',
+  async up(db) {
+    await installValidators(db);
+    for (const name of ['report_dashboards', 'saved_reports']) {
+      await db
+        .collection(name)
+        .createIndex(
+          { workspaceId: 1, operationId: 1 },
+          { unique: true, partialFilterExpression: { operationId: { $type: 'string' } } },
+        );
+    }
+    await db.collection('report_dashboards').createIndex({ workspaceId: 1, sortOrder: 1 });
+  },
+};
+
+const m0016: Migration = {
+  name: '0016-change-email-code',
   async up(db) {
     await installValidators(db);
   },
@@ -268,6 +306,8 @@ export const MIGRATIONS: Migration[] = [
   m0012,
   m0013,
   m0014,
+  m0015,
+  m0016,
 ];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */

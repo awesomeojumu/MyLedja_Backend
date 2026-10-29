@@ -367,4 +367,21 @@ export class GoalsService {
       transactionId: result.transactionId,
     };
   }
+
+  /** PU-30-1: delete goal metadata only — money stays in the account. */
+  async remove(ctx: WorkspaceContext, id: string, baseVersion: number): Promise<void> {
+    await this.database.transaction(async (session) => {
+      const before = await this.goals.findOne(ctx, { _id: id }, { session });
+      if (!before) throw Errors.notFound();
+      if (before.version !== baseVersion) throw GoalErrors.stale(toGoal(before));
+      const allocs = await this.allocations.find(ctx, { goalId: id }, { session });
+      for (const a of allocs) {
+        await this.allocations.deleteOne(ctx, { _id: a._id }, { session });
+        await this.ledger.feed(ctx, [{ collection: 'goal_allocations', docId: a._id, op: 'tombstone' }], session);
+      }
+      await this.goals.deleteOne(ctx, { _id: id }, { session });
+      await this.ledger.feed(ctx, [{ collection: 'goals', docId: id, op: 'tombstone' }], session);
+      await this.audit.record(ctx, { action: 'goal.deleted', target: { collection: 'goals', id } }, { session });
+    });
+  }
 }

@@ -46,6 +46,19 @@ export const Transaction = z
       holdingId: z.string().nullable(),
     }),
     fxRate: z.string().nullable(),
+    investment: z
+      .object({
+        kind: z.enum(['buy', 'sell', 'dividend', 'reinvest']),
+        units: z.string().nullable(),
+        price: MinorAmount.nullable(),
+        fees: MinorAmount.nullable(),
+        lots: z.array(z.object({ lotId: z.string(), units: z.string(), cost: MinorAmount })).nullable(),
+      })
+      .nullable()
+      .meta({
+        description:
+          'E20 to E22: units, price per unit, fees and the lots a sale took, so lots can be rebuilt from history (TECH-SPEC 6.8).',
+      }),
     edited: z.boolean().meta({ description: 'True when this replaced an earlier version ("Edited").' }),
     reconciled: z.boolean().meta({ description: 'Locked by a finished reconcile (🔒).' }),
     clearedAccountIds: z.array(z.string()),

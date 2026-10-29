@@ -1,5 +1,6 @@
-import { exponentOf, parseMinor } from '../../common/money/money.js';
+import { exponentOf, parseMinor, toMinorString } from '../../common/money/money.js';
 import { LedgerErrors } from './ledger.errors.js';
+import { formatUnits, type InvestmentMeta, type OpenLot, parseUnits, pickLots, valueOf } from './investments.js';
 import type { EventInput } from './ledger.inputs.js';
 import type { AccountRef, EventType, Line, SystemKey } from './ledger.types.js';
 
@@ -12,6 +13,10 @@ export interface Resolver {
   system(key: SystemKey): AccountRef;
   /** The event a refund points at, with the refunds already made against it. */
   original(id: string): { type: EventType; status: string; lines: Line[]; refunded: bigint } | null;
+  /** A holding's ledger account (its id is the holding's id), or null. */
+  holding?(id: string): AccountRef | null;
+  /** The holding's lots still held, from its history. */
+  lots?(holdingId: string): OpenLot[];
 }
 
 export type Built = {
@@ -20,12 +25,14 @@ export type Built = {
   /** E7: the rate, units of the first currency per one unit of the second, to 10 decimal places. */
   fxRate?: string;
   refundOf?: string;
+  holdingId?: string;
+  investment?: InvestmentMeta;
 };
 
 /** True for a person's own accounts (banks, cards, loans and so on), as opposed to categories and system accounts. */
 const isReal = (a: AccountRef) => (a.kind === 'asset' || a.kind === 'liability') && a.systemKey === null;
 
-const isCash = (a: AccountRef) => isReal(a) && !a.personDebt;
+const isCash = (a: AccountRef) => isReal(a) && !a.personDebt && !a.holding;
 
 function receivable(r: Resolver, id: string, field: string): AccountRef {
   const a = r.account(id);
@@ -94,7 +101,99 @@ export function buildEvent(input: EventInput, r: Resolver): Built {
       return buildWriteOff(input, r);
     case 'salary_gross':
       return buildSalaryGross(input, r);
+    case 'investment_buy':
+      return buildBuy(input, r);
+    case 'investment_sell':
+      return buildSell(input, r);
+    case 'dividend':
+      return buildDividend(input, r);
   }
+}
+
+function holdingOf(r: Resolver, id: string): AccountRef {
+  const h = r.holding?.(id) ?? null;
+  if (!h || !h.holding) throw LedgerErrors.notHolding();
+  if (h.archived) throw LedgerErrors.archived('holdingId');
+  return h;
+}
+
+/** E20: Dr holding (units × price + fees) · Cr cash. A lot opens with that cost. */
+function buildBuy(input: Extract<EventInput, { type: 'investment_buy' }>, r: Resolver): Built {
+  const h = holdingOf(r, input.holdingId);
+  const cash = real(r, input.accountId, 'accountId');
+  if (cash.currency !== h.currency) throw LedgerErrors.currencyMismatch('accountId');
+  const fees = parseMinor(input.fees ?? '0');
+  const cost = valueOf(parseUnits(input.units), parseMinor(input.price)) + fees;
+  return {
+    type: 'investment_buy',
+    lines: [line(h, cost), line(cash, -cost)],
+    holdingId: h.id,
+    investment: { kind: 'buy', units: input.units, price: input.price, fees: toMinorString(fees) },
+  };
+}
+
+/**
+ * E21: Dr cash (proceeds after fees) · Cr holding (cost of the lots sold, oldest first unless chosen) ·
+ * Cr income:Investment gain, or Dr loss:Investment loss, for the difference.
+ */
+function buildSell(input: Extract<EventInput, { type: 'investment_sell' }>, r: Resolver): Built {
+  const h = holdingOf(r, input.holdingId);
+  const cash = real(r, input.accountId, 'accountId');
+  if (cash.currency !== h.currency) throw LedgerErrors.currencyMismatch('accountId');
+  const units = parseUnits(input.units);
+  const open = r.lots?.(h.id) ?? [];
+  const held = open.reduce((s, l) => s + l.units, 0n);
+  if (units > held) throw LedgerErrors.notEnoughUnits(formatUnits(held));
+  const picks = pickLots(
+    open,
+    units,
+    input.lots?.map((l) => ({ lotId: l.lotId, units: parseUnits(l.units) })),
+  );
+  if (!picks) throw LedgerErrors.lotsDontMatch();
+  const fees = parseMinor(input.fees ?? '0');
+  const proceeds = valueOf(units, parseMinor(input.price)) - fees;
+  if (proceeds <= 0n) throw LedgerErrors.feesTooBig();
+  const cost = picks.reduce((s, p) => s + p.cost, 0n);
+  const gain = proceeds - cost;
+  const lines = [line(cash, proceeds), line(h, -cost)];
+  if (gain > 0n) lines.push(line(r.system('investment_gain'), -gain, h.currency));
+  if (gain < 0n) lines.push(line(r.system('investment_loss'), -gain, h.currency));
+  return {
+    type: 'investment_sell',
+    lines,
+    holdingId: h.id,
+    investment: {
+      kind: 'sell',
+      units: input.units,
+      price: input.price,
+      fees: toMinorString(fees),
+      lots: picks.map((p) => ({ lotId: p.lotId, units: formatUnits(p.units), cost: toMinorString(p.cost) })),
+    },
+  };
+}
+
+/** E22: Dr cash, or Dr holding (a new lot) when reinvested · Cr income:Investment income. */
+function buildDividend(input: Extract<EventInput, { type: 'dividend' }>, r: Resolver): Built {
+  const h = holdingOf(r, input.holdingId);
+  const amount = parseMinor(input.amount);
+  const income = r.system('investment_income');
+  if ((input.accountId ? 1 : 0) + (input.reinvestedUnits ? 1 : 0) !== 1) throw LedgerErrors.dividendTarget();
+  if (input.reinvestedUnits) {
+    return {
+      type: 'income',
+      lines: [line(h, amount), line(income, -amount, h.currency)],
+      holdingId: h.id,
+      investment: { kind: 'reinvest', units: input.reinvestedUnits },
+    };
+  }
+  const cash = real(r, input.accountId!, 'accountId');
+  if (cash.currency !== h.currency) throw LedgerErrors.currencyMismatch('accountId');
+  return {
+    type: 'income',
+    lines: [line(cash, amount), line(income, -amount, cash.currency)],
+    holdingId: h.id,
+    investment: { kind: 'dividend' },
+  };
 }
 
 /** E1: Dr account · Cr income:category. */

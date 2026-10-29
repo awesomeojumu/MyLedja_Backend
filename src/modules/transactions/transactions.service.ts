@@ -35,8 +35,9 @@ type Doc = TransactionDoc;
 type TxView = z.input<typeof Transaction>;
 type AccountMap = Map<string, AccountRef & { accountType: string | null }>;
 
+/** Your own accounts. A holding's ledger account isn't one: its lines point at the holding (links.holdingId). */
 const isReal = (a: AccountRef | null | undefined) =>
-  !!a && (a.kind === 'asset' || a.kind === 'liability') && a.systemKey === null;
+  !!a && (a.kind === 'asset' || a.kind === 'liability') && a.systemKey === null && !a.holding;
 
 export type TransferDismissalDoc = {
   _id: string;
@@ -560,6 +561,15 @@ export class TransactionsService {
         holdingId: doc.links.holdingId ?? null,
       },
       fxRate: doc.fxRate ? String(doc.fxRate) : null,
+      investment: doc.investment
+        ? {
+            kind: doc.investment.kind,
+            units: 'units' in doc.investment ? doc.investment.units : null,
+            price: 'price' in doc.investment ? doc.investment.price : null,
+            fees: 'fees' in doc.investment ? doc.investment.fees : null,
+            lots: 'lots' in doc.investment ? doc.investment.lots : null,
+          }
+        : null,
       edited: !!doc.links.correctionOf,
       reconciled: doc.reconciliationId !== null,
       clearedAccountIds: doc.clearedAccountIds,
@@ -579,6 +589,10 @@ function headline(doc: Doc, real: Line[], accounts: AccountMap): bigint {
   if (real.length === 1) {
     const a = accounts.get(real[0]!.ledgerAccountId)!;
     return effectOnAccount(real[0]!, a);
+  }
+  // A reinvested dividend touches only its holding: the headline is what it added.
+  if (real.length === 0 && doc.links.holdingId) {
+    return doc.lines.find((l) => l.ledgerAccountId === doc.links.holdingId)?.amountMinor ?? 0n;
   }
   // Fallback: net on real accounts (should be rare for Phase 1 types).
   return real.reduce((s, l) => s + effectOnAccount(l, accounts.get(l.ledgerAccountId)!), 0n);

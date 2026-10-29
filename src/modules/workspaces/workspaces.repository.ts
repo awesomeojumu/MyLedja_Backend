@@ -27,9 +27,17 @@ export type WorkspaceDoc = {
   setupDraft: SetupDraft | null;
   /** Each AI use is on only after the person agrees (TECH-SPEC 5.8, Settings › AI features). */
   aiConsent?: AiConsent;
+  /** Health settings (DESIGN.md page 23); defaults apply until set. */
+  healthSettings?: HealthSettingsDoc;
   createdAt: Date;
   updatedAt: Date;
   version: number;
+};
+
+export type HealthSettingsDoc = {
+  cashAccountIds: string[] | null;
+  targetMonths: 3 | 6 | 12;
+  countInvestments: boolean;
 };
 
 export type AiConsent = { categorize: boolean; statements: boolean; healthAdvice: boolean; updatedAt: Date | null };
@@ -41,6 +49,14 @@ export class WorkspacesRepository extends BaseRepository<WorkspaceDoc> {
 
   get(ctx: WorkspaceContext, o: Opts = {}) {
     return this.findOne(ctx, { _id: ctx.workspaceId }, o);
+  }
+
+  async setHealthSettings(ctx: WorkspaceContext, settings: HealthSettingsDoc) {
+    await this.updateOne(
+      ctx,
+      { _id: ctx.workspaceId },
+      { $set: { healthSettings: settings, updatedAt: new Date() }, $inc: { version: 1 } },
+    );
   }
 
   async setAiConsent(ctx: WorkspaceContext, consent: AiConsent) {
