@@ -101,6 +101,11 @@
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
             "description": "As shown: what you have, or for a card or loan what you owe."
           },
+          "holdingsValue": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Investment accounts: market value of the holdings in it, in its currency (TECH-SPEC 6.8). Net worth adds it to the balance. \"0\" for others."
+          },
           "clearedBalance": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
@@ -153,6 +158,7 @@
           "closedWithBalance",
           "sortOrder",
           "balance",
+          "holdingsValue",
           "clearedBalance",
           "unclearedBalance",
           "lastReconciledAt",
@@ -878,6 +884,148 @@
         ],
         "additionalProperties": false
       },
+      "BuilderSpec": {
+        "type": "object",
+        "properties": {
+          "show": {
+            "type": "string",
+            "enum": [
+              "spending",
+              "income",
+              "net",
+              "balance",
+              "count"
+            ]
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "category",
+              "group",
+              "payee",
+              "account",
+              "tag",
+              "month"
+            ]
+          },
+          "splitBy": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "category",
+                  "group",
+                  "payee",
+                  "account",
+                  "tag",
+                  "month"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chart": {
+            "default": "bar",
+            "type": "string",
+            "enum": [
+              "bar",
+              "line",
+              "area",
+              "donut",
+              "table",
+              "number",
+              "sankey",
+              "calendar",
+              "note"
+            ]
+          },
+          "filters": {
+            "default": {},
+            "$ref": "#/components/schemas/ReportFilters"
+          }
+        },
+        "required": [
+          "show",
+          "groupBy",
+          "splitBy",
+          "chart",
+          "filters"
+        ],
+        "additionalProperties": false,
+        "description": "Report builder: show, group by, split by and chart (DESIGN.md page 21)."
+      },
+      "BuilderSpecInput": {
+        "type": "object",
+        "properties": {
+          "show": {
+            "type": "string",
+            "enum": [
+              "spending",
+              "income",
+              "net",
+              "balance",
+              "count"
+            ]
+          },
+          "groupBy": {
+            "type": "string",
+            "enum": [
+              "category",
+              "group",
+              "payee",
+              "account",
+              "tag",
+              "month"
+            ]
+          },
+          "splitBy": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "category",
+                  "group",
+                  "payee",
+                  "account",
+                  "tag",
+                  "month"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chart": {
+            "default": "bar",
+            "type": "string",
+            "enum": [
+              "bar",
+              "line",
+              "area",
+              "donut",
+              "table",
+              "number",
+              "sankey",
+              "calendar",
+              "note"
+            ]
+          },
+          "filters": {
+            "default": {},
+            "$ref": "#/components/schemas/ReportFilters"
+          }
+        },
+        "required": [
+          "show",
+          "groupBy"
+        ],
+        "description": "Report builder: show, group by, split by and chart (DESIGN.md page 21)."
+      },
       "BulkResult": {
         "type": "object",
         "properties": {
@@ -943,6 +1091,208 @@
         },
         "required": [
           "results"
+        ],
+        "additionalProperties": false
+      },
+      "CashFlow": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "bands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CashFlowBand"
+            }
+          },
+          "tiles": {
+            "type": "object",
+            "properties": {
+              "in": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+              },
+              "out": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                "description": "Everything that went out, not counting what was left over."
+              },
+              "savedBasisPoints": {
+                "description": "Left over ÷ income.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "in",
+              "out",
+              "savedBasisPoints"
+            ],
+            "additionalProperties": false
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                },
+                "shareBasisPoints": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "previous": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                },
+                "change": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                },
+                "categories": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "categoryId": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                        "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                      }
+                    },
+                    "required": [
+                      "categoryId",
+                      "label",
+                      "amount"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "kind",
+                "amount",
+                "shareBasisPoints",
+                "previous",
+                "change",
+                "categories"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The table under the diagram: each group with amount, share and change (P22-05)."
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "bands",
+          "tiles",
+          "groups"
+        ],
+        "additionalProperties": false
+      },
+      "CashFlowBand": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "in",
+              "out"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "income",
+              "borrowed",
+              "collected",
+              "returns",
+              "transfers",
+              "spending",
+              "goals",
+              "debt_payments",
+              "lent",
+              "investments",
+              "left_over",
+              "shortfall"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "groupId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "shareBasisPoints": {
+            "description": "Share of income (P22-03).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "side",
+          "kind",
+          "categoryId",
+          "groupId",
+          "label",
+          "amount",
+          "shareBasisPoints"
         ],
         "additionalProperties": false
       },
@@ -1179,6 +1529,18 @@
           "id",
           "op",
           "doc"
+        ],
+        "additionalProperties": false
+      },
+      "ChangedEmail": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
         ],
         "additionalProperties": false
       },
@@ -1642,6 +2004,65 @@
           "accountId"
         ]
       },
+      "CreateHoldingBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "Made on the device; also the id of its ledger account.",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "fund",
+              "pension",
+              "crypto",
+              "fixed_deposit",
+              "other"
+            ]
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "The holding uses this account's currency."
+          },
+          "price": {
+            "description": "Current price per unit, entered as a price for today.",
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$"
+          },
+          "priceDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "accountId"
+        ]
+      },
       "CreateIncomeStreamBody": {
         "type": "object",
         "properties": {
@@ -1796,6 +2217,52 @@
           "recurrence",
           "startDate",
           "taxClass"
+        ]
+      },
+      "CreateReportDashboardBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateSavedReportBody": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "spec": {
+            "$ref": "#/components/schemas/BuilderSpec"
+          },
+          "dashboardId": {
+            "description": "Also add it to this dashboard.",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "name",
+          "spec"
         ]
       },
       "CreateScheduleBody": {
@@ -2170,6 +2637,102 @@
               "steps"
             ],
             "additionalProperties": false
+          },
+          "health": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "score": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "band": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "strong",
+                          "okay",
+                          "needs_attention"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "change": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "ready",
+                  "score",
+                  "band",
+                  "change"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Phase 5 Health card (DESIGN.md page 5)."
+          },
+          "investments": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "unrealised": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "change": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Over the last month."
+                  }
+                },
+                "required": [
+                  "value",
+                  "unrealised",
+                  "change"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Phase 5 Investments card; null with no holdings."
           }
         },
         "required": [
@@ -2182,7 +2745,9 @@
           "budgetProgress",
           "whereItWent",
           "recent",
-          "getStarted"
+          "getStarted",
+          "health",
+          "investments"
         ],
         "additionalProperties": false
       },
@@ -2651,6 +3216,87 @@
         ],
         "additionalProperties": false
       },
+      "DividendInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "dividend"
+          },
+          "holdingId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "accountId": {
+            "description": "Paid into this account. Leave out when reinvested.",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reinvestedUnits": {
+            "description": "Reinvested: the units bought with it (a new lot).",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})(?:\\.\\d{1,6})?$"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "holdingId",
+          "amount",
+          "date"
+        ],
+        "description": "E22: Dr cash, or Dr holding when reinvested · Cr income:Investment income. Posted as type income."
+      },
       "Error": {
         "type": "object",
         "properties": {
@@ -2718,8 +3364,79 @@
           },
           {
             "$ref": "#/components/schemas/InvestmentSellInput"
+          },
+          {
+            "$ref": "#/components/schemas/DividendInput"
           }
         ]
+      },
+      "ExchangeRate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "rate": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual"
+            ],
+            "description": "Typed in by hand (TECH-SPEC 6.13 decision 4)."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "currency",
+          "date",
+          "rate",
+          "source",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "ExchangeRateList": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "description": "The workspace currency the rates convert into."
+          },
+          "rates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeRate"
+            }
+          },
+          "needed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Currencies your accounts and holdings use that have no rate yet."
+          }
+        },
+        "required": [
+          "currency",
+          "rates",
+          "needed"
+        ],
+        "additionalProperties": false
       },
       "ExpenseInput": {
         "type": "object",
@@ -3222,11 +3939,521 @@
         ],
         "additionalProperties": false
       },
+      "HealthInputs": {
+        "type": "object",
+        "properties": {
+          "months": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "month": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "description": "YYYY-MM."
+                },
+                "income": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                },
+                "spending": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                },
+                "essential": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                },
+                "hasData": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "month",
+                "income",
+                "spending",
+                "essential",
+                "hasData"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "liquidCash": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "recentBorrowing": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "debtPayments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^-?(0|[1-9]\\d{0,17})$",
+              "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+            }
+          },
+          "bills": {
+            "type": "object",
+            "properties": {
+              "due": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "onTime": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "due",
+              "onTime"
+            ],
+            "additionalProperties": false
+          },
+          "budget": {
+            "type": "object",
+            "properties": {
+              "planned": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "within": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "overspent": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "planned",
+              "within",
+              "overspent"
+            ],
+            "additionalProperties": false
+          },
+          "historyDays": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "targetMonths": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "months",
+          "liquidCash",
+          "recentBorrowing",
+          "debtPayments",
+          "bills",
+          "budget",
+          "historyDays",
+          "targetMonths"
+        ],
+        "additionalProperties": false,
+        "description": "What the score was worked out from, so the stress test runs on the device."
+      },
+      "HealthPage": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "description": "YYYY-MM."
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "band": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "strong",
+                  "okay",
+                  "needs_attention"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Points since last month."
+          },
+          "reason": {
+            "type": "object",
+            "properties": {
+              "strongest": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "saving",
+                      "runway",
+                      "debt_load",
+                      "bills",
+                      "budget"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "weakest": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "saving",
+                      "runway",
+                      "debt_load",
+                      "bills",
+                      "budget"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "strongest",
+              "weakest"
+            ],
+            "additionalProperties": false,
+            "description": "For the one plain sentence about why (P23-01)."
+          },
+          "pillars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthPillar"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "two_months",
+                "three_pillars"
+              ]
+            }
+          },
+          "basedOnDataUpTo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                "description": "YYYY-MM-DD in the workspace time zone."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when a counted account is 30 days stale."
+          },
+          "advice": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pillar": {
+                  "type": "string",
+                  "enum": [
+                    "saving",
+                    "runway",
+                    "debt_load",
+                    "bills",
+                    "budget"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "enum": [
+                    "budget",
+                    "goals",
+                    "debts",
+                    "plan"
+                  ]
+                },
+                "amount": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                      "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "count": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "pillar",
+                "link",
+                "amount",
+                "count"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "month": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "description": "YYYY-MM."
+                },
+                "score": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "month",
+                "score"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/HealthInputs"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/HealthSettings"
+          }
+        },
+        "required": [
+          "month",
+          "ready",
+          "score",
+          "band",
+          "change",
+          "reason",
+          "pillars",
+          "missing",
+          "basedOnDataUpTo",
+          "advice",
+          "history",
+          "inputs",
+          "settings"
+        ],
+        "additionalProperties": false
+      },
+      "HealthPillar": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "saving",
+              "runway",
+              "debt_load",
+              "bills",
+              "budget"
+            ]
+          },
+          "value": {
+            "description": "Basis points; runway in hundredths of a month.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "used": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The numbers the formula used (P23-02)."
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "score",
+          "used"
+        ],
+        "additionalProperties": false
+      },
+      "HealthSettings": {
+        "type": "object",
+        "properties": {
+          "cashAccountIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accounts that count as cash. Null: bank, cash, wallet and savings (TECH-SPEC 6.10)."
+          },
+          "targetMonths": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 3
+              },
+              {
+                "type": "number",
+                "const": 6
+              },
+              {
+                "type": "number",
+                "const": 12
+              }
+            ]
+          },
+          "countInvestments": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cashAccountIds",
+          "targetMonths",
+          "countInvestments"
+        ],
+        "additionalProperties": false
+      },
+      "HealthSettingsInput": {
+        "type": "object",
+        "properties": {
+          "cashAccountIds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Accounts that count as cash. Null: bank, cash, wallet and savings (TECH-SPEC 6.10)."
+          },
+          "targetMonths": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 3
+              },
+              {
+                "type": "number",
+                "const": 6
+              },
+              {
+                "type": "number",
+                "const": 12
+              }
+            ]
+          },
+          "countInvestments": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cashAccountIds",
+          "targetMonths",
+          "countInvestments"
+        ]
+      },
       "Holding": {
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Also the id of the holding's ledger account (TECH-SPEC 6.1)."
           },
           "name": {
             "type": "string"
@@ -3249,21 +4476,36 @@
             ]
           },
           "accountId": {
-            "type": "string"
+            "type": "string",
+            "description": "The investment account it is held in."
           },
           "currency": {
             "type": "string"
           },
-          "ledgerAccountId": {
-            "type": "string"
+          "archived": {
+            "type": "boolean"
           },
           "units": {
-            "type": "string"
+            "type": "string",
+            "description": "Units as a decimal string, up to 6 places."
           },
           "cost": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
-            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+            "description": "Remaining cost of the lots held (units × price + fees when bought)."
+          },
+          "averageCost": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cost per unit, rounded. Null with no units."
           },
           "price": {
             "anyOf": [
@@ -3275,12 +4517,35 @@
               {
                 "type": "null"
               }
+            ],
+            "description": "The latest price entered, or null."
+          },
+          "priceDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                "description": "YYYY-MM-DD in the workspace time zone."
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "value": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
-            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+            "description": "Units × latest price; the cost when no price was entered (TECH-SPEC 6.8)."
+          },
+          "unrealised": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Value − cost. Never income (M17)."
+          },
+          "realised": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Gains and losses of lots sold (E21)."
           },
           "version": {
             "type": "integer",
@@ -3295,37 +4560,76 @@
           "type",
           "accountId",
           "currency",
-          "ledgerAccountId",
+          "archived",
           "units",
           "cost",
+          "averageCost",
           "price",
+          "priceDate",
           "value",
+          "unrealised",
+          "realised",
           "version"
         ],
         "additionalProperties": false
       },
-      "HoldingList": {
+      "HoldingDetail": {
         "type": "object",
         "properties": {
-          "holdings": {
+          "holding": {
+            "$ref": "#/components/schemas/Holding"
+          },
+          "lots": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Holding"
+              "$ref": "#/components/schemas/HoldingLot"
+            }
+          },
+          "trades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldingTrade"
+            }
+          },
+          "dividends": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldingDividend"
+            }
+          },
+          "dividendsThisYear": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldingPrice"
+            }
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvestmentSeriesPoint"
             }
           }
         },
         "required": [
-          "holdings"
+          "holding",
+          "lots",
+          "trades",
+          "dividends",
+          "dividendsThisYear",
+          "prices",
+          "series"
         ],
         "additionalProperties": false
       },
-      "HoldingLot": {
+      "HoldingDividend": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "holdingId": {
+          "transactionId": {
             "type": "string"
           },
           "date": {
@@ -3333,46 +4637,97 @@
             "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
             "description": "YYYY-MM-DD in the workspace time zone."
           },
-          "units": {
-            "type": "string"
+          "amount": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
           },
-          "soldUnits": {
-            "type": "string"
+          "accountId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reinvested": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "transactionId",
+          "date",
+          "amount",
+          "accountId",
+          "reinvested"
+        ],
+        "additionalProperties": false
+      },
+      "HoldingLot": {
+        "type": "object",
+        "properties": {
+          "lotId": {
+            "type": "string",
+            "description": "The id of the buy (or reinvested dividend) that opened it."
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "units": {
+            "type": "string",
+            "description": "Units bought."
+          },
+          "unitsHeld": {
+            "type": "string",
+            "description": "Units as a decimal string, up to 6 places."
+          },
+          "costPerUnit": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
           },
           "cost": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
-            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+            "description": "Cost of the units still held."
           },
-          "pricePerUnit": {
+          "value": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
             "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
           },
-          "fees": {
+          "gain": {
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
-            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+            "description": "Unrealised gain of the units still held."
+          },
+          "realised": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Realised gain of the units sold from this lot."
+          },
+          "sold": {
+            "type": "boolean",
+            "description": "Every unit sold: shown greyed (P18-02)."
           }
         },
         "required": [
-          "id",
-          "holdingId",
+          "lotId",
           "date",
           "units",
-          "soldUnits",
+          "unitsHeld",
+          "costPerUnit",
           "cost",
-          "pricePerUnit",
-          "fees"
+          "value",
+          "gain",
+          "realised",
+          "sold"
         ],
         "additionalProperties": false
       },
       "HoldingPrice": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
           "holdingId": {
             "type": "string"
           },
@@ -3385,13 +4740,81 @@
             "type": "string",
             "pattern": "^-?(0|[1-9]\\d{0,17})$",
             "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
         "required": [
-          "id",
           "holdingId",
           "date",
-          "price"
+          "price",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "HoldingTrade": {
+        "type": "object",
+        "properties": {
+          "transactionId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "buy",
+              "sell"
+            ]
+          },
+          "units": {
+            "type": "string",
+            "description": "Units as a decimal string, up to 6 places."
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "fees": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Paid for a buy (with fees), received for a sale (after fees)."
+          },
+          "gain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A sale: its realised gain."
+          }
+        },
+        "required": [
+          "transactionId",
+          "date",
+          "kind",
+          "units",
+          "price",
+          "fees",
+          "amount",
+          "gain"
         ],
         "additionalProperties": false
       },
@@ -4214,36 +5637,32 @@
             "type": "string",
             "const": "investment_buy"
           },
-          "holdingAccountId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-            "description": "The holding asset account (H)."
-          },
-          "cashAccountId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-            "description": "Money from (cash or bank)."
-          },
-          "units": {
-            "type": "string",
-            "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$"
-          },
-          "pricePerUnit": {
-            "type": "string",
-            "pattern": "^[1-9]\\d{0,17}$",
-            "description": "Price per unit in minor units of the cash currency."
-          },
-          "fees": {
-            "default": "0",
-            "type": "string",
-            "pattern": "^(0|[1-9]\\d{0,17})$"
-          },
           "holdingId": {
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Where the money came from."
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})(?:\\.\\d{1,6})?$",
+            "description": "Units as a decimal string with up to 6 places: \"500\", \"12.5\"."
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Price per unit in minor units."
+          },
+          "fees": {
+            "default": "0",
+            "description": "Broker and other fees in minor units. Part of the cost of a buy; taken from a sale.",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,17})$"
           },
           "date": {
             "type": "string",
@@ -4285,13 +5704,13 @@
         },
         "required": [
           "type",
-          "holdingAccountId",
-          "cashAccountId",
+          "holdingId",
+          "accountId",
           "units",
-          "pricePerUnit",
+          "price",
           "date"
         ],
-        "description": "E20: buy at cost; never spending (case 15)."
+        "description": "E20: Dr holding (units × price + fees) · Cr cash. Not spending (case 15)."
       },
       "InvestmentSellInput": {
         "type": "object",
@@ -4300,39 +5719,57 @@
             "type": "string",
             "const": "investment_sell"
           },
-          "holdingAccountId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "cashAccountId": {
-            "type": "string",
-            "format": "uuid",
-            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-          },
-          "units": {
-            "type": "string",
-            "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$"
-          },
-          "pricePerUnit": {
-            "type": "string",
-            "pattern": "^[1-9]\\d{0,17}$",
-            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
-          },
-          "fees": {
-            "default": "0",
-            "type": "string",
-            "pattern": "^(0|[1-9]\\d{0,17})$"
-          },
-          "costOfLots": {
-            "type": "string",
-            "pattern": "^[1-9]\\d{0,17}$",
-            "description": "Cost basis of the lots sold (FIFO or chosen)."
-          },
           "holdingId": {
             "type": "string",
             "format": "uuid",
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Where the proceeds went."
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,14})(?:\\.\\d{1,6})?$",
+            "description": "Units as a decimal string with up to 6 places: \"500\", \"12.5\"."
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Price per unit in minor units."
+          },
+          "fees": {
+            "default": "0",
+            "description": "Broker and other fees in minor units. Part of the cost of a buy; taken from a sale.",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,17})$"
+          },
+          "lots": {
+            "description": "Chosen lots. Leave out to sell the oldest first (TECH-SPEC 6.8).",
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "lotId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "units": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9]\\d{0,14})(?:\\.\\d{1,6})?$",
+                  "description": "Units as a decimal string with up to 6 places: \"500\", \"12.5\"."
+                }
+              },
+              "required": [
+                "lotId",
+                "units"
+              ]
+            }
           },
           "date": {
             "type": "string",
@@ -4374,14 +5811,39 @@
         },
         "required": [
           "type",
-          "holdingAccountId",
-          "cashAccountId",
+          "holdingId",
+          "accountId",
           "units",
-          "pricePerUnit",
-          "costOfLots",
+          "price",
           "date"
         ],
-        "description": "E21: sell; only the gain or loss counts as income (case 17)."
+        "description": "E21: Dr cash (proceeds after fees) · Cr holding (cost of lots sold) · gain to income or loss (case 17)."
+      },
+      "InvestmentSeriesPoint": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "value": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "cost": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          }
+        },
+        "required": [
+          "date",
+          "value",
+          "cost"
+        ],
+        "additionalProperties": false
       },
       "LendBody": {
         "type": "object",
@@ -5388,7 +6850,20 @@
               "income.stream.create",
               "income.stream.update",
               "rule.upsert",
-              "rule.delete"
+              "rule.delete",
+              "holding.create",
+              "holding.update",
+              "holding.prices",
+              "holding.archive",
+              "holding.price.delete",
+              "exchange_rate.set",
+              "exchange_rate.delete",
+              "report_dashboard.create",
+              "report_dashboard.update",
+              "report_dashboard.delete",
+              "saved_report.create",
+              "saved_report.update",
+              "saved_report.delete"
             ]
           },
           "targetId": {
@@ -5727,6 +7202,128 @@
           "leftAfterBills",
           "missedCount",
           "matchBannerCount"
+        ],
+        "additionalProperties": false
+      },
+      "Portfolio": {
+        "type": "object",
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "currency": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "cost": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "unrealised": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "realised": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Realised gains in the range."
+          },
+          "dividends": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Dividends and reinvested dividends in the range (E22)."
+          },
+          "partial": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Currencies left out of the totals for want of a rate."
+          },
+          "holdings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Holding"
+            }
+          },
+          "byType": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "stock",
+                    "fund",
+                    "pension",
+                    "crypto",
+                    "fixed_deposit",
+                    "other"
+                  ]
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                }
+              },
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "byAccount": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string",
+                  "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                  "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                }
+              },
+              "required": [
+                "accountId",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvestmentSeriesPoint"
+            }
+          }
+        },
+        "required": [
+          "asOf",
+          "currency",
+          "value",
+          "cost",
+          "unrealised",
+          "realised",
+          "dividends",
+          "partial",
+          "holdings",
+          "byType",
+          "byAccount",
+          "series"
         ],
         "additionalProperties": false
       },
@@ -6282,6 +7879,887 @@
           "daysBefore"
         ]
       },
+      "ReportCard": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "net_worth",
+              "income_vs_expenses",
+              "spending_by_category",
+              "spending_trends",
+              "cash_flow",
+              "transaction_calendar",
+              "summary_number",
+              "budget_analysis",
+              "age_of_money",
+              "balance_forecast",
+              "crossover",
+              "investment_performance",
+              "debt_payoff",
+              "income_steadiness",
+              "formula",
+              "note",
+              "custom"
+            ]
+          },
+          "title": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "savedReportId": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "range": {
+            "default": "this_month",
+            "type": "string",
+            "enum": [
+              "this_month",
+              "last_month",
+              "last_3_months",
+              "this_year",
+              "last_12_months",
+              "all"
+            ]
+          },
+          "interval": {
+            "default": "month",
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "chart": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "bar",
+                  "line",
+                  "area",
+                  "donut",
+                  "table",
+                  "number",
+                  "sankey",
+                  "calendar",
+                  "note"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec": {
+            "default": null,
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuilderSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "formula": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "layout": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 11
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "w": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              },
+              "h": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "w",
+              "h"
+            ],
+            "additionalProperties": false,
+            "description": "12 columns on web; phones show cards in y order."
+          },
+          "hidden": {
+            "default": false,
+            "type": "boolean"
+          },
+          "highlight": {
+            "default": false,
+            "description": "The dashboard's one gold highlight, chosen in Edit layout (P19-05). At most one card.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "savedReportId",
+          "range",
+          "interval",
+          "chart",
+          "spec",
+          "formula",
+          "text",
+          "layout",
+          "hidden",
+          "highlight"
+        ],
+        "additionalProperties": false
+      },
+      "ReportCardInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "net_worth",
+              "income_vs_expenses",
+              "spending_by_category",
+              "spending_trends",
+              "cash_flow",
+              "transaction_calendar",
+              "summary_number",
+              "budget_analysis",
+              "age_of_money",
+              "balance_forecast",
+              "crossover",
+              "investment_performance",
+              "debt_payoff",
+              "income_steadiness",
+              "formula",
+              "note",
+              "custom"
+            ]
+          },
+          "title": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "savedReportId": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "range": {
+            "default": "this_month",
+            "type": "string",
+            "enum": [
+              "this_month",
+              "last_month",
+              "last_3_months",
+              "this_year",
+              "last_12_months",
+              "all"
+            ]
+          },
+          "interval": {
+            "default": "month",
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "chart": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "bar",
+                  "line",
+                  "area",
+                  "donut",
+                  "table",
+                  "number",
+                  "sankey",
+                  "calendar",
+                  "note"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spec": {
+            "default": null,
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuilderSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "formula": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "layout": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 11
+              },
+              "y": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "w": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              },
+              "h": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "w",
+              "h"
+            ],
+            "description": "12 columns on web; phones show cards in y order."
+          },
+          "hidden": {
+            "default": false,
+            "type": "boolean"
+          },
+          "highlight": {
+            "default": false,
+            "description": "The dashboard's one gold highlight, chosen in Edit layout (P19-05). At most one card.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "layout"
+        ]
+      },
+      "ReportDashboard": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportCard"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "sortOrder",
+          "cards",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "ReportDashboardList": {
+        "type": "object",
+        "properties": {
+          "dashboards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportDashboard"
+            }
+          }
+        },
+        "required": [
+          "dashboards"
+        ],
+        "additionalProperties": false
+      },
+      "ReportFilters": {
+        "type": "object",
+        "properties": {
+          "accountIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "categoryIds": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "payeeIds": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "tagIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "types": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense",
+                "transfer",
+                "opening_balance",
+                "balance_adjustment",
+                "refund",
+                "loan_proceeds",
+                "loan_repayment",
+                "lend",
+                "collect",
+                "write_off",
+                "salary_gross",
+                "investment_buy",
+                "investment_sell",
+                "reversal"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "The same filters as Transactions (P21-02)."
+      },
+      "ReportFiltersInput": {
+        "type": "object",
+        "properties": {
+          "accountIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "categoryIds": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "payeeIds": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "tagIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "types": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense",
+                "transfer",
+                "opening_balance",
+                "balance_adjustment",
+                "refund",
+                "loan_proceeds",
+                "loan_repayment",
+                "lend",
+                "collect",
+                "write_off",
+                "salary_gross",
+                "investment_buy",
+                "investment_sell",
+                "reversal"
+              ]
+            }
+          }
+        },
+        "description": "The same filters as Transactions (P21-02)."
+      },
+      "ReportResult": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "net_worth",
+              "income_vs_expenses",
+              "spending_by_category",
+              "spending_trends",
+              "cash_flow",
+              "transaction_calendar",
+              "summary_number",
+              "budget_analysis",
+              "age_of_money",
+              "balance_forecast",
+              "crossover",
+              "investment_performance",
+              "debt_payoff",
+              "income_steadiness",
+              "formula",
+              "note",
+              "custom"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "chart": {
+            "type": "string",
+            "enum": [
+              "bar",
+              "line",
+              "area",
+              "donut",
+              "table",
+              "number",
+              "sankey",
+              "calendar",
+              "note"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "money",
+              "count",
+              "days",
+              "basis_points"
+            ]
+          },
+          "table": {
+            "$ref": "#/components/schemas/ReportTable"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finding": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "What the title says, for the app to phrase (\"spending_fell\")."
+                  },
+                  "amount": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                        "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "changeBasisPoints": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "previousFrom": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                        "description": "YYYY-MM-DD in the workspace time zone."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "key",
+                  "amount",
+                  "changeBasisPoints",
+                  "previousFrom"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the card found, so its title can say it (P19-01)."
+          },
+          "drill": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "accountIds": {
+                  "maxItems": 50,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "categoryIds": {
+                  "maxItems": 200,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "payeeIds": {
+                  "maxItems": 200,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "tagIds": {
+                  "maxItems": 50,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "types": {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "income",
+                      "expense",
+                      "transfer",
+                      "opening_balance",
+                      "balance_adjustment",
+                      "refund",
+                      "loan_proceeds",
+                      "loan_repayment",
+                      "lend",
+                      "collect",
+                      "write_off",
+                      "salary_gross",
+                      "investment_buy",
+                      "investment_sell",
+                      "reversal"
+                    ]
+                  }
+                },
+                "from": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                  "description": "YYYY-MM-DD in the workspace time zone."
+                },
+                "to": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                  "description": "YYYY-MM-DD in the workspace time zone."
+                }
+              },
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false
+            },
+            "description": "For each row key: the Transactions filters behind it (P20-03)."
+          },
+          "partial": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "description": "note: the card text (Markdown).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "from",
+          "to",
+          "interval",
+          "chart",
+          "unit",
+          "table",
+          "previous",
+          "finding",
+          "drill",
+          "partial",
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "ReportTable": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "total": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "label",
+                "values",
+                "total"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "columnTotals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "columns",
+          "rows",
+          "columnTotals",
+          "total"
+        ],
+        "additionalProperties": false,
+        "description": "Every number in the chart, with totals (P20-02). The chart draws exactly this table: one series per column, one point per row."
+      },
       "Restored": {
         "type": "object",
         "properties": {
@@ -6494,6 +8972,89 @@
         ],
         "additionalProperties": false
       },
+      "RunReportBody": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "net_worth",
+              "income_vs_expenses",
+              "spending_by_category",
+              "spending_trends",
+              "cash_flow",
+              "transaction_calendar",
+              "summary_number",
+              "budget_analysis",
+              "age_of_money",
+              "balance_forecast",
+              "crossover",
+              "investment_performance",
+              "debt_payoff",
+              "income_steadiness",
+              "formula",
+              "note",
+              "custom"
+            ]
+          },
+          "from": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "interval": {
+            "default": "month",
+            "type": "string",
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year"
+            ]
+          },
+          "compare": {
+            "default": false,
+            "description": "Also return the previous period of the same length.",
+            "type": "boolean"
+          },
+          "filters": {
+            "default": {},
+            "$ref": "#/components/schemas/ReportFilters"
+          },
+          "spec": {
+            "description": "custom and summary_number: what to show.",
+            "$ref": "#/components/schemas/BuilderSpec"
+          },
+          "savedReportId": {
+            "description": "custom: run a saved builder report.",
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "formula": {
+            "description": "formula: an expression over income, spending, net, assets, debts and net_worth.",
+            "type": "string",
+            "maxLength": 200
+          },
+          "monthsAhead": {
+            "default": 6,
+            "description": "balance_forecast only.",
+            "type": "integer",
+            "minimum": 3,
+            "maximum": 12
+          }
+        },
+        "required": [
+          "kind",
+          "from",
+          "to"
+        ]
+      },
       "SalaryGrossInput": {
         "type": "object",
         "properties": {
@@ -6600,6 +9161,47 @@
           "date"
         ],
         "description": "E24: gross salary with statutory deductions (case 18)."
+      },
+      "SavedReport": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/BuilderSpec"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "spec",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "SavedReportList": {
+        "type": "object",
+        "properties": {
+          "reports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SavedReport"
+            }
+          }
+        },
+        "required": [
+          "reports"
+        ],
+        "additionalProperties": false
       },
       "Schedule": {
         "type": "object",
@@ -6890,6 +9492,30 @@
           "instalments"
         ]
       },
+      "SetExchangeRateBody": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "rate": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,11})(\\.\\d{1,10})?$",
+            "description": "Workspace currency per one unit of the other currency, as a decimal string: \"1550\"."
+          }
+        },
+        "required": [
+          "currency",
+          "date",
+          "rate"
+        ]
+      },
       "SetGoalScheduleBody": {
         "type": "object",
         "properties": {
@@ -6919,6 +9545,59 @@
           "recurrence",
           "startDate"
         ]
+      },
+      "SetPricesBody": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "prices": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "holdingId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "price": {
+                  "type": "string",
+                  "pattern": "^[1-9]\\d{0,17}$",
+                  "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+                }
+              },
+              "required": [
+                "holdingId",
+                "price"
+              ]
+            }
+          }
+        },
+        "required": [
+          "date",
+          "prices"
+        ]
+      },
+      "SetPricesResult": {
+        "type": "object",
+        "properties": {
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoldingPrice"
+            }
+          }
+        },
+        "required": [
+          "prices"
+        ],
+        "additionalProperties": false
       },
       "SignInResponse": {
         "anyOf": [
@@ -7382,6 +10061,98 @@
               "null"
             ]
           },
+          "investment": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "buy",
+                      "sell",
+                      "dividend",
+                      "reinvest"
+                    ]
+                  },
+                  "units": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "price": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                        "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "fees": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                        "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "lots": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "lotId": {
+                              "type": "string"
+                            },
+                            "units": {
+                              "type": "string"
+                            },
+                            "cost": {
+                              "type": "string",
+                              "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                              "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                            }
+                          },
+                          "required": [
+                            "lotId",
+                            "units",
+                            "cost"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "units",
+                  "price",
+                  "fees",
+                  "lots"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E20 to E22: units, price per unit, fees and the lots a sale took, so lots can be rebuilt from history (TECH-SPEC 6.8)."
+          },
           "edited": {
             "type": "boolean",
             "description": "True when this replaced an earlier version (\"Edited\")."
@@ -7439,6 +10210,7 @@
           "lines",
           "links",
           "fxRate",
+          "investment",
           "edited",
           "reconciled",
           "clearedAccountIds",
@@ -7966,6 +10738,47 @@
           "baseVersion"
         ]
       },
+      "UpdateHoldingBody": {
+        "type": "object",
+        "properties": {
+          "baseVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "The `version` the change started from."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "fund",
+              "pension",
+              "crypto",
+              "fixed_deposit",
+              "other"
+            ]
+          }
+        },
+        "required": [
+          "baseVersion"
+        ]
+      },
       "UpdateIncomeStreamBody": {
         "type": "object",
         "properties": {
@@ -8094,6 +10907,59 @@
               "active",
               "paused"
             ]
+          }
+        },
+        "required": [
+          "baseVersion"
+        ]
+      },
+      "UpdateReportDashboardBody": {
+        "type": "object",
+        "properties": {
+          "baseVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "The `version` the change started from."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "sortOrder": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "cards": {
+            "maxItems": 40,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportCard"
+            }
+          }
+        },
+        "required": [
+          "baseVersion"
+        ]
+      },
+      "UpdateSavedReportBody": {
+        "type": "object",
+        "properties": {
+          "baseVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "The `version` the change started from."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "spec": {
+            "$ref": "#/components/schemas/BuilderSpec"
           }
         },
         "required": [
@@ -8877,6 +11743,65 @@
           },
           "429": {
             "description": "Too many tries; wait `retryAfterSeconds`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/recheck/google": {
+      "post": {
+        "operationId": "recheckGoogle",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Confirm it's you with Google (accounts that have no password)",
+        "description": "Google-only accounts (no passwordHash) mark the session rechecked so sensitive actions can continue (PU-57).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
             "content": {
               "application/json": {
                 "schema": {
@@ -9892,6 +12817,178 @@
         }
       }
     },
+    "/v1/me/email/confirm": {
+      "post": {
+        "operationId": "confirmEmailChange",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Confirm the new email with the code from that address (PU-61)",
+        "description": "Email only changes after this succeeds. The old address gets a notice.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "email",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangedEmail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/email/request": {
+      "post": {
+        "operationId": "requestEmailChange",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Start changing email: send a 6-digit code to the new address (PU-61)",
+        "description": "Needs a recent re-check. An address already in use returns 409 email_in_use without saying why. The code goes to the NEW email.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/passkeys": {
       "post": {
         "operationId": "addPasskey",
@@ -10108,7 +13205,7 @@
         "tags": [
           "Security"
         ],
-        "summary": "Change the password; other devices are signed out",
+        "summary": "Change the password; other devices are signed out unless signOutOtherDevices is false",
         "security": [
           {
             "bearer": []
@@ -10141,6 +13238,10 @@
                     "type": "string",
                     "minLength": 10,
                     "maxLength": 200
+                  },
+                  "signOutOtherDevices": {
+                    "default": true,
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -10223,6 +13324,11 @@
                     "type": "string",
                     "minLength": 2,
                     "maxLength": 50000000
+                  },
+                  "workspaceName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
                   }
                 },
                 "required": [
@@ -14054,6 +17160,123 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/cash-flow": {
+      "get": {
+        "operationId": "getCashFlow",
+        "tags": [
+          "Cash flow"
+        ],
+        "summary": "Where money came from and where it went (DESIGN.md page 22)",
+        "description": "Income bands add up to Income and spending bands to Spent. Borrowed money is a grey source, never income; goals, debt payments and investments sit apart from spending.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "description": "YYYY-MM-DD in the workspace time zone."
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "description": "YYYY-MM-DD in the workspace time zone."
+            }
+          },
+          {
+            "name": "accountIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              }
+            }
+          },
+          {
+            "name": "includeTransfers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "false",
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashFlow"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/categories": {
       "get": {
         "operationId": "listCategories",
@@ -16451,9 +19674,9 @@
       "get": {
         "operationId": "listExchangeRates",
         "tags": [
-          "Exchange rates"
+          "Currencies"
         ],
-        "summary": "Hand-entered exchange rates",
+        "summary": "Exchange rates by currency and date, newest first (Settings › Currencies)",
         "security": [
           {
             "bearer": []
@@ -16470,6 +19693,15 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            }
           }
         ],
         "responses": {
@@ -16478,50 +19710,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rates": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "date": {
-                            "type": "string",
-                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                            "description": "YYYY-MM-DD in the workspace time zone."
-                          },
-                          "rate": {
-                            "type": "string"
-                          },
-                          "source": {
-                            "type": "string",
-                            "enum": [
-                              "manual",
-                              "download"
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "currency",
-                          "date",
-                          "rate",
-                          "source"
-                        ],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "rates"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/ExchangeRateList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -16548,12 +19747,12 @@
           }
         }
       },
-      "post": {
-        "operationId": "saveExchangeRate",
+      "put": {
+        "operationId": "setExchangeRate",
         "tags": [
-          "Exchange rates"
+          "Currencies"
         ],
-        "summary": "Save a rate for a currency and date (case 25)",
+        "summary": "Add a rate for a date; a second one for the same date replaces it",
         "security": [
           {
             "bearer": []
@@ -16587,74 +19786,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "currency": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 3
-                  },
-                  "date": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                    "description": "YYYY-MM-DD in the workspace time zone."
-                  },
-                  "rate": {
-                    "type": "string",
-                    "pattern": "^\\d+(\\.\\d{1,10})?$"
-                  },
-                  "source": {
-                    "default": "manual",
-                    "type": "string",
-                    "enum": [
-                      "manual",
-                      "download"
-                    ]
-                  }
-                },
-                "required": [
-                  "currency",
-                  "date",
-                  "rate"
-                ]
+                "$ref": "#/components/schemas/SetExchangeRateBody"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "currency": {
-                      "type": "string"
-                    },
-                    "date": {
-                      "type": "string",
-                      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                      "description": "YYYY-MM-DD in the workspace time zone."
-                    },
-                    "rate": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "currency",
-                    "date",
-                    "rate",
-                    "source"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/ExchangeRate"
                 }
               }
             }
@@ -16671,6 +19814,117 @@
           },
           "401": {
             "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/exchange-rates/{currency}/{date}": {
+      "delete": {
+        "operationId": "deleteExchangeRate",
+        "tags": [
+          "Currencies"
+        ],
+        "summary": "Remove a rate",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            }
+          },
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "description": "YYYY-MM-DD in the workspace time zone."
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
             "content": {
               "application/json": {
                 "schema": {
@@ -17622,6 +20876,185 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/health-settings": {
+      "put": {
+        "operationId": "setHealthSettings",
+        "tags": [
+          "Health"
+        ],
+        "summary": "Which accounts count as cash, the emergency target, and investments in runway",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HealthSettings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/health/{month}": {
+      "get": {
+        "operationId": "getFinancialHealth",
+        "tags": [
+          "Health"
+        ],
+        "summary": "Financial health for a month (DESIGN.md page 23)",
+        "description": "The score needs three pillars with data and 60 days of history; until then `ready` is false and `missing` says why. Advice is chosen by rules (TECH-SPEC 6.10).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "description": "YYYY-MM."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
             "content": {
               "application/json": {
                 "schema": {
@@ -19121,19 +22554,20 @@
         }
       }
     },
-    "/v1/workspaces/{workspaceId}/investments/buy": {
-      "post": {
-        "operationId": "buyHolding",
+    "/v1/workspaces/{workspaceId}/investments": {
+      "get": {
+        "operationId": "getPortfolio",
         "tags": [
           "Investments"
         ],
-        "summary": "E20 buy at cost",
+        "summary": "Portfolio: value, gains, dividends and every holding (DESIGN.md page 17)",
+        "description": "Buys are not spending and price rises are not income (M14, M17). Buy, sell and dividends are posted through createTransaction with types investment_buy, investment_sell and dividend.",
         "security": [
           {
             "bearer": []
           }
         ],
-        "x-min-role": "editor",
+        "x-min-role": "viewer",
         "parameters": [
           {
             "name": "workspaceId",
@@ -19146,231 +22580,37 @@
             }
           },
           {
-            "name": "X-Operation-Id",
-            "in": "header",
-            "required": true,
-            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "name": "range",
+            "in": "query",
+            "required": false,
             "schema": {
+              "default": "1Y",
               "type": "string",
-              "format": "uuid"
+              "enum": [
+                "1M",
+                "3M",
+                "1Y",
+                "All"
+              ]
+            }
+          },
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": false,
+              "type": "boolean"
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "holdingId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "units": {
-                    "type": "string"
-                  },
-                  "pricePerUnit": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  },
-                  "fees": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  },
-                  "cashAccountId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "date": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                    "description": "YYYY-MM-DD in the workspace time zone."
-                  },
-                  "operationId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  }
-                },
-                "required": [
-                  "holdingId",
-                  "units",
-                  "pricePerUnit",
-                  "cashAccountId",
-                  "date"
-                ]
-              }
-            }
-          }
-        },
         "responses": {
-          "201": {
-            "description": "Created",
+          "200": {
+            "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "transactionId": {
-                      "type": "string"
-                    },
-                    "lotId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "transactionId",
-                    "lotId"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in, or the details are wrong",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found, or not in a workspace you belong to",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workspaces/{workspaceId}/investments/dividend": {
-      "post": {
-        "operationId": "recordDividend",
-        "tags": [
-          "Investments"
-        ],
-        "summary": "E22 dividend or reinvested dividend",
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "x-min-role": "editor",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          },
-          {
-            "name": "X-Operation-Id",
-            "in": "header",
-            "required": true,
-            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "holdingId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "amount": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  },
-                  "date": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                    "description": "YYYY-MM-DD in the workspace time zone."
-                  },
-                  "cashAccountId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "reinvested": {
-                    "default": false,
-                    "type": "boolean"
-                  },
-                  "units": {
-                    "type": "string"
-                  },
-                  "pricePerUnit": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  },
-                  "operationId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  }
-                },
-                "required": [
-                  "holdingId",
-                  "amount",
-                  "date",
-                  "cashAccountId"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "transactionId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "transactionId"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/Portfolio"
                 }
               }
             }
@@ -19409,69 +22649,12 @@
       }
     },
     "/v1/workspaces/{workspaceId}/investments/holdings": {
-      "get": {
-        "operationId": "listHoldings",
-        "tags": [
-          "Investments"
-        ],
-        "summary": "Holdings in the workspace",
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "x-min-role": "viewer",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HoldingList"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in, or the details are wrong",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found, or not in a workspace you belong to",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      },
       "post": {
         "operationId": "createHolding",
         "tags": [
           "Investments"
         ],
-        "summary": "Add a holding (no money moves)",
+        "summary": "Add a holding",
         "security": [
           {
             "bearer": []
@@ -19505,54 +22688,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 60
-                  },
-                  "symbol": {
-                    "type": "string",
-                    "maxLength": 20
-                  },
-                  "type": {
-                    "default": "stock",
-                    "type": "string",
-                    "enum": [
-                      "stock",
-                      "fund",
-                      "pension",
-                      "crypto",
-                      "fixed_deposit",
-                      "other"
-                    ]
-                  },
-                  "accountId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "currency": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 3
-                  },
-                  "currentPrice": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  }
-                },
-                "required": [
-                  "name",
-                  "accountId"
-                ]
+                "$ref": "#/components/schemas/CreateHoldingBody"
               }
             }
           }
@@ -19588,6 +22724,16 @@
               }
             }
           },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found, or not in a workspace you belong to",
             "content": {
@@ -19601,13 +22747,13 @@
         }
       }
     },
-    "/v1/workspaces/{workspaceId}/investments/holdings/{holdingId}/lots": {
+    "/v1/workspaces/{workspaceId}/investments/holdings/{holdingId}": {
       "get": {
-        "operationId": "listLots",
+        "operationId": "getHolding",
         "tags": [
           "Investments"
         ],
-        "summary": "Lots for a holding (FIFO order)",
+        "summary": "One holding: lots, trades, dividends and prices (DESIGN.md page 18)",
         "security": [
           {
             "bearer": []
@@ -19634,6 +22780,21 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "1Y",
+              "type": "string",
+              "enum": [
+                "1M",
+                "3M",
+                "1Y",
+                "All"
+              ]
+            }
           }
         ],
         "responses": {
@@ -19642,19 +22803,17 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "lots": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/HoldingLot"
-                      }
-                    }
-                  },
-                  "required": [
-                    "lots"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/HoldingDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -19680,21 +22839,19 @@
             }
           }
         }
-      }
-    },
-    "/v1/workspaces/{workspaceId}/investments/holdings/{holdingId}/prices": {
-      "get": {
-        "operationId": "listPrices",
+      },
+      "patch": {
+        "operationId": "updateHolding",
         "tags": [
           "Investments"
         ],
-        "summary": "Price history for a holding",
+        "summary": "Rename a holding or change its symbol or type",
         "security": [
           {
             "bearer": []
           }
         ],
-        "x-min-role": "viewer",
+        "x-min-role": "editor",
         "parameters": [
           {
             "name": "workspaceId",
@@ -19715,6 +22872,134 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHoldingBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Holding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteHolding",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Remove a holding with no units left",
+        "description": "Its history stays. A holding with units is refused: sell them first.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "holdingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -19723,25 +23008,145 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "prices": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/HoldingPrice"
-                      }
-                    }
-                  },
-                  "required": [
-                    "prices"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/Holding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
           },
           "401": {
             "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/holdings/{holdingId}/prices/{date}": {
+      "delete": {
+        "operationId": "deleteHoldingPrice",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Remove a price from the price history",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "holdingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+              "description": "YYYY-MM-DD in the workspace time zone."
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
             "content": {
               "application/json": {
                 "schema": {
@@ -19764,12 +23169,13 @@
       }
     },
     "/v1/workspaces/{workspaceId}/investments/prices": {
-      "post": {
-        "operationId": "savePrices",
+      "put": {
+        "operationId": "setHoldingPrices",
         "tags": [
           "Investments"
         ],
-        "summary": "Update holding prices (not income)",
+        "summary": "Update prices: one price per holding for a date (P17-04)",
+        "description": "Entering a price again for the same date replaces it. Prices are not ledger events (M17).",
         "security": [
           {
             "bearer": []
@@ -19803,40 +23209,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "date": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                    "description": "YYYY-MM-DD in the workspace time zone."
-                  },
-                  "prices": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "holdingId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                        },
-                        "price": {
-                          "type": "string",
-                          "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                          "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                        }
-                      },
-                      "required": [
-                        "holdingId",
-                        "price"
-                      ]
-                    }
-                  }
-                },
-                "required": [
-                  "date",
-                  "prices"
-                ]
+                "$ref": "#/components/schemas/SetPricesBody"
               }
             }
           }
@@ -19847,18 +23220,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "saved": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
-                    }
-                  },
-                  "required": [
-                    "saved"
-                  ],
-                  "additionalProperties": false
+                  "$ref": "#/components/schemas/SetPricesResult"
                 }
               }
             }
@@ -19883,152 +23245,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not found, or not in a workspace you belong to",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workspaces/{workspaceId}/investments/sell": {
-      "post": {
-        "operationId": "sellHolding",
-        "tags": [
-          "Investments"
-        ],
-        "summary": "E21 sell (FIFO or chosen lots)",
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "x-min-role": "editor",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          },
-          {
-            "name": "X-Operation-Id",
-            "in": "header",
-            "required": true,
-            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "holdingId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "units": {
-                    "type": "string"
-                  },
-                  "pricePerUnit": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  },
-                  "fees": {
-                    "type": "string",
-                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                  },
-                  "cashAccountId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "date": {
-                    "type": "string",
-                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                    "description": "YYYY-MM-DD in the workspace time zone."
-                  },
-                  "lotIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    }
-                  },
-                  "operationId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  }
-                },
-                "required": [
-                  "holdingId",
-                  "units",
-                  "pricePerUnit",
-                  "cashAccountId",
-                  "date"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "transactionId": {
-                      "type": "string"
-                    },
-                    "gain": {
-                      "type": "string",
-                      "pattern": "^-?(0|[1-9]\\d{0,17})$",
-                      "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
-                    }
-                  },
-                  "required": [
-                    "transactionId",
-                    "gain"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in, or the details are wrong",
+          "403": {
+            "description": "Not allowed",
             "content": {
               "application/json": {
                 "schema": {
@@ -21995,6 +25213,816 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/reports/dashboards": {
+      "get": {
+        "operationId": "listReportDashboards",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Report dashboards; Overview and Year in review are made the first time",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDashboardList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createReportDashboard",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Make a new dashboard",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReportDashboardBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDashboard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/reports/dashboards/{dashboardId}": {
+      "patch": {
+        "operationId": "updateReportDashboard",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Rename, or change its cards and layout",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReportDashboardBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportDashboard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteReportDashboard",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Delete a dashboard",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/reports/run": {
+      "post": {
+        "operationId": "runReport",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Run a report: its table, which is also its chart, and what it found",
+        "description": "Read-only, so it takes no operation id. Every report reads the event type, not the sign (DESIGN.md 9.2).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunReportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/reports/saved": {
+      "get": {
+        "operationId": "listSavedReports",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Reports made in the builder",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReportList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSavedReport",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Save a builder report with a name (P21-03)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSavedReportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/reports/saved/{reportId}": {
+      "patch": {
+        "operationId": "updateSavedReport",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Change a saved report",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSavedReportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSavedReport",
+        "tags": [
+          "Reports"
+        ],
+        "summary": "Delete a saved report",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
             "content": {
               "application/json": {
                 "schema": {
