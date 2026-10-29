@@ -9,6 +9,8 @@ import type { Database } from '../../db/client.js';
 import type { AuditRepository } from '../audit/audit.repository.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
+import type { UsersRepository } from '../auth/auth.repository.js';
+import type { Mailer } from '../notifications/email/email.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import { scheduleRoutes as scheduleRouteDefs } from './schedules.contract.js';
 import type { Occurrence, PlanMonthSummary, RecurringCandidate, Schedule } from './schedules.contract.js';
@@ -69,6 +71,8 @@ export class SchedulesService {
     private readonly transactions: TransactionsService,
     private readonly audit: AuditRepository,
     private readonly notifications: NotificationsService,
+    private readonly mailer: Mailer | null = null,
+    private readonly users: UsersRepository | null = null,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -442,7 +446,7 @@ export class SchedulesService {
           if (fireOn !== input.localDate) continue;
           const kind = s.kind === 'income' ? 'income' : 'bill';
           const copy = reminderCopy(s.name, occ.date, daysBefore);
-          await this.notifications.createOnce(ctx, {
+          const { created } = await this.notifications.createOnceDetailed(ctx, {
             userId: input.ownerUserId,
             kind,
             title: copy.title,
@@ -462,6 +466,11 @@ export class SchedulesService {
               { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
             ],
           });
+          // B2.8: email the owner once when the inbox row is first created.
+          if (created && this.mailer && this.users) {
+            const user = await this.users.byId(input.ownerUserId);
+            if (user?.email) await this.mailer.billReminder(user.email, copy.title, copy.body);
+          }
         }
       }
     }

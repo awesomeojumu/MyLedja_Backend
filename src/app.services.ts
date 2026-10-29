@@ -208,6 +208,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     now,
   );
   const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
+  const users = new UsersRepository(db);
   const schedules = new SchedulesService(
     database,
     new SchedulesRepository(db),
@@ -216,6 +217,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     transactions,
     audit,
     notifications,
+    mailer,
+    users,
     now,
   );
   const debts = new DebtsService(
@@ -297,7 +300,6 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const codes = new CodesRepository(db);
   const limits = new RateLimitRepository(db, now);
   const idempotency = new IdempotencyRepository(db);
-  const users = new UsersRepository(db);
   const hasher = new PasswordHasher(o.hasher ?? DEFAULT_HASHER);
   const auth = new AuthService(
     config,

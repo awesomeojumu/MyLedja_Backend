@@ -126,10 +126,20 @@ export class NotificationsService {
 
   /** Creates a notification once per dedupeKey (B2.8: each type created once). */
   async createOnce(ctx: WorkspaceContext, input: CreateInput, session?: ClientSession) {
+    const { doc } = await this.createOnceDetailed(ctx, input, session);
+    return doc;
+  }
+
+  /** Same as `createOnce`, plus whether this call inserted a new row (for email/push side-effects). */
+  async createOnceDetailed(
+    ctx: WorkspaceContext,
+    input: CreateInput,
+    session?: ClientSession,
+  ): Promise<{ doc: NotificationDoc; created: boolean }> {
     const run = async (s: ClientSession) => {
       if (input.dedupeKey) {
         const same = await this.repo.byDedupe(ctx, input.userId, input.dedupeKey, { session: s });
-        if (same) return same;
+        if (same) return { doc: same, created: false };
       }
       const now = this.now();
       const doc = await this.repo.insertOne(
@@ -153,7 +163,7 @@ export class NotificationsService {
         { session: s },
       );
       await this.ledger.feed(ctx, [{ collection: 'notifications', docId: doc._id, op: 'upsert' }], s);
-      return doc;
+      return { doc, created: true };
     };
     if (session) return run(session);
     return this.database.transaction(run);
