@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { defineRoute } from '../../common/http/contract.js';
+import { LocalDate, Uuid } from '../../common/http/schemas.js';
 import { WorkspaceParams } from '../workspaces/workspaces.contract.js';
 
 /** Settings › Import and export: CSV export, full backup, restore, delete account (build plan B3.6, B3.7). */
@@ -14,6 +15,27 @@ export const ExportFile = z
     content: z.string().meta({ description: 'The whole file as text, for the app to save.' }),
   })
   .meta({ id: 'ExportFile' });
+
+export const ExportCsvColumn = z.enum([
+  'date',
+  'type',
+  'account',
+  'category',
+  'payee',
+  'amount',
+  'currency',
+  'notes',
+  'status',
+]);
+
+export const ExportCsvBody = z
+  .object({
+    from: LocalDate.optional(),
+    to: LocalDate.optional(),
+    accountIds: z.array(Uuid).max(50).optional(),
+    columns: z.array(ExportCsvColumn).min(1).max(20).optional(),
+  })
+  .meta({ id: 'ExportCsvBody' });
 
 const BackupContent = z.object({ content: z.string().min(2).max(50_000_000) });
 const RestoreBody = BackupContent.extend({
@@ -48,13 +70,15 @@ export const exportRoutes = {
     method: 'POST',
     path: '/v1/workspaces/:workspaceId/exports/transactions',
     tag,
-    summary: 'Export every transaction as CSV (asks again)',
-    description: 'Cells that start with =, +, - or @ are made safe for spreadsheets.',
+    summary: 'Export transactions as CSV (asks again)',
+    description:
+      'Optional body filters by date range, accounts and columns. Cells that start with =, +, - or @ are made safe for spreadsheets.',
     access: { kind: 'workspace', minRole: 'viewer' },
     params: WorkspaceParams,
+    body: ExportCsvBody.optional().default({}),
     status: 200,
     response: ExportFile,
-    errors: [401, 403, 404],
+    errors: [400, 401, 403, 404],
   }),
   backup: defineRoute({
     name: 'createBackup',

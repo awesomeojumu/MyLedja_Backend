@@ -88,14 +88,42 @@ export class ExportsService {
     private readonly now: () => Date = () => new Date(),
   ) {}
 
-  async exportCsv(ctx: WorkspaceContext, sessionId: string) {
+  async exportCsv(
+    ctx: WorkspaceContext,
+    sessionId: string,
+    body: { from?: string; to?: string; accountIds?: string[]; columns?: string[] } = {},
+  ) {
     await this.security.requireRecent(sessionId);
     const data = await this.repo.dumpWorkspace(ctx.workspaceId);
     const accounts = new Map((data.ledger_accounts ?? []).map((a) => [String(a._id), a]));
     const categories = new Map((data.categories ?? []).map((c) => [String(c._id), String(c.name)]));
     const payees = new Map((data.payees ?? []).map((p) => [String(p._id), String(p.name)]));
-    const rows = [['Date', 'Type', 'Account', 'Category', 'Payee', 'Amount', 'Currency', 'Notes', 'Status']];
-    const txs = [...(data.transactions ?? [])].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const colKeys = body.columns?.length
+      ? body.columns
+      : (['date', 'type', 'account', 'category', 'payee', 'amount', 'currency', 'notes', 'status'] as const);
+    const headers: Record<string, string> = {
+      date: 'Date',
+      type: 'Type',
+      account: 'Account',
+      category: 'Category',
+      payee: 'Payee',
+      amount: 'Amount',
+      currency: 'Currency',
+      notes: 'Notes',
+      status: 'Status',
+    };
+    const rows = [colKeys.map((k) => headers[k] ?? k)];
+    const accountFilter = body.accountIds?.length ? new Set(body.accountIds) : null;
+    const txs = [...(data.transactions ?? [])]
+      .filter((tx) => {
+        const date = String(tx.date);
+        if (body.from && date < body.from) return false;
+        if (body.to && date > body.to) return false;
+        if (!accountFilter) return true;
+        const lines = (tx.lines as Document[]) ?? [];
+        return lines.some((l) => accountFilter.has(String(l.ledgerAccountId)));
+      })
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
     for (const tx of txs) {
       const lines = (tx.lines as Document[]) ?? [];
       const real = lines.filter((l) => accounts.get(String(l.ledgerAccountId))?.accountType);
@@ -103,17 +131,18 @@ export class ExportsService {
       const cats = [
         ...new Set(lines.map((l) => (l.categoryId ? categories.get(String(l.categoryId)) : undefined)).filter(Boolean)),
       ];
-      rows.push([
-        String(tx.date),
-        String(tx.type),
-        real.map((l) => String(accounts.get(String(l.ledgerAccountId))?.name ?? '')).join(' → '),
-        cats.join(' + '),
-        tx.payeeId ? (payees.get(String(tx.payeeId)) ?? '') : '',
-        minorToText(amount),
-        String(lines[0]?.currency ?? 'NGN'),
-        String(tx.notes ?? ''),
-        String(tx.status),
-      ]);
+      const cells: Record<string, string> = {
+        date: String(tx.date),
+        type: String(tx.type),
+        account: real.map((l) => String(accounts.get(String(l.ledgerAccountId))?.name ?? '')).join(' → '),
+        category: cats.join(' + '),
+        payee: tx.payeeId ? (payees.get(String(tx.payeeId)) ?? '') : '',
+        amount: minorToText(amount),
+        currency: String(lines[0]?.currency ?? 'NGN'),
+        notes: String(tx.notes ?? ''),
+        status: String(tx.status),
+      };
+      rows.push(colKeys.map((k) => cells[k] ?? ''));
     }
     await this.audit.record(ctx, { action: 'export.csv', target: { collection: 'workspaces', id: ctx.workspaceId } });
     const day = this.now().toISOString().slice(0, 10);

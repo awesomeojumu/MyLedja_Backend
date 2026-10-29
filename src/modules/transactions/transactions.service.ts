@@ -403,15 +403,40 @@ export class TransactionsService {
         });
         return { transactionId: id, status: 'changed', transaction: await this.viewOf(ctx, event), error: null };
       }
+      case 'set_account': {
+        const accounts = await this.accountMap(ctx, [before]);
+        const input = inputOf(before, (x) => accounts.get(x) ?? null);
+        if (!input || input.type === 'transfer' || !('accountId' in input)) {
+          throw new AppError(400, 'not_movable', "This transaction's account can't be bulk-changed.");
+        }
+        if (input.accountId === action.accountId) {
+          return { transactionId: id, status: 'unchanged', transaction: await this.viewOf(ctx, before), error: null };
+        }
+        const next = { ...input, accountId: action.accountId } as EventInput;
+        const { event } = await this.ledger.correct(ctx, id, next, {
+          operationId,
+          baseVersion: before.version,
+        });
+        return { transactionId: id, status: 'changed', transaction: await this.viewOf(ctx, event), error: null };
+      }
     }
   }
 
   private async matchFilter(ctx: WorkspaceContext, q: z.output<typeof TransactionQuery>) {
     const filter: Record<string, unknown> = {};
     const and: Record<string, unknown>[] = [];
-    if (q.status === 'live') {
+    const liveLike = q.status === 'live' || q.status === 'posted' || q.status === 'pending' || q.status === 'waiting';
+    if (liveLike) {
       filter.status = 'posted';
       filter.type = { $ne: 'reversal' };
+    }
+    if (q.status === 'pending') {
+      // Uncleared bank/import rows (clearedAccountIds empty, importId set).
+      and.push({ importId: { $ne: null }, clearedAccountIds: { $size: 0 } });
+    }
+    if (q.status === 'waiting') {
+      // Offline waiting is client-side; server has nothing in that queue.
+      and.push({ _id: { $exists: false } });
     }
     if (q.from || q.to) {
       filter.date = {
@@ -424,8 +449,20 @@ export class TransactionsService {
     if (q.payeeId?.length) filter.payeeId = { $in: q.payeeId };
     if (q.tagId?.length) filter.tagIds = { $in: q.tagId };
     if (q.type?.length) {
-      const types = q.status === 'live' ? q.type.filter((t) => t !== 'reversal') : q.type;
+      const types = liveLike ? q.type.filter((t) => t !== 'reversal') : q.type;
       filter.type = { $in: types };
+    }
+    if (q.hasReceipt === 'true') {
+      and.push({
+        $or: [
+          { 'receiptFileIds.0': { $exists: true } },
+          { notes: /^receipt:/i },
+          { notes: /^https?:\/\//i },
+        ],
+      });
+    }
+    if (q.edited === 'true') {
+      and.push({ 'links.correctionOf': { $ne: null } });
     }
     if (q.uncategorized === 'true') {
       const starters = await this.categories.find(ctx, {

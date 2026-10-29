@@ -28,6 +28,7 @@ import { BankingController } from './modules/banking/banking.controller.js';
 import { InvestmentsController } from './modules/investments/investments.controller.js';
 import { CurrenciesController } from './modules/currencies/currencies.controller.js';
 import { ReportsController } from './modules/reports/reports.controller.js';
+import { FilesController } from './modules/files/files.controller.js';
 
 @Module({})
 export class AppModule {
@@ -57,6 +58,7 @@ export class AppModule {
         SyncController,
         SecurityController,
         ExportsController,
+        FilesController,
         AiController,
         RulesController,
         BankingController,

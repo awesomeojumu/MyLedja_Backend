@@ -94,13 +94,18 @@ export const TransactionQuery = z.object({
   tagId: csv(Uuid).optional(),
   type: csv(z.enum(EVENT_TYPES)).optional(),
   status: z
-    .enum(['live', 'all'])
+    .enum(['live', 'all', 'posted', 'pending', 'waiting'])
     .default('live')
-    .meta({ description: '"live" hides reversals and replaced versions.' }),
+    .meta({
+      description:
+        '"live"/"posted" hide reversals and replaced versions; "pending" is uncleared bank/import rows; "waiting" is reserved for the client offline queue (server returns none); "all" includes history.',
+    }),
   minAmount: MinorAmount.optional().meta({ description: 'On the size of the headline amount.' }),
   maxAmount: MinorAmount.optional(),
   q: z.string().trim().max(100).optional().meta({ description: 'Payee, note, category name or amount.' }),
   uncategorized: z.enum(['true', 'false']).optional(),
+  hasReceipt: z.enum(['true', 'false']).optional().meta({ description: 'Only rows with receiptFileIds or a receipt note.' }),
+  edited: z.enum(['true', 'false']).optional().meta({ description: 'Only corrected (edited) versions.' }),
   ...PageQuery,
 });
 
@@ -128,6 +133,7 @@ export const BulkBody = z.object({
     z.object({ kind: z.literal('add_tag'), tagId: Uuid }),
     z.object({ kind: z.literal('remove_tag'), tagId: Uuid }),
     z.object({ kind: z.literal('set_payee'), payeeId: Uuid.nullable() }),
+    z.object({ kind: z.literal('set_account'), accountId: Uuid }),
     z.object({ kind: z.literal('delete') }),
   ]),
 });
@@ -256,8 +262,8 @@ export const transactionRoutes = {
     method: 'POST',
     path: `${base}/bulk`,
     tag,
-    summary: 'Categorize, tag, set payee or delete many at once',
-    description: 'Categorizing saves each as a correction. Each transaction answers on its own.',
+    summary: 'Categorize, tag, set payee or account, or delete many at once',
+    description: 'Categorizing and set_account save each as a correction. Each transaction answers on its own.',
     access: editor,
     params: WorkspaceParams,
     body: BulkBody,
