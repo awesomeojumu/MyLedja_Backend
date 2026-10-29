@@ -1213,7 +1213,10 @@
       ],
       "budget": {
         "style": "envelope",
-        "months": ["2026-10", "2026-11"],
+        "months": [
+          "2026-10",
+          "2026-11"
+        ],
         "assigned": {
           "2026-10": {
             "food": "9000000"
@@ -1343,7 +1346,9 @@
           "usd": "12000"
         },
         "netWorth": "18600000",
-        "partialWithoutRate": ["USD"]
+        "partialWithoutRate": [
+          "USD"
+        ]
       }
     },
     {
