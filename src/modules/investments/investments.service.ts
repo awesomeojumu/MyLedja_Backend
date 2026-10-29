@@ -25,9 +25,7 @@ export class InvestmentsService {
           if (total <= 0) return s;
           return s + (BigInt(l.costMinor) * BigInt(Math.round(open * 1e6))) / BigInt(Math.round(total * 1e6));
         }, 0n);
-        const priceRow = prices
-          .filter((p) => p.holdingId === h._id)
-          .sort((a, b) => b.date.localeCompare(a.date))[0];
+        const priceRow = prices.filter((p) => p.holdingId === h._id).sort((a, b) => b.date.localeCompare(a.date))[0];
         const price = priceRow ? BigInt(priceRow.priceMinor) : null;
         const value = price !== null ? costOfPurchase(String(units), price.toString(), '0') : cost;
         return {
@@ -321,7 +319,10 @@ export class InvestmentsService {
     };
   }
 
-  async saveRate(ctx: WorkspaceContext, body: { currency: string; date: string; rate: string; source?: 'manual' | 'download' }) {
+  async saveRate(
+    ctx: WorkspaceContext,
+    body: { currency: string; date: string; rate: string; source?: 'manual' | 'download' },
+  ) {
     const now = new Date();
     const id = uuidv7();
     await this.repo.rates.updateOne(

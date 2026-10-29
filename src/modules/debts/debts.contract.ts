@@ -221,7 +221,9 @@ export const debtRoutes = {
         overpayment: z
           .enum(['gift', 'credit'])
           .optional()
-          .meta({ description: 'TECH-SPEC 6.9: when principal exceeds outstanding, gift (income/expense) or keep as credit.' }),
+          .meta({
+            description: 'TECH-SPEC 6.9: when principal exceeds outstanding, gift (income/expense) or keep as credit.',
+          }),
       })
       .meta({ id: 'RecordDebtPaymentBody' }),
     status: 201,
