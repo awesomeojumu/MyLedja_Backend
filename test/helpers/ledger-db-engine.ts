@@ -11,6 +11,8 @@ const asEvent = (e: TransactionDoc): EngineEvent => ({
   status: e.status,
   date: e.date,
   lines: e.lines,
+  holdingId: e.links.holdingId ?? null,
+  investment: e.investment ?? null,
 });
 
 /** A fresh person and workspace with the cases' accounts and categories, posting through the real ledger. */
@@ -25,8 +27,9 @@ export async function dbEngine(t: TestApp, file: CasesFile): Promise<Engine & { 
       kind: a.kind as 'asset' | 'liability',
       accountType: (a.personDebt ? 'other_asset' : a.accountType) as never,
       name: a.name,
-      currency: file.currency,
+      currency: a.currency ?? file.currency,
       personDebt: a.personDebt ?? null,
+      holdingOf: a.holdingOf ? realIds.get(a.holdingOf)! : null,
     });
     realIds.set(a.key, doc._id);
     ledgerIds.set(a.key, doc._id);

@@ -32,6 +32,12 @@ import { incomeRoutes } from '../income/income.contract.js';
 import type { CountersRepository } from '../workspaces/workspaces.repository.js';
 import { RuleBody } from '../rules/rules.contract.js';
 import type { RulesService } from '../rules/rules.service.js';
+import { CreateHoldingBody, SetPricesBody, UpdateHoldingBody } from '../investments/investments.contract.js';
+import type { InvestmentsService } from '../investments/investments.service.js';
+import type { CurrenciesService } from '../currencies/currencies.service.js';
+import type { ReportsService } from '../reports/reports.service.js';
+import { reportRoutes } from '../reports/reports.contract.js';
+import { SetExchangeRateBody } from '../currencies/currencies.contract.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
 const PREVIOUS_SCHEMA_VERSION = 0;
@@ -61,6 +67,9 @@ type PullQuery = { since: string; limit: number };
 export class SyncService {
   /** Set after construction, like transactions.onUnlock, to keep the constructor's order stable. */
   rules!: RulesService;
+  investments!: InvestmentsService;
+  currencies!: CurrenciesService;
+  reports!: ReportsService;
 
   constructor(
     private readonly counters: CountersRepository,
@@ -378,6 +387,71 @@ export class SyncService {
         if (!targetId) throw Errors.validation('targetId', 'Choose the rule to delete.');
         return { result: await this.rules.remove(ctx, targetId), duplicate: false };
       }
+      case 'holding.create': {
+        const body = CreateHoldingBody.parse(payload);
+        return { result: await this.investments.create(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'holding.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the holding to update.');
+        const body = UpdateHoldingBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.investments.update(ctx, targetId, body), duplicate: false };
+      }
+      case 'holding.prices': {
+        return { result: await this.investments.setPrices(ctx, SetPricesBody.parse(payload)), duplicate: false };
+      }
+      case 'holding.archive': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the holding to remove.');
+        return { result: await this.investments.archive(ctx, targetId), duplicate: false };
+      }
+      case 'holding.price.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the holding.');
+        const date = z.string().parse(payload.date);
+        await this.investments.deletePrice(ctx, targetId, date);
+        return { result: null, duplicate: false };
+      }
+      case 'exchange_rate.delete': {
+        const body = SetExchangeRateBody.pick({ currency: true, date: true }).parse(payload);
+        await this.currencies.remove(ctx, body.currency, body.date);
+        return { result: null, duplicate: false };
+      }
+      case 'exchange_rate.set': {
+        const body = SetExchangeRateBody.parse(payload);
+        return { result: await this.currencies.set(ctx, body), duplicate: false };
+      }
+      case 'report_dashboard.create': {
+        const body = reportRoutes.createDashboard.body!.parse(payload);
+        return { result: await this.reports.createDashboard(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'report_dashboard.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the dashboard to update.');
+        const body = reportRoutes.updateDashboard.body!.parse({
+          ...payload,
+          baseVersion: baseVersion ?? payload.baseVersion,
+        });
+        return { result: await this.reports.updateDashboard(ctx, targetId, body), duplicate: false };
+      }
+      case 'report_dashboard.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the dashboard to delete.');
+        await this.reports.deleteDashboard(ctx, targetId);
+        return { result: null, duplicate: false };
+      }
+      case 'saved_report.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the report to delete.');
+        await this.reports.deleteSaved(ctx, targetId);
+        return { result: null, duplicate: false };
+      }
+      case 'saved_report.create': {
+        const body = reportRoutes.createSaved.body!.parse(payload);
+        return { result: await this.reports.createSaved(ctx, body, op.operationId), duplicate: false };
+      }
+      case 'saved_report.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the report to update.');
+        const body = reportRoutes.updateSaved.body!.parse({
+          ...payload,
+          baseVersion: baseVersion ?? payload.baseVersion,
+        });
+        return { result: await this.reports.updateSaved(ctx, targetId, body), duplicate: false };
+      }
       default: {
         const _exhaustive: never = op.type;
         throw Errors.validation('type', `Unknown operation type: ${_exhaustive}`);
@@ -443,6 +517,16 @@ export class SyncService {
           }
         case 'rules':
           return await this.rules.get(ctx, row.docId).catch(() => null);
+        case 'holdings':
+          return await this.investments.getHolding(ctx, row.docId).catch(() => null);
+        case 'prices':
+          return await this.investments.getPrice(ctx, row.docId);
+        case 'exchange_rates':
+          return await this.currencies.get(ctx, row.docId);
+        case 'report_dashboards':
+          return await this.reports.getDashboard(ctx, row.docId);
+        case 'saved_reports':
+          return await this.reports.getSaved(ctx, row.docId);
         case 'income_streams':
           try {
             return await this.income.getStreamDoc(ctx, row.docId);

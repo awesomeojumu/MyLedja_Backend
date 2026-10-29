@@ -19,6 +19,8 @@ export function inputOf(e: TransactionDoc, accountOf: (id: string) => AccountRef
   };
   const real = e.lines.filter((l) => isReal(accountOf(l.ledgerAccountId)));
   const cats = e.lines.filter((l) => !isReal(accountOf(l.ledgerAccountId)) && l.categoryId);
+  // Investment events carry units and lots; they're changed by deleting and recording again.
+  if (e.investment) return null;
   switch (e.type) {
     case 'income':
       return {
@@ -85,6 +87,8 @@ export function inputOf(e: TransactionDoc, accountOf: (id: string) => AccountRef
     case 'collect':
     case 'write_off':
     case 'salary_gross':
+    case 'investment_buy':
+    case 'investment_sell':
       return null;
   }
 }
