@@ -506,6 +506,10 @@ export class LedgerService {
         realIds.add(input.accountId).add(input.pensionAccountId).add(input.nhfAccountId);
         categoryIds.add(input.categoryId);
         break;
+      case 'investment_buy':
+      case 'investment_sell':
+        realIds.add(input.holdingAccountId).add(input.cashAccountId);
+        break;
     }
     // One session can run only one operation at a time, so these run in turn.
     const reals = await this.accounts.byIds(ctx, [...realIds], { session });
