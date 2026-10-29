@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { defineRoute } from '../../common/http/contract.js';
-import { Uuid } from '../../common/http/schemas.js';
+import { Email, Uuid } from '../../common/http/schemas.js';
 import { NewPassword, SessionResponse } from '../auth/auth.contract.js';
 import { WorkspaceParams } from '../workspaces/workspaces.contract.js';
 
@@ -105,7 +105,20 @@ export const DeviceSession = z
   })
   .meta({ id: 'DeviceSession' });
 
-export const ChangePasswordBody = z.object({ currentPassword: z.string().max(200), newPassword: NewPassword });
+export const ChangePasswordBody = z.object({
+  currentPassword: z.string().max(200),
+  newPassword: NewPassword,
+  /** When false, other devices stay signed in. Default true (FE may send it). */
+  signOutOtherDevices: z.boolean().default(true),
+});
+
+const EmailCode = z.string({ error: 'Enter the 6-digit code from the email' }).regex(/^\d{6}$/, {
+  error: 'Enter the 6-digit code from the email',
+});
+
+export const ChangeEmailRequestBody = z.object({ email: Email });
+export const ChangeEmailConfirmBody = z.object({ email: Email, code: EmailCode });
+export const ChangedEmail = z.object({ email: z.string() }).meta({ id: 'ChangedEmail' });
 
 export const ActivityEvent = z
   .object({
@@ -184,6 +197,19 @@ export const securityRoutes = {
     status: 200,
     response: PasskeyOptions,
     errors: [401, 404],
+  }),
+  recheckGoogle: defineRoute({
+    name: 'recheckGoogle',
+    method: 'POST',
+    path: '/v1/auth/recheck/google',
+    tag,
+    summary: "Confirm it's you with Google (accounts that have no password)",
+    description:
+      'Google-only accounts (no passwordHash) mark the session rechecked so sensitive actions can continue (PU-57).',
+    access: { kind: 'user' },
+    status: 200,
+    response: SecurityStatus,
+    errors: [400, 401],
   }),
   status: defineRoute({
     name: 'getSecurity',
@@ -304,12 +330,39 @@ export const securityRoutes = {
     method: 'POST',
     path: '/v1/me/password',
     tag,
-    summary: 'Change the password; other devices are signed out',
+    summary: 'Change the password; other devices are signed out unless signOutOtherDevices is false',
     access: { kind: 'user' },
     body: ChangePasswordBody,
     status: 204,
     response: null,
     errors: [400, 401, 429],
+  }),
+  requestEmailChange: defineRoute({
+    name: 'requestEmailChange',
+    method: 'POST',
+    path: '/v1/me/email/request',
+    tag,
+    summary: 'Start changing email: send a 6-digit code to the new address (PU-61)',
+    description:
+      'Needs a recent re-check. An address already in use returns 409 email_in_use without saying why. The code goes to the NEW email.',
+    access: { kind: 'user' },
+    body: ChangeEmailRequestBody,
+    status: 204,
+    response: null,
+    errors: [400, 401, 403, 409],
+  }),
+  confirmEmailChange: defineRoute({
+    name: 'confirmEmailChange',
+    method: 'POST',
+    path: '/v1/me/email/confirm',
+    tag,
+    summary: 'Confirm the new email with the code from that address (PU-61)',
+    description: 'Email only changes after this succeeds. The old address gets a notice.',
+    access: { kind: 'user' },
+    body: ChangeEmailConfirmBody,
+    status: 200,
+    response: ChangedEmail,
+    errors: [400, 401],
   }),
   activity: defineRoute({
     name: 'listActivity',

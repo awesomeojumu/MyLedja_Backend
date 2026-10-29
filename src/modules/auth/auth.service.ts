@@ -158,7 +158,7 @@ export class AuthService {
   }
 
   /** Makes a new code, unless one was made under 45 seconds ago and `force` is off. */
-  private async issueCode(email: string, purpose: CodePurpose, force: boolean): Promise<string | null> {
+  async issueCode(email: string, purpose: CodePurpose, force: boolean): Promise<string | null> {
     const now = this.now();
     const current = await this.codes.find(email, purpose);
     if (!force && current && now.getTime() - current.createdAt.getTime() < CODE_RESEND_SECONDS * 1000) return null;
@@ -176,7 +176,7 @@ export class AuthService {
   }
 
   /** Checks a code; wrong tries count, and the fifth kills it. Returns the code's id to delete on success. */
-  private async checkCode(email: string, purpose: CodePurpose, code: string): Promise<string> {
+  async checkCode(email: string, purpose: CodePurpose, code: string): Promise<string> {
     const doc = await this.codes.find(email, purpose);
     if (!doc || doc.expiresAt.getTime() <= this.now().getTime()) {
       throw new AppError(400, 'code_expired', AUTH_MESSAGES.codeExpired, { field: 'code' });
@@ -190,6 +190,11 @@ export class AuthService {
       throw new AppError(400, 'code_wrong', AUTH_MESSAGES.codeWrong, { field: 'code' });
     }
     return doc._id;
+  }
+
+  /** Removes a consumed email code (after a successful verify). */
+  async removeCode(codeId: string, session?: ClientSession) {
+    await this.codes.remove(codeId, session ? { session } : {});
   }
 
   async verifyEmail(body: z.output<typeof VerifyEmailBody>, meta: RequestMeta): Promise<SessionResult> {

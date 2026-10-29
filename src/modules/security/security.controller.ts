@@ -56,6 +56,11 @@ export class SecurityController {
     return this.s.security.recheckPasskeyOptions(req.auth!.userId);
   }
 
+  @Route(r.recheckGoogle)
+  recheckGoogle(@Req() req: Req): Promise<Output<typeof r.recheckGoogle>> {
+    return this.s.security.recheckGoogle(req.auth!.userId, req.auth!.sessionId);
+  }
+
   @Route(r.status)
   status(@Req() req: Req): Promise<Output<typeof r.status>> {
     return this.s.security.status(req.auth!.userId, req.auth!.sessionId);
@@ -112,6 +117,19 @@ export class SecurityController {
   @Route(r.changePassword)
   changePassword(@In() i: Input<typeof r.changePassword>, @Req() req: Req): Promise<void> {
     return this.s.security.changePassword(req.auth!.userId, req.auth!.sessionId, i.body);
+  }
+
+  @Route(r.requestEmailChange)
+  requestEmailChange(@In() i: Input<typeof r.requestEmailChange>, @Req() req: Req): Promise<void> {
+    return this.s.security.requestEmailChange(req.auth!.userId, req.auth!.sessionId, i.body);
+  }
+
+  @Route(r.confirmEmailChange)
+  confirmEmailChange(
+    @In() i: Input<typeof r.confirmEmailChange>,
+    @Req() req: Req,
+  ): Promise<Output<typeof r.confirmEmailChange>> {
+    return this.s.security.confirmEmailChange(req.auth!.userId, req.auth!.sessionId, i.body);
   }
 
   @Route(r.activity)

@@ -189,7 +189,7 @@ export class ExportsService {
   }
 
   /** Restores into a new workspace with new ids; the person's current workspace is never touched (TECH-SPEC 11). */
-  async restore(userId: string, sessionId: string, content: string) {
+  async restore(userId: string, sessionId: string, content: string, workspaceName?: string) {
     await this.security.requireRecent(sessionId);
     const f = this.read(content);
     const workspaceId = newId();
@@ -204,7 +204,7 @@ export class ExportsService {
       month: 'short',
       timeZone: f.workspace.timeZone,
     }).format(now);
-    const name = `${f.workspace.name} (restored ${day})`.slice(0, 60);
+    const name = (workspaceName?.trim() || `${f.workspace.name} (restored ${day})`).slice(0, 60);
     const ctx = memberContext({ workspaceId, userId, sessionId, role: 'owner' });
     await this.database.transaction(async (session) => {
       await this.repo.insertRaw(

@@ -61,7 +61,7 @@ export const VALIDATORS: Record<string, Document> = {
     properties: {
       _id: uuid,
       email: str,
-      purpose: { enum: ['sign_up', 'recover'] },
+      purpose: { enum: ['sign_up', 'recover', 'change_email'] },
       hash: str,
       tries: int,
       createdAt: date,

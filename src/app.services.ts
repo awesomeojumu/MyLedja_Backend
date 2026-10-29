@@ -295,6 +295,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     workspaces,
     now,
     notifications,
+    mailer,
   );
   const exports = new ExportsService(
     database,
