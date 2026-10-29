@@ -1118,6 +1118,7 @@ export class ReportsService {
       text: null,
       layout: { x: (i % 2) * 6, y: Math.floor(i / 2) * 4, w: 6, h: 4 },
       hidden: false,
+      highlight: false,
     }));
   }
 
@@ -1201,7 +1202,11 @@ export class ReportsService {
       const set: Partial<ReportDashboardDoc> = { updatedAt: this.d.now() };
       if (body.name !== undefined) set.name = body.name;
       if (body.sortOrder !== undefined) set.sortOrder = body.sortOrder;
-      if (body.cards !== undefined) set.cards = body.cards;
+      // One gold highlight per dashboard (P19-05): the first card marked keeps it.
+      if (body.cards !== undefined) {
+        const first = body.cards.findIndex((c) => c.highlight);
+        set.cards = body.cards.map((c, i) => ({ ...c, highlight: i === first }));
+      }
       const after = await this.d.dashboards.findOneAndUpdate(
         ctx,
         { _id: id, version: body.baseVersion },

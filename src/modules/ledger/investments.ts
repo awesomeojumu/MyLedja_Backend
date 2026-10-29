@@ -182,3 +182,8 @@ export function position(lots: readonly Lot[], prices: readonly Price[], holding
   const value = price ? valueOf(units, price.priceMinor) : cost;
   return { units, cost, value, unrealised: value - cost, realised, price };
 }
+
+/** Cost per unit from a cost and units held, rounded half away from zero. */
+export function roundUnitsCost(cost: bigint, micro: bigint): bigint {
+  return divRoundHalfAwayFromZero(cost * UNIT_SCALE, micro);
+}

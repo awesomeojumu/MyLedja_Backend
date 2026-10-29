@@ -247,6 +247,11 @@ describe('dashboards and saved reports (P19, P21)', () => {
       cards: after.cards.slice(1) as never,
     });
     expect(moved.cards).toHaveLength(after.cards.length - 1);
+    const lit = await s.reports.updateDashboard(ctx, overview.id, {
+      baseVersion: moved.version,
+      cards: moved.cards.map((c) => ({ ...c, highlight: true })) as never,
+    });
+    expect(lit.cards.filter((c) => c.highlight)).toHaveLength(1);
     await expect(
       s.reports.updateDashboard(ctx, overview.id, { baseVersion: after.version, name: 'Old' }),
     ).rejects.toMatchObject({ code: 'already_changed' });

@@ -8015,6 +8015,11 @@
           "hidden": {
             "default": false,
             "type": "boolean"
+          },
+          "highlight": {
+            "default": false,
+            "description": "The dashboard's one gold highlight, chosen in Edit layout (P19-05). At most one card.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -8029,7 +8034,8 @@
           "formula",
           "text",
           "layout",
-          "hidden"
+          "hidden",
+          "highlight"
         ],
         "additionalProperties": false
       },
@@ -8201,6 +8207,11 @@
           },
           "hidden": {
             "default": false,
+            "type": "boolean"
+          },
+          "highlight": {
+            "default": false,
+            "description": "The dashboard's one gold highlight, chosen in Edit layout (P19-05). At most one card.",
             "type": "boolean"
           }
         },

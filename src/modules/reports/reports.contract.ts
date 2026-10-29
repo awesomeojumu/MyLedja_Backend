@@ -149,6 +149,10 @@ export const ReportCard = z
       })
       .meta({ description: '12 columns on web; phones show cards in y order.' }),
     hidden: z.boolean().default(false),
+    highlight: z
+      .boolean()
+      .default(false)
+      .meta({ description: "The dashboard's one gold highlight, chosen in Edit layout (P19-05). At most one card." }),
   })
   .meta({ id: 'ReportCard' });
 
