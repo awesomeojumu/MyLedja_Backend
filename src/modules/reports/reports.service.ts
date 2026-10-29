@@ -495,13 +495,16 @@ export class ReportsService {
           months.map((m) => minDate(monthBounds(m).to, minDate(to, b.today))),
         );
         const t = table(
-          ['assets', 'debts', 'unrealised', 'adjustments', 'written_off'].map((k) => ({ key: k, label: k })),
+          ['assets', 'debts', 'unrealised', 'adjustments', 'written_off', 'exchange_rate_change'].map((k) => ({
+            key: k,
+            label: k,
+          })),
           months.map((m, i) => {
             const p = points[i]!;
             return {
               key: m,
               label: m,
-              values: [p.assets, p.debts, p.unrealised, p.adjustments, p.writtenOff],
+              values: [p.assets, p.debts, p.unrealised, p.adjustments, p.writtenOff, p.exchangeRateChange],
               total: p.assets - p.debts + p.unrealised,
             };
           }),
@@ -676,12 +679,16 @@ export class ReportsService {
     }
   }
 
-  /** Assets, debts, unrealised gains and the month's adjustments and write-offs on each date (TECH-SPEC 6.7). */
+  /**
+   * Assets, debts, unrealised gains, adjustments, write-offs and exchange-rate change on each date
+   * (TECH-SPEC 6.7 / 6.13). Exchange-rate change is foreign balances at this date's rates minus the
+   * same balances at the previous date's rates — shown on the Net worth report only.
+   */
   private async netWorthAt(ctx: WorkspaceContext, b: Book, dates: string[]) {
     const last = dates.reduce((a, d) => (d > a ? d : a), '0000-00-00');
     const facts = await this.facts(ctx, b, null, last);
     const vals = await this.d.investments.valuationsOn(ctx, dates);
-    return dates.map((date) => {
+    return dates.map((date, i) => {
       const balances = new Map<string, bigint>();
       let adjustments = 0n;
       let writtenOff = 0n;
@@ -717,7 +724,32 @@ export class ReportsService {
         if (v === null) partial.add(holding.currency);
         else unrealised += v;
       }
-      return { date, assets, debts, unrealised, adjustments, writtenOff, partial: [...partial] };
+      const prev = i > 0 ? dates[i - 1]! : null;
+      let exchangeRateChange = 0n;
+      if (prev) {
+        for (const [id, raw] of balances) {
+          const a = b.byId.get(id)!;
+          if (a.currency === b.currency || raw === 0n) continue;
+          const now = b.convert(raw, a.currency, date);
+          const then = b.convert(raw, a.currency, prev);
+          if (now === null || then === null) {
+            partial.add(a.currency);
+            continue;
+          }
+          exchangeRateChange += now - then;
+        }
+        for (const { holding, position } of vals.get(date) ?? []) {
+          if (holding.currency === b.currency || position.value === 0n) continue;
+          const now = b.convert(position.value, holding.currency, date);
+          const then = b.convert(position.value, holding.currency, prev);
+          if (now === null || then === null) {
+            partial.add(holding.currency);
+            continue;
+          }
+          exchangeRateChange += now - then;
+        }
+      }
+      return { date, assets, debts, unrealised, adjustments, writtenOff, exchangeRateChange, partial: [...partial] };
     });
   }
 
