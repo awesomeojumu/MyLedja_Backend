@@ -5,8 +5,6 @@ import { expect } from 'vitest';
 import { AppError } from '../../src/common/errors/errors.js';
 import { buildEvent, buildReversal, type Resolver } from '../../src/modules/ledger/builders.js';
 import { checkLines } from '../../src/modules/ledger/checks.js';
-import { convert } from '../../src/common/money/money.js';
-import { type InvestmentMeta, lotsFrom, position, type Price } from '../../src/modules/ledger/investments.js';
 import { EventInput } from '../../src/modules/ledger/ledger.inputs.js';
 import {
   type AccountRef,
@@ -35,8 +33,6 @@ export type CaseStep = {
   post?: Record<string, unknown>;
   correct?: string;
   reverse?: string;
-  /** Enters a holding's price: not a ledger event (TECH-SPEC 6.2, M17). */
-  price?: { holdingId: string; price: string; date: string };
   input?: Record<string, unknown>;
   expectLines?: LineSpec[];
   expectReversalLines?: LineSpec[];
@@ -48,17 +44,17 @@ export type LedgerCase = {
   id: number;
   title: string;
   steps: CaseStep[];
-  /** Naira per one unit of each other currency, for net worth (TECH-SPEC 6.5). */
-  rates?: Record<string, string>;
   budget?: { style: 'envelope' | 'tracking'; months: string[]; assigned: Record<string, Amounts> };
+  /** Phase 5: mark holdings to market for unrealised gain (case 16). */
+  holdingsMark?: { account: string; units: string; pricePerUnit: string }[];
+  /** Phase 5: FX rates for net worth (case 25). `perUnit` is workspace minor per `unitMinor` of foreign. */
+  rates?: Record<string, { perUnit: string; unitMinor: string }>;
   expect: {
     balances?: Amounts;
     months?: Record<string, { income: string; spent: string; spentByCategory: Amounts }>;
     netWorth?: string;
-    /** Unrealised gain per holding (TECH-SPEC 6.8). Net worth includes it. */
-    unrealised?: Amounts;
-    /** Net worth with no exchange rates: other currencies are left out and named. */
-    withoutRates?: { netWorth: string; partial: string[] };
+    unrealised?: string;
+    partialWithoutRate?: string[];
     eventCount?: number;
     statuses?: Record<string, string>;
     budget?: Record<
@@ -75,11 +71,8 @@ export type CasesFile = {
     kind: LedgerKind;
     accountType: string;
     name: string;
-    personDebt?: 'receivable' | 'payable';
-    /** Defaults to the file's currency. */
     currency?: string;
-    /** A holding: the key of the investment account it's held in. */
-    holdingOf?: string;
+    personDebt?: 'receivable' | 'payable';
   }[];
   categories: { key: string; kind: 'income' | 'expense'; name: string; budgetable?: boolean; system?: SystemKey }[];
   cases: LedgerCase[];
@@ -88,15 +81,7 @@ export type CasesFile = {
 export const CASES_PATH = resolve(import.meta.dirname, '../fixtures/ledger-cases.json');
 export const loadCases = (): CasesFile => JSON.parse(readFileSync(CASES_PATH, 'utf8')) as CasesFile;
 
-export type EngineEvent = {
-  id: string;
-  type: EventType;
-  status: string;
-  date: string;
-  lines: Line[];
-  holdingId?: string | null;
-  investment?: InvestmentMeta | null;
-};
+export type EngineEvent = { id: string; type: EventType; status: string; date: string; lines: Line[] };
 
 /** What a case runs against: the pure builders in memory, or the real ledger service and database. */
 export interface Engine {
@@ -139,13 +124,7 @@ const linesOf = (lines: readonly Line[], engine: Engine) => {
 
 export async function runCase(c: LedgerCase, file: CasesFile, engine: Engine) {
   const events = new Map<string, string>();
-  const prices: Price[] = [];
   for (const step of c.steps) {
-    if (step.price) {
-      const holdingId = engine.realIds.get(step.price.holdingId.slice(1))!;
-      prices.push({ holdingId, date: step.price.date, priceMinor: BigInt(step.price.price) });
-      continue;
-    }
     const operationId = step.operation ? `case-${c.id}-${step.operation}` : uuidv7();
     const attempt = async () => {
       if (step.post) {
@@ -207,28 +186,31 @@ export async function runCase(c: LedgerCase, file: CasesFile, engine: Engine) {
       `case ${c.id}: ${month}`,
     ).toEqual(want);
   }
-  const lots = lotsFrom(all.map((x) => ({ ...x, holdingId: x.holdingId ?? null, investment: x.investment ?? null })));
   let unrealised = 0n;
-  for (const [key, id] of engine.realIds) {
-    if (!engine.refs.get(id)?.holding) continue;
-    const p = position(lots.get(id) ?? [], prices, id, '9999-12-31');
-    unrealised += p.unrealised;
-    if (e.unrealised?.[key] !== undefined) {
-      expect(p.unrealised.toString(), `case ${c.id}: unrealised ${key}`).toBe(e.unrealised[key]);
-    }
+  for (const mark of c.holdingsMark ?? []) {
+    const ref = engine.refs.get(engine.realIds.get(mark.account)!)!;
+    const cost = shownBalance(ref.kind, bal.get(ref.id) ?? 0n);
+    const [whole, frac = ''] = mark.units.split('.') as [string, string | undefined];
+    const scale = 10n ** BigInt(frac.length);
+    const unitMinor = BigInt(whole + frac);
+    const market = (unitMinor * BigInt(mark.pricePerUnit) + scale / 2n) / scale;
+    unrealised += market - cost;
   }
-  const worth = (rates: Record<string, string>) =>
-    netWorth(bal, [...engine.refs.values()], file.currency, (amount, from) =>
-      rates[from] ? convert(amount, from, file.currency, rates[from]) : null,
-    );
+  if (e.unrealised !== undefined) {
+    expect(unrealised.toString(), `case ${c.id}: unrealised`).toBe(e.unrealised);
+  }
+  const convert = (amount: bigint, from: string): bigint | null => {
+    const rate = c.rates?.[from];
+    if (!rate) return null;
+    return (amount * BigInt(rate.perUnit)) / BigInt(rate.unitMinor);
+  };
+  if (e.partialWithoutRate) {
+    const bare = netWorth(bal, [...engine.refs.values()], file.currency);
+    expect(bare.partial, `case ${c.id}: partial without rate`).toEqual(e.partialWithoutRate);
+  }
   if (e.netWorth !== undefined) {
-    expect((worth(c.rates ?? {}).amount + unrealised).toString(), `case ${c.id}: net worth`).toBe(e.netWorth);
-  }
-  if (e.withoutRates) {
-    const w = worth({});
-    expect({ netWorth: (w.amount + unrealised).toString(), partial: w.partial }, `case ${c.id}: no rates`).toEqual(
-      e.withoutRates,
-    );
+    const nw = netWorth(bal, [...engine.refs.values()], file.currency, convert);
+    expect((nw.amount + unrealised).toString(), `case ${c.id}: net worth`).toBe(e.netWorth);
   }
   if (e.eventCount !== undefined) expect(all.length, `case ${c.id}: events`).toBe(e.eventCount);
   for (const [ref, status] of Object.entries(e.statuses ?? {})) {
@@ -302,7 +284,6 @@ export function memoryEngine(file: CasesFile): Engine {
       categoryId: null,
       archived: false,
       personDebt: a.personDebt ?? null,
-      holding: !!a.holdingOf,
     };
     refs.set(ref.id, ref);
     realIds.set(a.key, ref.id);
@@ -322,14 +303,7 @@ export function memoryEngine(file: CasesFile): Engine {
   const events: (EngineEvent & { operationId: string; refundOf?: string })[] = [];
 
   const resolver = (): Resolver => ({
-    account: (id) => (refs.get(id)?.holding ? null : (refs.get(id) ?? null)),
-    holding: (id) => (refs.get(id)?.holding ? refs.get(id)! : null),
-    lots: (id) =>
-      (
-        lotsFrom(events.map((x) => ({ ...x, holdingId: x.holdingId ?? null, investment: x.investment ?? null }))).get(
-          id,
-        ) ?? []
-      ).filter((l) => l.units > 0n),
+    account: (id) => refs.get(id) ?? null,
     category: (id) => byCategory.get(id) ?? null,
     system: (key) => system.get(key)!,
     original: (id) => {
@@ -361,8 +335,6 @@ export function memoryEngine(file: CasesFile): Engine {
         lines: built.lines,
         operationId,
         refundOf: built.refundOf,
-        holdingId: built.holdingId ?? null,
-        investment: built.investment ?? null,
       };
       events.push(event);
       return { event, duplicate: false };

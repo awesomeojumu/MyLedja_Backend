@@ -1,12 +1,32 @@
 {
-  "about": "MyLedja worked cases (TECH-SPEC 6.14). Shared by the backend and the app: change it in the backend, then copy it and its sha256 to the app. Amounts are whole kobo as strings. In inputs, \"@key\" names an account or category below and \"#ref\" names an earlier step's event. Balances are as shown to people: what you have, or for a liability what you owe. Each case starts from an empty workspace. Phase 5: a \"price\" step enters a holding's price; \"rates\" on a case are naira per unit of each other currency; \"unrealised\" and \"withoutRates\" check TECH-SPEC 6.7 and 6.8.",
-  "version": 2,
+  "about": "MyLedja worked cases (TECH-SPEC 6.14). Shared by the backend and the app: change it in the backend, then copy it and its sha256 to the app. Amounts are whole kobo as strings. In inputs, \"@key\" names an account or category below and \"#ref\" names an earlier step's event. Balances are as shown to people: what you have, or for a liability what you owe. Each case starts from an empty workspace.",
+  "version": 1,
   "currency": "NGN",
   "accounts": [
-    { "key": "gtbank", "kind": "asset", "accountType": "bank", "name": "GTBank Current" },
-    { "key": "opay", "kind": "asset", "accountType": "wallet", "name": "OPay Wallet" },
-    { "key": "card", "kind": "liability", "accountType": "card", "name": "Zenith Credit Card" },
-    { "key": "bank_loan", "kind": "liability", "accountType": "loan", "name": "GTBank Loan" },
+    {
+      "key": "gtbank",
+      "kind": "asset",
+      "accountType": "bank",
+      "name": "GTBank Current"
+    },
+    {
+      "key": "opay",
+      "kind": "asset",
+      "accountType": "wallet",
+      "name": "OPay Wallet"
+    },
+    {
+      "key": "card",
+      "kind": "liability",
+      "accountType": "card",
+      "name": "Zenith Credit Card"
+    },
+    {
+      "key": "bank_loan",
+      "kind": "liability",
+      "accountType": "loan",
+      "name": "GTBank Loan"
+    },
     {
       "key": "tunde",
       "kind": "asset",
@@ -14,30 +34,76 @@
       "name": "Tunde owes me",
       "personDebt": "receivable"
     },
-    { "key": "pension", "kind": "asset", "accountType": "pension", "name": "Pension RSA" },
-    { "key": "nhf", "kind": "asset", "accountType": "nhf", "name": "NHF" },
-    { "key": "stanbic", "kind": "asset", "accountType": "investment", "name": "Stanbic Shares" },
-    { "key": "mtn", "kind": "asset", "accountType": "holding", "name": "MTN Nigeria", "holdingOf": "stanbic" },
-    { "key": "usd", "kind": "asset", "accountType": "bank", "name": "GTBank Dollar", "currency": "USD" }
+    {
+      "key": "pension",
+      "kind": "asset",
+      "accountType": "pension",
+      "name": "Pension RSA"
+    },
+    {
+      "key": "nhf",
+      "kind": "asset",
+      "accountType": "nhf",
+      "name": "NHF"
+    },
+    {
+      "key": "mtn",
+      "kind": "asset",
+      "accountType": "investment",
+      "name": "MTN shares"
+    },
+    {
+      "key": "usd",
+      "kind": "asset",
+      "accountType": "bank",
+      "name": "USD Cash",
+      "currency": "USD"
+    }
   ],
   "categories": [
-    { "key": "salary", "kind": "income", "name": "Salary", "budgetable": true },
-    { "key": "food", "kind": "expense", "name": "Food" },
-    { "key": "household", "kind": "expense", "name": "Household" },
-    { "key": "electronics", "kind": "expense", "name": "Electronics" },
-    { "key": "clothing", "kind": "expense", "name": "Clothing" },
+    {
+      "key": "salary",
+      "kind": "income",
+      "name": "Salary",
+      "budgetable": true
+    },
+    {
+      "key": "food",
+      "kind": "expense",
+      "name": "Food"
+    },
+    {
+      "key": "household",
+      "kind": "expense",
+      "name": "Household"
+    },
+    {
+      "key": "electronics",
+      "kind": "expense",
+      "name": "Electronics"
+    },
+    {
+      "key": "clothing",
+      "kind": "expense",
+      "name": "Clothing"
+    },
     {
       "key": "interest_and_charges",
       "kind": "expense",
       "name": "Interest and charges",
       "system": "interest_and_charges"
     },
-    { "key": "taxes", "kind": "expense", "name": "Taxes", "system": "taxes" }
+    {
+      "key": "taxes",
+      "kind": "expense",
+      "name": "Taxes",
+      "system": "taxes"
+    }
   ],
   "cases": [
     {
       "id": 1,
-      "title": "Salary ₦640,000.00 into GTBank",
+      "title": "Salary \u20a6640,000.00 into GTBank",
       "steps": [
         {
           "ref": "e1",
@@ -49,20 +115,34 @@
             "date": "2026-10-25"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "64000000" },
-            { "account": "@salary", "amount": "-64000000" }
+            {
+              "account": "@gtbank",
+              "amount": "64000000"
+            },
+            {
+              "account": "@salary",
+              "amount": "-64000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "64000000" },
-        "months": { "2026-10": { "income": "64000000", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "gtbank": "64000000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "64000000",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "64000000"
       }
     },
     {
       "id": 2,
-      "title": "Groceries ₦18,450.00 from GTBank",
+      "title": "Groceries \u20a618,450.00 from GTBank",
       "steps": [
         {
           "ref": "e1",
@@ -74,20 +154,36 @@
             "date": "2026-10-12"
           },
           "expectLines": [
-            { "account": "@food", "amount": "1845000" },
-            { "account": "@gtbank", "amount": "-1845000" }
+            {
+              "account": "@food",
+              "amount": "1845000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-1845000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "-1845000" },
-        "months": { "2026-10": { "income": "0", "spent": "1845000", "spentByCategory": { "food": "1845000" } } },
+        "balances": {
+          "gtbank": "-1845000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "1845000",
+            "spentByCategory": {
+              "food": "1845000"
+            }
+          }
+        },
         "netWorth": "-1845000"
       }
     },
     {
       "id": 3,
-      "title": "₦50,000.00 GTBank → OPay",
+      "title": "\u20a650,000.00 GTBank \u2192 OPay",
       "steps": [
         {
           "ref": "e1",
@@ -99,20 +195,35 @@
             "date": "2026-10-12"
           },
           "expectLines": [
-            { "account": "@opay", "amount": "5000000" },
-            { "account": "@gtbank", "amount": "-5000000" }
+            {
+              "account": "@opay",
+              "amount": "5000000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-5000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "-5000000", "opay": "5000000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "gtbank": "-5000000",
+          "opay": "5000000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "0"
       }
     },
     {
       "id": 4,
-      "title": "Laptop ₦300,000.00 on a credit card",
+      "title": "Laptop \u20a6300,000.00 on a credit card",
       "steps": [
         {
           "ref": "e1",
@@ -124,22 +235,36 @@
             "date": "2026-10-10"
           },
           "expectLines": [
-            { "account": "@electronics", "amount": "30000000" },
-            { "account": "@card", "amount": "-30000000" }
+            {
+              "account": "@electronics",
+              "amount": "30000000"
+            },
+            {
+              "account": "@card",
+              "amount": "-30000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "card": "30000000" },
+        "balances": {
+          "card": "30000000"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "30000000", "spentByCategory": { "electronics": "30000000" } }
+          "2026-10": {
+            "income": "0",
+            "spent": "30000000",
+            "spentByCategory": {
+              "electronics": "30000000"
+            }
+          }
         },
         "netWorth": "-30000000"
       }
     },
     {
       "id": 5,
-      "title": "Pay the card ₦300,000.00 from GTBank next month",
+      "title": "Pay the card \u20a6300,000.00 from GTBank next month",
       "steps": [
         {
           "ref": "e1",
@@ -161,23 +286,42 @@
             "date": "2026-11-05"
           },
           "expectLines": [
-            { "account": "@card", "amount": "30000000" },
-            { "account": "@gtbank", "amount": "-30000000" }
+            {
+              "account": "@card",
+              "amount": "30000000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-30000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "-30000000", "card": "0" },
+        "balances": {
+          "gtbank": "-30000000",
+          "card": "0"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "30000000", "spentByCategory": { "electronics": "30000000" } },
-          "2026-11": { "income": "0", "spent": "0", "spentByCategory": {} }
+          "2026-10": {
+            "income": "0",
+            "spent": "30000000",
+            "spentByCategory": {
+              "electronics": "30000000"
+            }
+          },
+          "2026-11": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
         },
         "netWorth": "-30000000"
       }
     },
     {
       "id": 6,
-      "title": "Card interest ₦4,500.00",
+      "title": "Card interest \u20a64,500.00",
       "steps": [
         {
           "ref": "e1",
@@ -189,22 +333,36 @@
             "date": "2026-10-28"
           },
           "expectLines": [
-            { "account": "@interest_and_charges", "amount": "450000" },
-            { "account": "@card", "amount": "-450000" }
+            {
+              "account": "@interest_and_charges",
+              "amount": "450000"
+            },
+            {
+              "account": "@card",
+              "amount": "-450000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "card": "450000" },
+        "balances": {
+          "card": "450000"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "450000", "spentByCategory": { "interest_and_charges": "450000" } }
+          "2026-10": {
+            "income": "0",
+            "spent": "450000",
+            "spentByCategory": {
+              "interest_and_charges": "450000"
+            }
+          }
         },
         "netWorth": "-450000"
       }
     },
     {
       "id": 7,
-      "title": "Bank loan ₦500,000.00 received",
+      "title": "Bank loan \u20a6500,000.00 received",
       "steps": [
         {
           "ref": "e1",
@@ -216,20 +374,35 @@
             "date": "2026-10-01"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "50000000" },
-            { "account": "@bank_loan", "amount": "-50000000" }
+            {
+              "account": "@gtbank",
+              "amount": "50000000"
+            },
+            {
+              "account": "@bank_loan",
+              "amount": "-50000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "50000000", "bank_loan": "50000000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "gtbank": "50000000",
+          "bank_loan": "50000000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "0"
       }
     },
     {
       "id": 8,
-      "title": "Loan payment ₦60,000.00 (₦50,000.00 principal, ₦10,000.00 interest)",
+      "title": "Loan payment \u20a660,000.00 (\u20a650,000.00 principal, \u20a610,000.00 interest)",
       "steps": [
         {
           "post": {
@@ -251,24 +424,46 @@
             "date": "2026-11-05"
           },
           "expectLines": [
-            { "account": "@bank_loan", "amount": "5000000" },
-            { "account": "@interest_and_charges", "amount": "1000000" },
-            { "account": "@gtbank", "amount": "-6000000" }
+            {
+              "account": "@bank_loan",
+              "amount": "5000000"
+            },
+            {
+              "account": "@interest_and_charges",
+              "amount": "1000000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-6000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "44000000", "bank_loan": "45000000" },
+        "balances": {
+          "gtbank": "44000000",
+          "bank_loan": "45000000"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} },
-          "2026-11": { "income": "0", "spent": "1000000", "spentByCategory": { "interest_and_charges": "1000000" } }
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          },
+          "2026-11": {
+            "income": "0",
+            "spent": "1000000",
+            "spentByCategory": {
+              "interest_and_charges": "1000000"
+            }
+          }
         },
         "netWorth": "-1000000"
       }
     },
     {
       "id": 9,
-      "title": "Lend Tunde ₦100,000.00",
+      "title": "Lend Tunde \u20a6100,000.00",
       "steps": [
         {
           "ref": "e1",
@@ -280,20 +475,35 @@
             "date": "2026-10-05"
           },
           "expectLines": [
-            { "account": "@tunde", "amount": "10000000" },
-            { "account": "@opay", "amount": "-10000000" }
+            {
+              "account": "@tunde",
+              "amount": "10000000"
+            },
+            {
+              "account": "@opay",
+              "amount": "-10000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "opay": "-10000000", "tunde": "10000000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "opay": "-10000000",
+          "tunde": "10000000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "0"
       }
     },
     {
       "id": 10,
-      "title": "Tunde pays ₦42,000.00 (₦40,000.00 principal, ₦2,000.00 interest)",
+      "title": "Tunde pays \u20a642,000.00 (\u20a640,000.00 principal, \u20a62,000.00 interest)",
       "steps": [
         {
           "post": {
@@ -315,24 +525,44 @@
             "date": "2026-11-15"
           },
           "expectLines": [
-            { "account": "@opay", "amount": "4200000" },
-            { "account": "@tunde", "amount": "-4000000" },
-            { "account": "@system:interest_earned", "amount": "-200000" }
+            {
+              "account": "@opay",
+              "amount": "4200000"
+            },
+            {
+              "account": "@tunde",
+              "amount": "-4000000"
+            },
+            {
+              "account": "@system:interest_earned",
+              "amount": "-200000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "opay": "-5800000", "tunde": "6000000" },
+        "balances": {
+          "opay": "-5800000",
+          "tunde": "6000000"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} },
-          "2026-11": { "income": "200000", "spent": "0", "spentByCategory": {} }
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          },
+          "2026-11": {
+            "income": "200000",
+            "spent": "0",
+            "spentByCategory": {}
+          }
         },
         "netWorth": "200000"
       }
     },
     {
       "id": 11,
-      "title": "Write off Tunde's ₦60,000.00",
+      "title": "Write off Tunde's \u20a660,000.00",
       "steps": [
         {
           "post": {
@@ -355,26 +585,52 @@
         },
         {
           "ref": "e1",
-          "post": { "type": "write_off", "receivableAccountId": "@tunde", "amount": "6000000", "date": "2026-12-01" },
+          "post": {
+            "type": "write_off",
+            "receivableAccountId": "@tunde",
+            "amount": "6000000",
+            "date": "2026-12-01"
+          },
           "expectLines": [
-            { "account": "@system:written_off", "amount": "6000000" },
-            { "account": "@tunde", "amount": "-6000000" }
+            {
+              "account": "@system:written_off",
+              "amount": "6000000"
+            },
+            {
+              "account": "@tunde",
+              "amount": "-6000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "opay": "-6000000", "tunde": "0" },
+        "balances": {
+          "opay": "-6000000",
+          "tunde": "0"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} },
-          "2026-11": { "income": "0", "spent": "0", "spentByCategory": {} },
-          "2026-12": { "income": "0", "spent": "0", "spentByCategory": {} }
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          },
+          "2026-11": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          },
+          "2026-12": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
         },
         "netWorth": "-6000000"
       }
     },
     {
       "id": 12,
-      "title": "Split ₦9,000.00 into ₦3,000.00 Food and ₦6,000.00 Household",
+      "title": "Split \u20a69,000.00 into \u20a63,000.00 Food and \u20a66,000.00 Household",
       "steps": [
         {
           "ref": "e1",
@@ -383,25 +639,45 @@
             "accountId": "@gtbank",
             "amount": "900000",
             "splits": [
-              { "categoryId": "@food", "amount": "300000" },
-              { "categoryId": "@household", "amount": "600000" }
+              {
+                "categoryId": "@food",
+                "amount": "300000"
+              },
+              {
+                "categoryId": "@household",
+                "amount": "600000"
+              }
             ],
             "date": "2026-10-14"
           },
           "expectLines": [
-            { "account": "@food", "amount": "300000" },
-            { "account": "@household", "amount": "600000" },
-            { "account": "@gtbank", "amount": "-900000" }
+            {
+              "account": "@food",
+              "amount": "300000"
+            },
+            {
+              "account": "@household",
+              "amount": "600000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-900000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "-900000" },
+        "balances": {
+          "gtbank": "-900000"
+        },
         "months": {
           "2026-10": {
             "income": "0",
             "spent": "900000",
-            "spentByCategory": { "food": "300000", "household": "600000" }
+            "spentByCategory": {
+              "food": "300000",
+              "household": "600000"
+            }
           }
         },
         "netWorth": "-900000"
@@ -409,7 +685,7 @@
     },
     {
       "id": 13,
-      "title": "Shoes ₦30,000.00 on 28 Oct, refunded ₦30,000.00 on 3 Nov",
+      "title": "Shoes \u20a630,000.00 on 28 Oct, refunded \u20a630,000.00 on 3 Nov",
       "steps": [
         {
           "ref": "e1",
@@ -431,23 +707,43 @@
             "date": "2026-11-03"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "3000000" },
-            { "account": "@clothing", "amount": "-3000000" }
+            {
+              "account": "@gtbank",
+              "amount": "3000000"
+            },
+            {
+              "account": "@clothing",
+              "amount": "-3000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "0" },
+        "balances": {
+          "gtbank": "0"
+        },
         "months": {
-          "2026-10": { "income": "0", "spent": "3000000", "spentByCategory": { "clothing": "3000000" } },
-          "2026-11": { "income": "0", "spent": "-3000000", "spentByCategory": { "clothing": "-3000000" } }
+          "2026-10": {
+            "income": "0",
+            "spent": "3000000",
+            "spentByCategory": {
+              "clothing": "3000000"
+            }
+          },
+          "2026-11": {
+            "income": "0",
+            "spent": "-3000000",
+            "spentByCategory": {
+              "clothing": "-3000000"
+            }
+          }
         },
         "netWorth": "0"
       }
     },
     {
       "id": 14,
-      "title": "A refund of ₦35,000.00 against a ₦30,000.00 purchase",
+      "title": "A refund of \u20a635,000.00 against a \u20a630,000.00 purchase",
       "steps": [
         {
           "ref": "e1",
@@ -470,118 +766,161 @@
           "expectError": {
             "status": 400,
             "code": "refund_too_big",
-            "message": "This refund is more than the purchase (₦30,000.00)."
+            "message": "This refund is more than the purchase (\u20a630,000.00)."
           }
         }
       ],
-      "expect": { "balances": { "gtbank": "-3000000" }, "eventCount": 1 }
+      "expect": {
+        "balances": {
+          "gtbank": "-3000000"
+        },
+        "eventCount": 1
+      }
     },
     {
       "id": 15,
-      "title": "Buy 500 MTN at ₦210.00 plus ₦500.00 fees",
+      "title": "Buy 500 MTN at \u20a6210.00 plus \u20a6500.00 fees",
       "steps": [
         {
           "ref": "e1",
-          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" }
-        },
-        {
-          "ref": "e2",
           "post": {
             "type": "investment_buy",
-            "holdingId": "@mtn",
-            "accountId": "@gtbank",
+            "holdingAccountId": "@mtn",
+            "cashAccountId": "@gtbank",
             "units": "500",
-            "price": "21000",
+            "pricePerUnit": "21000",
             "fees": "50000",
-            "date": "2026-10-10"
+            "date": "2026-10-28"
           },
           "expectLines": [
-            { "account": "@mtn", "amount": "10550000" },
-            { "account": "@gtbank", "amount": "-10550000" }
+            {
+              "account": "@mtn",
+              "amount": "10550000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-10550000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "70680000", "mtn": "10550000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
-        "netWorth": "81230000"
+        "balances": {
+          "gtbank": "-10550000",
+          "mtn": "10550000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
+        "netWorth": "0"
       }
     },
     {
       "id": 16,
-      "title": "Price rises to ₦236.00",
+      "title": "Price rises to \u20a6236.00",
       "steps": [
         {
           "ref": "e1",
-          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" }
-        },
-        {
-          "ref": "e2",
           "post": {
             "type": "investment_buy",
-            "holdingId": "@mtn",
-            "accountId": "@gtbank",
+            "holdingAccountId": "@mtn",
+            "cashAccountId": "@gtbank",
             "units": "500",
-            "price": "21000",
+            "pricePerUnit": "21000",
             "fees": "50000",
-            "date": "2026-10-10"
+            "date": "2026-10-28"
           }
-        },
-        { "price": { "holdingId": "@mtn", "price": "23600", "date": "2026-10-20" } }
+        }
+      ],
+      "holdingsMark": [
+        {
+          "account": "mtn",
+          "units": "500",
+          "pricePerUnit": "23600"
+        }
       ],
       "expect": {
-        "balances": { "gtbank": "70680000", "mtn": "10550000" },
-        "unrealised": { "mtn": "1250000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
-        "netWorth": "82480000"
+        "balances": {
+          "gtbank": "-10550000",
+          "mtn": "10550000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
+        "unrealised": "1250000",
+        "netWorth": "1250000"
       }
     },
     {
       "id": 17,
-      "title": "Sell 200 at ₦240.00, no fees",
+      "title": "Sell 200 at \u20a6240.00, no fees",
       "steps": [
         {
           "ref": "e1",
-          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" }
+          "post": {
+            "type": "investment_buy",
+            "holdingAccountId": "@mtn",
+            "cashAccountId": "@gtbank",
+            "units": "500",
+            "pricePerUnit": "21000",
+            "fees": "50000",
+            "date": "2026-10-28"
+          }
         },
         {
           "ref": "e2",
           "post": {
-            "type": "investment_buy",
-            "holdingId": "@mtn",
-            "accountId": "@gtbank",
-            "units": "500",
-            "price": "21000",
-            "fees": "50000",
-            "date": "2026-10-10"
-          }
-        },
-        {
-          "ref": "e3",
-          "post": {
             "type": "investment_sell",
-            "holdingId": "@mtn",
-            "accountId": "@gtbank",
+            "holdingAccountId": "@mtn",
+            "cashAccountId": "@gtbank",
             "units": "200",
-            "price": "24000",
-            "date": "2026-10-25"
+            "pricePerUnit": "24000",
+            "fees": "0",
+            "costOfLots": "4220000",
+            "date": "2026-10-29"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "4800000" },
-            { "account": "@mtn", "amount": "-4220000" },
-            { "account": "@system:investment_gain", "amount": "-580000" }
+            {
+              "account": "@gtbank",
+              "amount": "4800000"
+            },
+            {
+              "account": "@mtn",
+              "amount": "-4220000"
+            },
+            {
+              "account": "@system:investment_gain",
+              "amount": "-580000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "75480000", "mtn": "6330000" },
-        "months": { "2026-10": { "income": "580000", "spent": "0", "spentByCategory": {} } },
-        "netWorth": "81810000"
+        "balances": {
+          "gtbank": "-5750000",
+          "mtn": "6330000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "580000",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
+        "netWorth": "580000"
       }
     },
     {
       "id": 18,
-      "title": "Gross salary ₦800,000.00 with PAYE, pension and NHF",
+      "title": "Gross salary \u20a6800,000.00 with PAYE, pension and NHF",
       "steps": [
         {
           "ref": "e1",
@@ -599,48 +938,97 @@
             "date": "2026-10-27"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "62000000" },
-            { "account": "@taxes", "amount": "9600000" },
-            { "account": "@pension", "amount": "6400000" },
-            { "account": "@nhf", "amount": "2000000" },
-            { "account": "@salary", "amount": "-80000000" }
+            {
+              "account": "@gtbank",
+              "amount": "62000000"
+            },
+            {
+              "account": "@taxes",
+              "amount": "9600000"
+            },
+            {
+              "account": "@pension",
+              "amount": "6400000"
+            },
+            {
+              "account": "@nhf",
+              "amount": "2000000"
+            },
+            {
+              "account": "@salary",
+              "amount": "-80000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "62000000", "pension": "6400000", "nhf": "2000000" },
+        "balances": {
+          "gtbank": "62000000",
+          "pension": "6400000",
+          "nhf": "2000000"
+        },
         "months": {
-          "2026-10": { "income": "80000000", "spent": "9600000", "spentByCategory": { "taxes": "9600000" } }
+          "2026-10": {
+            "income": "80000000",
+            "spent": "9600000",
+            "spentByCategory": {
+              "taxes": "9600000"
+            }
+          }
         },
         "netWorth": "70400000"
       }
     },
     {
       "id": 19,
-      "title": "Opening balance ₦812,300.00",
+      "title": "Opening balance \u20a6812,300.00",
       "steps": [
         {
           "ref": "e1",
-          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "81230000", "date": "2026-10-01" },
+          "post": {
+            "type": "opening_balance",
+            "accountId": "@gtbank",
+            "amount": "81230000",
+            "date": "2026-10-01"
+          },
           "expectLines": [
-            { "account": "@gtbank", "amount": "81230000" },
-            { "account": "@system:opening_balances", "amount": "-81230000" }
+            {
+              "account": "@gtbank",
+              "amount": "81230000"
+            },
+            {
+              "account": "@system:opening_balances",
+              "amount": "-81230000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "81230000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "gtbank": "81230000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "81230000"
       }
     },
     {
       "id": 20,
-      "title": "Reconcile: the bank says ₦812,300.00, MyLedja says ₦790,100.00",
+      "title": "Reconcile: the bank says \u20a6812,300.00, MyLedja says \u20a6790,100.00",
       "steps": [
         {
           "ref": "e1",
-          "post": { "type": "opening_balance", "accountId": "@gtbank", "amount": "79010000", "date": "2026-10-01" }
+          "post": {
+            "type": "opening_balance",
+            "accountId": "@gtbank",
+            "amount": "79010000",
+            "date": "2026-10-01"
+          }
         },
         {
           "ref": "e2",
@@ -652,20 +1040,34 @@
             "date": "2026-10-31"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "2220000" },
-            { "account": "@system:adjustments", "amount": "-2220000" }
+            {
+              "account": "@gtbank",
+              "amount": "2220000"
+            },
+            {
+              "account": "@system:adjustments",
+              "amount": "-2220000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "81230000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "gtbank": "81230000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "81230000"
       }
     },
     {
       "id": 21,
-      "title": "Edit #2's amount to ₦18,540.00",
+      "title": "Edit #2's amount to \u20a618,540.00",
       "steps": [
         {
           "ref": "e1",
@@ -688,21 +1090,46 @@
             "date": "2026-10-12"
           },
           "expectReversalLines": [
-            { "account": "@food", "amount": "-1845000" },
-            { "account": "@gtbank", "amount": "1845000" }
+            {
+              "account": "@food",
+              "amount": "-1845000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "1845000"
+            }
           ],
           "expectLines": [
-            { "account": "@food", "amount": "1854000" },
-            { "account": "@gtbank", "amount": "-1854000" }
+            {
+              "account": "@food",
+              "amount": "1854000"
+            },
+            {
+              "account": "@gtbank",
+              "amount": "-1854000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "-1854000" },
-        "months": { "2026-10": { "income": "0", "spent": "1854000", "spentByCategory": { "food": "1854000" } } },
+        "balances": {
+          "gtbank": "-1854000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "1854000",
+            "spentByCategory": {
+              "food": "1854000"
+            }
+          }
+        },
         "netWorth": "-1854000",
         "eventCount": 3,
-        "statuses": { "e1": "reversed", "e2": "posted" }
+        "statuses": {
+          "e1": "reversed",
+          "e2": "posted"
+        }
       }
     },
     {
@@ -734,14 +1161,24 @@
         }
       ],
       "expect": {
-        "balances": { "gtbank": "-1845000" },
-        "months": { "2026-10": { "income": "0", "spent": "1845000", "spentByCategory": { "food": "1845000" } } },
+        "balances": {
+          "gtbank": "-1845000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "1845000",
+            "spentByCategory": {
+              "food": "1845000"
+            }
+          }
+        },
         "eventCount": 1
       }
     },
     {
       "id": 23,
-      "title": "Envelope: Food assigned ₦90,000.00, spent ₦93,000.00 in October",
+      "title": "Envelope: Food assigned \u20a690,000.00, spent \u20a693,000.00 in October",
       "steps": [
         {
           "ref": "e1",
@@ -776,11 +1213,23 @@
       ],
       "budget": {
         "style": "envelope",
-        "months": ["2026-10", "2026-11"],
-        "assigned": { "2026-10": { "food": "9000000" }, "2026-11": { "food": "9000000" } }
+        "months": [
+          "2026-10",
+          "2026-11"
+        ],
+        "assigned": {
+          "2026-10": {
+            "food": "9000000"
+          },
+          "2026-11": {
+            "food": "9000000"
+          }
+        }
       },
       "expect": {
-        "balances": { "gtbank": "90700000" },
+        "balances": {
+          "gtbank": "90700000"
+        },
         "budget": {
           "2026-10": {
             "leftToPlan": "41000000",
@@ -813,7 +1262,7 @@
     },
     {
       "id": 24,
-      "title": "8% pension on ₦800,000.01",
+      "title": "8% pension on \u20a6800,000.01",
       "steps": [
         {
           "ref": "e1",
@@ -831,42 +1280,80 @@
             "date": "2026-10-27"
           },
           "expectLines": [
-            { "account": "@gtbank", "amount": "62000001" },
-            { "account": "@taxes", "amount": "9600000" },
-            { "account": "@pension", "amount": "6400000" },
-            { "account": "@nhf", "amount": "2000000" },
-            { "account": "@salary", "amount": "-80000001" }
+            {
+              "account": "@gtbank",
+              "amount": "62000001"
+            },
+            {
+              "account": "@taxes",
+              "amount": "9600000"
+            },
+            {
+              "account": "@pension",
+              "amount": "6400000"
+            },
+            {
+              "account": "@nhf",
+              "amount": "2000000"
+            },
+            {
+              "account": "@salary",
+              "amount": "-80000001"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "gtbank": "62000001", "pension": "6400000", "nhf": "2000000" },
+        "balances": {
+          "gtbank": "62000001",
+          "pension": "6400000",
+          "nhf": "2000000"
+        },
         "months": {
-          "2026-10": { "income": "80000001", "spent": "9600000", "spentByCategory": { "taxes": "9600000" } }
+          "2026-10": {
+            "income": "80000001",
+            "spent": "9600000",
+            "spentByCategory": {
+              "taxes": "9600000"
+            }
+          }
         },
         "netWorth": "70400001"
       }
     },
     {
       "id": 25,
-      "title": "$120.00 balance at ₦1,550.00 per dollar",
-      "rates": { "USD": "1550" },
+      "title": "$120.00 balance at \u20a61,550.00 per dollar",
       "steps": [
         {
           "ref": "e1",
-          "post": { "type": "opening_balance", "accountId": "@usd", "amount": "12000", "date": "2026-10-01" }
+          "post": {
+            "type": "opening_balance",
+            "accountId": "@usd",
+            "amount": "12000",
+            "date": "2026-10-28"
+          }
         }
       ],
+      "rates": {
+        "USD": {
+          "perUnit": "155000",
+          "unitMinor": "100"
+        }
+      },
       "expect": {
-        "balances": { "usd": "12000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "usd": "12000"
+        },
         "netWorth": "18600000",
-        "withoutRates": { "netWorth": "0", "partial": ["USD"] }
+        "partialWithoutRate": [
+          "USD"
+        ]
       }
     },
     {
       "id": 26,
-      "title": "Record as money back: ₦40,000.00 against ₦100,000.00 lent",
+      "title": "Record as money back: \u20a640,000.00 against \u20a6100,000.00 lent",
       "steps": [
         {
           "post": {
@@ -888,20 +1375,35 @@
             "date": "2026-10-20"
           },
           "expectLines": [
-            { "account": "@opay", "amount": "4000000" },
-            { "account": "@tunde", "amount": "-4000000" }
+            {
+              "account": "@opay",
+              "amount": "4000000"
+            },
+            {
+              "account": "@tunde",
+              "amount": "-4000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "opay": "-6000000", "tunde": "6000000" },
-        "months": { "2026-10": { "income": "0", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "opay": "-6000000",
+          "tunde": "6000000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "0",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "0"
       }
     },
     {
       "id": 27,
-      "title": "Same ₦40,000.00 treated as income instead",
+      "title": "Same \u20a640,000.00 treated as income instead",
       "steps": [
         {
           "post": {
@@ -922,14 +1424,29 @@
             "date": "2026-10-20"
           },
           "expectLines": [
-            { "account": "@opay", "amount": "4000000" },
-            { "account": "@salary", "amount": "-4000000" }
+            {
+              "account": "@opay",
+              "amount": "4000000"
+            },
+            {
+              "account": "@salary",
+              "amount": "-4000000"
+            }
           ]
         }
       ],
       "expect": {
-        "balances": { "opay": "-6000000", "tunde": "10000000" },
-        "months": { "2026-10": { "income": "4000000", "spent": "0", "spentByCategory": {} } },
+        "balances": {
+          "opay": "-6000000",
+          "tunde": "10000000"
+        },
+        "months": {
+          "2026-10": {
+            "income": "4000000",
+            "spent": "0",
+            "spentByCategory": {}
+          }
+        },
         "netWorth": "4000000"
       }
     }

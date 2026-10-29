@@ -180,71 +180,44 @@ export const SalaryGrossInput = z
   })
   .meta({ id: 'SalaryGrossInput', description: 'E24: gross salary with statutory deductions (case 18).' });
 
-const UNITS_ERROR = 'Enter the number of units, for example 500 or 12.5';
-
-/** Units held, up to 6 decimal places, as a string. */
+/** Whole units as a decimal string (stocks are whole; crypto may use fractions). */
 export const Units = z
-  .string({ error: UNITS_ERROR })
-  .regex(/^(0|[1-9]\d{0,14})(?:\.\d{1,6})?$/, { error: UNITS_ERROR })
-  .refine((v) => /[1-9]/.test(v), { error: 'Enter more than 0 units' })
-  .meta({ description: 'Units as a decimal string with up to 6 places: "500", "12.5".' });
-
-const Fees = z
-  .string({ error: AMOUNT_ERROR })
-  .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
-  .default('0')
-  .meta({ description: 'Broker and other fees in minor units. Part of the cost of a buy; taken from a sale.' });
+  .string()
+  .regex(/^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/, { error: 'Enter the number of units' })
+  .refine((v) => Number(v) > 0, { error: 'Enter the number of units' });
 
 export const InvestmentBuyInput = z
   .object({
     type: z.literal('investment_buy'),
-    holdingId: Uuid,
-    accountId: Uuid.meta({ description: 'Where the money came from.' }),
+    holdingAccountId: Uuid.meta({ description: 'The holding asset account (H).' }),
+    cashAccountId: Uuid.meta({ description: 'Money from (cash or bank).' }),
     units: Units,
-    price: PositiveMinor.meta({ description: 'Price per unit in minor units.' }),
-    fees: Fees,
+    pricePerUnit: PositiveMinor.meta({ description: 'Price per unit in minor units of the cash currency.' }),
+    fees: z
+      .string({ error: AMOUNT_ERROR })
+      .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
+      .default('0'),
+    holdingId: Uuid.optional(),
     ...common,
   })
-  .meta({
-    id: 'InvestmentBuyInput',
-    description: 'E20: Dr holding (units × price + fees) · Cr cash. Not spending (case 15).',
-  });
+  .meta({ id: 'InvestmentBuyInput', description: 'E20: buy at cost; never spending (case 15).' });
 
 export const InvestmentSellInput = z
   .object({
     type: z.literal('investment_sell'),
-    holdingId: Uuid,
-    accountId: Uuid.meta({ description: 'Where the proceeds went.' }),
+    holdingAccountId: Uuid,
+    cashAccountId: Uuid,
     units: Units,
-    price: PositiveMinor.meta({ description: 'Price per unit in minor units.' }),
-    fees: Fees,
-    lots: z
-      .array(z.object({ lotId: Uuid, units: Units }))
-      .min(1)
-      .max(200)
-      .optional()
-      .meta({ description: 'Chosen lots. Leave out to sell the oldest first (TECH-SPEC 6.8).' }),
+    pricePerUnit: PositiveMinor,
+    fees: z
+      .string({ error: AMOUNT_ERROR })
+      .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
+      .default('0'),
+    costOfLots: PositiveMinor.meta({ description: 'Cost basis of the lots sold (FIFO or chosen).' }),
+    holdingId: Uuid.optional(),
     ...common,
   })
-  .meta({
-    id: 'InvestmentSellInput',
-    description:
-      'E21: Dr cash (proceeds after fees) · Cr holding (cost of lots sold) · gain to income or loss (case 17).',
-  });
-
-export const DividendInput = z
-  .object({
-    type: z.literal('dividend'),
-    holdingId: Uuid,
-    amount: PositiveMinor,
-    accountId: Uuid.nullable().optional().meta({ description: 'Paid into this account. Leave out when reinvested.' }),
-    reinvestedUnits: Units.optional().meta({ description: 'Reinvested: the units bought with it (a new lot).' }),
-    ...common,
-  })
-  .meta({
-    id: 'DividendInput',
-    description: 'E22: Dr cash, or Dr holding when reinvested · Cr income:Investment income. Posted as type income.',
-  });
+  .meta({ id: 'InvestmentSellInput', description: 'E21: sell; only the gain or loss counts as income (case 17).' });
 
 export const EventInput = z
   .discriminatedUnion('type', [
@@ -262,7 +235,6 @@ export const EventInput = z
     SalaryGrossInput,
     InvestmentBuyInput,
     InvestmentSellInput,
-    DividendInput,
   ])
   .meta({ id: 'EventInput' });
 

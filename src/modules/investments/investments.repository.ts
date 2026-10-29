@@ -1,42 +1,70 @@
-import type { Db } from 'mongodb';
-import { BaseRepository } from '../../common/repository/base.repository.js';
+import type { Collection, Db } from 'mongodb';
+
+export type HoldingType = 'stock' | 'fund' | 'pension' | 'crypto' | 'fixed_deposit' | 'other';
 
 export type HoldingDoc = {
-  /** Also the id of the holding's ledger account. */
   _id: string;
   workspaceId: string;
   name: string;
   symbol: string | null;
-  type: 'stock' | 'fund' | 'pension' | 'crypto' | 'fixed_deposit' | 'other';
+  type: HoldingType;
   accountId: string;
   currency: string;
-  archivedAt: Date | null;
-  operationId: string | null;
+  ledgerAccountId: string;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
-  version: number;
 };
 
-/** A price typed in for one holding on one day (TECH-SPEC 6.8). Not a ledger event. */
+export type LotDoc = {
+  _id: string;
+  workspaceId: string;
+  holdingId: string;
+  date: string;
+  units: string;
+  soldUnits: string;
+  costMinor: string;
+  pricePerUnitMinor: string;
+  feesMinor: string;
+  buyEventId: string | null;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type PriceDoc = {
   _id: string;
   workspaceId: string;
   holdingId: string;
   date: string;
   priceMinor: string;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
-  version: number;
 };
 
-export class HoldingsRepository extends BaseRepository<HoldingDoc> {
-  constructor(db: Db) {
-    super(db, 'holdings');
-  }
-}
+export type RateDoc = {
+  _id: string;
+  workspaceId: string;
+  currency: string;
+  date: string;
+  rate: string;
+  source: 'manual' | 'download';
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
-export class PricesRepository extends BaseRepository<PriceDoc> {
+export class InvestmentsRepository {
+  readonly holdings: Collection<HoldingDoc>;
+  readonly lots: Collection<LotDoc>;
+  readonly prices: Collection<PriceDoc>;
+  readonly rates: Collection<RateDoc>;
+
   constructor(db: Db) {
-    super(db, 'prices');
+    this.holdings = db.collection('holdings');
+    this.lots = db.collection('lots');
+    this.prices = db.collection('prices');
+    this.rates = db.collection('exchange_rates');
   }
 }
