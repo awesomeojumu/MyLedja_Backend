@@ -38,6 +38,7 @@ export const OPERATION_TYPES = [
   'debt.borrow',
   'debt.payment',
   'debt.write_off',
+  'debt.update',
   'debt.schedule',
   'debt.settle',
   'income.stream.create',

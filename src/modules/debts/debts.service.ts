@@ -62,6 +62,20 @@ function addMonthsLocal(date: string, months: number): string {
   return formatLocalDate(ny, nm + 1, nd);
 }
 
+function addWeeksLocal(date: string, weeks: number): string {
+  const { y, m, d } = parseLocalDate(date);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + weeks * 7);
+  return formatLocalDate(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+}
+
+function nextInstalmentDate(instalments: z.output<typeof InstalmentSchedule>, paymentCount: number): string {
+  if (instalments.everyWeeks != null) {
+    return addWeeksLocal(instalments.firstDate, paymentCount * instalments.everyWeeks);
+  }
+  return addMonthsLocal(instalments.firstDate, paymentCount * instalments.everyMonths);
+}
+
 function instalmentMeta(
   instalments: z.output<typeof InstalmentSchedule> | null,
   paymentCount: number,
@@ -70,7 +84,7 @@ function instalmentMeta(
   if (!instalments || outstanding <= 0n || paymentCount >= instalments.count) {
     return { nextInstalmentDate: null, nextInstalmentAmount: null };
   }
-  const nextDate = addMonthsLocal(instalments.firstDate, paymentCount * instalments.everyMonths);
+  const nextDate = nextInstalmentDate(instalments, paymentCount);
   const isLast = paymentCount === instalments.count - 1;
   const planned = parseMinor(instalments.amount);
   const amount = isLast ? outstanding : planned > outstanding ? outstanding : planned;

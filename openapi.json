@@ -2639,7 +2639,7 @@
             "items": {
               "$ref": "#/components/schemas/Transaction"
             },
-            "description": "The latest five."
+            "description": "The latest eight (DESIGN.md page 5)."
           },
           "getStarted": {
             "type": "object",
@@ -3065,6 +3065,11 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 12
+          },
+          "everyWeeks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 52
           }
         },
         "required": [
@@ -3098,6 +3103,11 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 12
+          },
+          "everyWeeks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 52
           }
         },
         "required": [
@@ -6918,6 +6928,9 @@
               "account.update",
               "category.create",
               "category.update",
+              "category.delete",
+              "category.undo_delete",
+              "category_group.create",
               "payee.create",
               "payee.update",
               "tag.create",
@@ -6939,6 +6952,7 @@
               "debt.borrow",
               "debt.payment",
               "debt.write_off",
+              "debt.update",
               "debt.schedule",
               "debt.settle",
               "income.stream.create",
@@ -10287,6 +10301,13 @@
             "type": "boolean",
             "description": "Locked by a finished reconcile (🔒)."
           },
+          "reconciliationId": {
+            "description": "Finished reconcile that locked this transaction, if any.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "clearedAccountIds": {
             "type": "array",
             "items": {
@@ -10343,6 +10364,7 @@
           "investment",
           "edited",
           "reconciled",
+          "reconciliationId",
           "clearedAccountIds",
           "importId",
           "runningBalance",
@@ -18021,6 +18043,11 @@
                       }
                     ],
                     "description": "Where its transactions move (each one as a correction). Required when it has any."
+                  },
+                  "undoId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                   }
                 },
                 "required": [
@@ -19333,6 +19360,7 @@
           "Debts"
         ],
         "summary": "Write off what they owe you (E17)",
+        "description": "TECH-SPEC 6.9: reason is required for audit; stored on the write-off transaction notes (Losses, not spending).",
         "security": [
           {
             "bearer": []

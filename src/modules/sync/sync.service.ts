@@ -51,6 +51,7 @@ const LendBody = debtRoutes.lend.body!;
 const BorrowBody = debtRoutes.borrow.body!;
 const DebtPaymentBody = debtRoutes.recordPayment.body!;
 const WriteOffBody = debtRoutes.writeOff.body!;
+const UpdateDebtBody = debtRoutes.update.body!;
 const SetDebtScheduleBody = debtRoutes.setSchedule.body!;
 const SettleDebtBody = debtRoutes.settle.body!;
 const CreateGoalBody = goalRoutes.create.body!;
@@ -399,9 +400,7 @@ export class SyncService {
               .optional(),
           })
           .parse(payload);
-        const occurrenceKey =
-          targetId ??
-          (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
+        const occurrenceKey = targetId ?? (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
         if (!occurrenceKey) throw Errors.validation('targetId', 'Choose the occurrence to mark paid.');
         return {
           result: await this.schedules.markPaid(
@@ -431,9 +430,7 @@ export class SyncService {
               .optional(),
           })
           .parse(payload);
-        const occurrenceKey =
-          targetId ??
-          (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
+        const occurrenceKey = targetId ?? (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
         if (!occurrenceKey) throw Errors.validation('targetId', 'Choose the occurrence to mark received.');
         return {
           result: await this.schedules.markReceived(
@@ -455,9 +452,7 @@ export class SyncService {
             date: z.string().optional(),
           })
           .parse(payload);
-        const occurrenceKey =
-          targetId ??
-          (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
+        const occurrenceKey = targetId ?? (body.scheduleId && body.date ? `${body.scheduleId}:${body.date}` : null);
         if (!occurrenceKey) throw Errors.validation('targetId', 'Choose the occurrence to unmark.');
         return {
           result: await this.schedules.unmark(ctx, occurrenceKey),
@@ -524,6 +519,11 @@ export class SyncService {
           body.reason,
         );
         return { result: debt, duplicate: false };
+      }
+      case 'debt.update': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the debt to update.');
+        const body = UpdateDebtBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.debts.update(ctx, targetId, body), duplicate: false };
       }
       case 'debt.schedule': {
         if (!targetId) throw Errors.validation('targetId', 'Choose the debt to schedule.');

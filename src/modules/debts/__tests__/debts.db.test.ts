@@ -52,6 +52,43 @@ describe('debts (B2.5)', () => {
     expect(written.debt.status).toBe('written_off');
     expect(written.debt.outstanding).toBe('0');
     expect(written.debt.notes).toContain('They left the country');
+    expect(written.transaction.notes).toBe('They left the country');
+  });
+
+  it('setSchedule monthly and weekly (PU-36)', async () => {
+    const w = await newWorkspace(t);
+    const s = t.services;
+    const opay = await s.accounts.create(
+      w.ctx,
+      { type: 'wallet', name: 'OPay', openingBalance: '20000000', openingDate: '2026-10-01' } as never,
+      uuidv7(),
+    );
+    const debt = await s.debts.lend(
+      w.ctx,
+      {
+        personName: 'Chioma',
+        amount: '9000000',
+        accountId: opay.id,
+        date: '2026-10-05',
+      } as never,
+      uuidv7(),
+    );
+    const monthly = await s.debts.setSchedule(
+      w.ctx,
+      debt.id,
+      { count: 3, amount: '3000000', firstDate: '2026-11-01', everyMonths: 1 },
+      debt.version,
+    );
+    expect(monthly.instalments?.everyMonths).toBe(1);
+    expect(monthly.nextInstalmentDate).toBe('2026-11-01');
+    const weekly = await s.debts.setSchedule(
+      w.ctx,
+      debt.id,
+      { count: 3, amount: '3000000', firstDate: '2026-11-01', everyMonths: 1, everyWeeks: 1 },
+      monthly.version,
+    );
+    expect(weekly.instalments?.everyWeeks).toBe(1);
+    expect(weekly.nextInstalmentDate).toBe('2026-11-01');
   });
 
   it('borrow from a person is not income (E13)', async () => {

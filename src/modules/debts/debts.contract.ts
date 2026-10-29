@@ -28,6 +28,8 @@ export const InstalmentSchedule = z
     }),
     firstDate: LocalDate,
     everyMonths: z.number().int().min(1).max(12).default(1),
+    /** When set, instalments advance by weeks instead of months (PU-36 Weekly). */
+    everyWeeks: z.number().int().min(1).max(52).optional(),
   })
   .meta({ id: 'DebtInstalmentSchedule' });
 
@@ -246,6 +248,8 @@ export const debtRoutes = {
     path: `${base}/:debtId/write-off`,
     tag,
     summary: 'Write off what they owe you (E17)',
+    description:
+      'TECH-SPEC 6.9: reason is required for audit; stored on the write-off transaction notes (Losses, not spending).',
     access: editor,
     params: DebtParams,
     body: z
