@@ -384,6 +384,7 @@ export class DebtsService {
     date: string,
     baseVersion: number,
     operationId: string,
+    reason: string,
   ): Promise<{
     debt: z.input<typeof Debt>;
     transaction: Awaited<ReturnType<TransactionsService['get']>>['transaction'];
@@ -399,9 +400,10 @@ export class DebtsService {
       if (before.direction !== 'they_owe_me') throw DebtsErrors.wrongDirection();
       const amount = before.outstandingMinor;
       if (parseMinor(amount) <= 0n) throw DebtsErrors.notZero();
+      const note = reason.trim();
       const tx = await this.ledger.postIn(
         ctx,
-        { type: 'write_off', receivableAccountId: before.ledgerAccountId, amount, date },
+        { type: 'write_off', receivableAccountId: before.ledgerAccountId, amount, date, notes: note },
         { operationId },
         session,
       );
@@ -412,6 +414,7 @@ export class DebtsService {
           $set: {
             outstandingMinor: '0',
             status: 'written_off',
+            notes: before.notes ? `${before.notes}\nWritten off: ${note}` : `Written off: ${note}`,
             updatedAt: this.now(),
           },
           $push: { paymentTransactionIds: tx._id },

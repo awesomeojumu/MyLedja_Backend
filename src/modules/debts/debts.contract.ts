@@ -248,7 +248,18 @@ export const debtRoutes = {
     summary: 'Write off what they owe you (E17)',
     access: editor,
     params: DebtParams,
-    body: z.object({ baseVersion: BaseVersion, date: LocalDate }),
+    body: z
+      .object({
+        baseVersion: BaseVersion,
+        date: LocalDate,
+        reason: z
+          .string()
+          .trim()
+          .min(1)
+          .max(500)
+          .meta({ description: 'Why the debt is written off (TECH-SPEC 6.9 / E17).' }),
+      })
+      .meta({ id: 'WriteOffDebtBody' }),
     status: 200,
     response: z.object({ debt: Debt, transaction: Transaction }).meta({ id: 'WriteOffDebtResult' }),
     errors: [400, 401, 403, 404, 409],

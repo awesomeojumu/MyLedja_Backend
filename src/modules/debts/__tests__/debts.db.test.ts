@@ -41,9 +41,17 @@ describe('debts (B2.5)', () => {
       uuidv7(),
     );
     expect(paid.debt.outstanding).toBe('6000000');
-    const written = await s.debts.writeOff(w.ctx, debt.id, '2026-12-01', paid.debt.version, uuidv7());
+    const written = await s.debts.writeOff(
+      w.ctx,
+      debt.id,
+      '2026-12-01',
+      paid.debt.version,
+      uuidv7(),
+      'They left the country',
+    );
     expect(written.debt.status).toBe('written_off');
     expect(written.debt.outstanding).toBe('0');
+    expect(written.debt.notes).toContain('They left the country');
   });
 
   it('borrow from a person is not income (E13)', async () => {
