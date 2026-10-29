@@ -61,6 +61,7 @@ export const Transaction = z
       }),
     edited: z.boolean().meta({ description: 'True when this replaced an earlier version ("Edited").' }),
     reconciled: z.boolean().meta({ description: 'Locked by a finished reconcile (🔒).' }),
+    reconciliationId: z.string().nullable().meta({ description: 'Finished reconcile that locked this transaction, if any.' }),
     clearedAccountIds: z.array(z.string()),
     importId: z.string().nullable(),
     runningBalance: MinorAmount.nullable().meta({ description: 'Only when the list is filtered to one account.' }),

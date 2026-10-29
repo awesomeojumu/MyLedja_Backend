@@ -572,6 +572,7 @@ export class TransactionsService {
         : null,
       edited: !!doc.links.correctionOf,
       reconciled: doc.reconciliationId !== null,
+      reconciliationId: doc.reconciliationId,
       clearedAccountIds: doc.clearedAccountIds,
       importId: doc.importId,
       runningBalance,
