@@ -50,6 +50,7 @@ const DebtPaymentBody = debtRoutes.recordPayment.body!;
 const WriteOffBody = debtRoutes.writeOff.body!;
 const UpdateDebtBody = debtRoutes.update.body!;
 const SetDebtScheduleBody = debtRoutes.setSchedule.body!;
+const SettleDebtBody = debtRoutes.settle.body!;
 const CreateGoalBody = goalRoutes.create.body!;
 const UpdateGoalBody = goalRoutes.update.body!;
 const AllocateGoalBody = goalRoutes.allocate.body!;
@@ -388,6 +389,11 @@ export class SyncService {
           result: await this.debts.setSchedule(ctx, targetId, body.instalments, body.baseVersion),
           duplicate: false,
         };
+      }
+      case 'debt.settle': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the debt to settle.');
+        const body = SettleDebtBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
+        return { result: await this.debts.settle(ctx, targetId, body.baseVersion), duplicate: false };
       }
       case 'income.stream.create': {
         const body = CreateIncomeStreamBody.parse(payload);
