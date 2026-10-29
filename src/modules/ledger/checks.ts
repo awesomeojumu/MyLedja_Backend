@@ -35,7 +35,13 @@ export function checkLines(
   const accounts = lines.map((l) => {
     const a = accountOf(l.ledgerAccountId);
     if (!a) throw new IntegrityError(2, `account ${l.ledgerAccountId} is not in this workspace`);
-    if (a.currency !== l.currency && a.systemKey !== 'fx_clearing') {
+    // Equity and FX clearing hold multi-currency counterparts (E7, E8 FX opening, E10).
+    const multiCurrency =
+      a.systemKey === 'fx_clearing' ||
+      a.systemKey === 'opening_balances' ||
+      a.systemKey === 'adjustments' ||
+      a.systemKey === 'revaluation';
+    if (a.currency !== l.currency && !multiCurrency) {
       throw LedgerErrors.currencyMismatch('amount');
     }
     return a;
@@ -119,6 +125,14 @@ export function checkLines(
       const inc = byKind('income');
       if (inc.length !== 1 || inc[0]!.amountMinor >= 0n)
         throw new IntegrityError(3, 'salary gross needs one income credit');
+      return;
+    }
+    case 'investment_buy': {
+      if (reals.length !== 2 || lines.length !== 2) throw new IntegrityError(3, 'a buy needs holding and cash');
+      return;
+    }
+    case 'investment_sell': {
+      if (reals.length !== 2) throw new IntegrityError(3, 'a sale needs holding and cash');
       return;
     }
     case 'reversal':

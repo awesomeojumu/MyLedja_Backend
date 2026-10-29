@@ -94,7 +94,32 @@ export function buildEvent(input: EventInput, r: Resolver): Built {
       return buildWriteOff(input, r);
     case 'salary_gross':
       return buildSalaryGross(input, r);
+    case 'investment_buy':
+      return buildInvestmentBuy(input, r);
+    case 'investment_sell':
+      return buildInvestmentSell(input, r);
   }
+}
+
+/** Cost = units × price + fees, rounded half away from zero to the minor unit (TECH-SPEC 6.5). */
+export function costOfPurchase(units: string, pricePerUnit: string, fees: string): bigint {
+  const price = parseMinor(pricePerUnit);
+  const fee = parseMinor(fees || '0');
+  const [whole, frac = ''] = units.split('.') as [string, string | undefined];
+  const scale = 10n ** BigInt(frac.length);
+  const unitMinor = BigInt(whole + frac.padEnd(frac.length, '0') || '0');
+  // units * price with fractional units: (unitMinor * price) / scale, half away from zero.
+  const num = unitMinor * price;
+  const half = scale / 2n;
+  const rounded = num >= 0n ? (num + half) / scale : -((-num + half) / scale);
+  return rounded + fee;
+}
+
+/** Proceeds after fees = units × price − fees (not below zero). */
+export function proceedsOfSale(units: string, pricePerUnit: string, fees: string): bigint {
+  const gross = costOfPurchase(units, pricePerUnit, '0');
+  const fee = parseMinor(fees || '0');
+  return gross > fee ? gross - fee : 0n;
 }
 
 /** E1: Dr account · Cr income:category. */
@@ -243,6 +268,33 @@ function buildWriteOff(input: Extract<EventInput, { type: 'write_off' }>, r: Res
   const amount = parseMinor(input.amount);
   const loss = r.system('written_off');
   return { type: 'write_off', lines: [line(loss, amount, recv.currency), line(recv, -amount, recv.currency)] };
+}
+
+/** E20: Dr holding · Cr cash. Cost = units × price + fees. Never spending. */
+function buildInvestmentBuy(input: Extract<EventInput, { type: 'investment_buy' }>, r: Resolver): Built {
+  const holding = real(r, input.holdingAccountId, 'holdingAccountId');
+  const cash = real(r, input.cashAccountId, 'cashAccountId');
+  if (holding.currency !== cash.currency) throw LedgerErrors.currencyMismatch('holdingAccountId');
+  if (holding.id === cash.id) throw LedgerErrors.sameAccount();
+  const cost = costOfPurchase(input.units, input.pricePerUnit, input.fees ?? '0');
+  if (cost <= 0n) throw LedgerErrors.wrongAccountKind('units');
+  return { type: 'investment_buy', lines: [line(holding, cost), line(cash, -cost)] };
+}
+
+/** E21: Dr cash (proceeds) · Cr holding (cost of lots) · Cr gain or Dr loss. */
+function buildInvestmentSell(input: Extract<EventInput, { type: 'investment_sell' }>, r: Resolver): Built {
+  const holding = real(r, input.holdingAccountId, 'holdingAccountId');
+  const cash = real(r, input.cashAccountId, 'cashAccountId');
+  if (holding.currency !== cash.currency) throw LedgerErrors.currencyMismatch('holdingAccountId');
+  if (holding.id === cash.id) throw LedgerErrors.sameAccount();
+  const proceeds = proceedsOfSale(input.units, input.pricePerUnit, input.fees ?? '0');
+  const cost = parseMinor(input.costOfLots);
+  if (cost <= 0n) throw LedgerErrors.wrongAccountKind('costOfLots');
+  const lines: Line[] = [line(cash, proceeds), line(holding, -cost)];
+  const diff = proceeds - cost;
+  if (diff > 0n) lines.push(line(r.system('investment_gain'), -diff, cash.currency));
+  else if (diff < 0n) lines.push(line(r.system('investment_loss'), -diff, cash.currency));
+  return { type: 'investment_sell', lines };
 }
 
 /** E24: gross salary with PAYE, pension and NHF. */

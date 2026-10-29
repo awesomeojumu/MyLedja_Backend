@@ -79,6 +79,8 @@ import { RulesService } from './modules/rules/rules.service.js';
 import { BankLinkIndex, BankLinksRepository } from './modules/banking/banking.repository.js';
 import { BankingService } from './modules/banking/banking.service.js';
 import { MonoProvider } from './modules/banking/mono.js';
+import { InvestmentsRepository } from './modules/investments/investments.repository.js';
+import { InvestmentsService } from './modules/investments/investments.service.js';
 
 export const SERVICES = Symbol('SERVICES');
 export const REFRESH_COOKIE = 'myledja_refresh';
@@ -333,6 +335,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     maxAttempts: 3,
     run: (job) => banking.runSync(job.payload),
   });
+  const investments = new InvestmentsService(new InvestmentsRepository(db), ledger);
 
   return {
     config,
@@ -364,6 +367,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     statements,
     rules,
     banking,
+    investments,
     categoriesRepo,
     idempotency,
     limits,

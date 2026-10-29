@@ -45,10 +45,16 @@ export type LedgerCase = {
   title: string;
   steps: CaseStep[];
   budget?: { style: 'envelope' | 'tracking'; months: string[]; assigned: Record<string, Amounts> };
+  /** Phase 5: mark holdings to market for unrealised gain (case 16). */
+  holdingsMark?: { account: string; units: string; pricePerUnit: string }[];
+  /** Phase 5: FX rates for net worth (case 25). `perUnit` is workspace minor per `unitMinor` of foreign. */
+  rates?: Record<string, { perUnit: string; unitMinor: string }>;
   expect: {
     balances?: Amounts;
     months?: Record<string, { income: string; spent: string; spentByCategory: Amounts }>;
     netWorth?: string;
+    unrealised?: string;
+    partialWithoutRate?: string[];
     eventCount?: number;
     statuses?: Record<string, string>;
     budget?: Record<
@@ -65,6 +71,7 @@ export type CasesFile = {
     kind: LedgerKind;
     accountType: string;
     name: string;
+    currency?: string;
     personDebt?: 'receivable' | 'payable';
   }[];
   categories: { key: string; kind: 'income' | 'expense'; name: string; budgetable?: boolean; system?: SystemKey }[];
@@ -179,10 +186,31 @@ export async function runCase(c: LedgerCase, file: CasesFile, engine: Engine) {
       `case ${c.id}: ${month}`,
     ).toEqual(want);
   }
+  let unrealised = 0n;
+  for (const mark of c.holdingsMark ?? []) {
+    const ref = engine.refs.get(engine.realIds.get(mark.account)!)!;
+    const cost = shownBalance(ref.kind, bal.get(ref.id) ?? 0n);
+    const [whole, frac = ''] = mark.units.split('.') as [string, string | undefined];
+    const scale = 10n ** BigInt(frac.length);
+    const unitMinor = BigInt(whole + frac);
+    const market = (unitMinor * BigInt(mark.pricePerUnit) + scale / 2n) / scale;
+    unrealised += market - cost;
+  }
+  if (e.unrealised !== undefined) {
+    expect(unrealised.toString(), `case ${c.id}: unrealised`).toBe(e.unrealised);
+  }
+  const convert = (amount: bigint, from: string): bigint | null => {
+    const rate = c.rates?.[from];
+    if (!rate) return null;
+    return (amount * BigInt(rate.perUnit)) / BigInt(rate.unitMinor);
+  };
+  if (e.partialWithoutRate) {
+    const bare = netWorth(bal, [...engine.refs.values()], file.currency);
+    expect(bare.partial, `case ${c.id}: partial without rate`).toEqual(e.partialWithoutRate);
+  }
   if (e.netWorth !== undefined) {
-    expect(netWorth(bal, [...engine.refs.values()], file.currency).amount.toString(), `case ${c.id}: net worth`).toBe(
-      e.netWorth,
-    );
+    const nw = netWorth(bal, [...engine.refs.values()], file.currency, convert);
+    expect((nw.amount + unrealised).toString(), `case ${c.id}: net worth`).toBe(e.netWorth);
   }
   if (e.eventCount !== undefined) expect(all.length, `case ${c.id}: events`).toBe(e.eventCount);
   for (const [ref, status] of Object.entries(e.statuses ?? {})) {
@@ -251,7 +279,7 @@ export function memoryEngine(file: CasesFile): Engine {
     const ref: AccountRef = {
       id: uuidv7(),
       kind: a.kind,
-      currency: file.currency,
+      currency: a.currency ?? file.currency,
       systemKey: null,
       categoryId: null,
       archived: false,
