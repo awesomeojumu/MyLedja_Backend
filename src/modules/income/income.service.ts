@@ -124,8 +124,7 @@ export class IncomeService {
     };
     const start = `${month}-01`;
     const [y, mo] = month.split('-').map(Number) as [number, number];
-    const end =
-      mo === 12 ? `${y + 1}-01-01` : `${y}-${String(mo + 1).padStart(2, '0')}-01`;
+    const end = mo === 12 ? `${y + 1}-01-01` : `${y}-${String(mo + 1).padStart(2, '0')}-01`;
     const txs = await this.ledger.transactions.find(ctx, {
       type: { $in: ['income', 'salary_gross'] },
       status: 'posted',
@@ -256,15 +255,11 @@ export class IncomeService {
     await this.ledger.patch(ctx, transactionId, { oneOff: true }, before.transaction.version);
     const streams = await this.streams.find(ctx, { linkedTransactionIds: transactionId } as never);
     for (const s of streams) {
-      await this.streams.findOneAndUpdate(
-        ctx,
-        { _id: s._id },
-        {
-          $pull: { linkedTransactionIds: transactionId },
-          $inc: { version: 1 },
-          $set: { updatedAt: this.now() },
-        } as never,
-      );
+      await this.streams.findOneAndUpdate(ctx, { _id: s._id }, {
+        $pull: { linkedTransactionIds: transactionId },
+        $inc: { version: 1 },
+        $set: { updatedAt: this.now() },
+      } as never);
     }
     return (await this.transactions.get(ctx, transactionId)).transaction;
   }

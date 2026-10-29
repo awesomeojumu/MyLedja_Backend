@@ -482,7 +482,7 @@ export class CategoriesService {
       for (const m of budgetMoves) {
         const amount = BigInt(m.amountMinor);
         const from = await this.budgetMonths!.byCategoryMonth(ctx, fromId, m.month, { session });
-        const fromNext = (from?.assignedMinor ?? 0n) > amount ? (from!.assignedMinor - amount) : 0n;
+        const fromNext = (from?.assignedMinor ?? 0n) > amount ? from!.assignedMinor - amount : 0n;
         await this.budgetMonths!.setAssigned(ctx, m.month, fromId, fromNext, now, { session });
         await this.budgetMonths!.setAssigned(ctx, m.month, categoryId, amount, now, { session });
         await this.ledger.feed(
@@ -505,9 +505,7 @@ export class CategoriesService {
     onlyIds?: string[],
   ): Promise<string[]> {
     if (!this.rules) return [];
-    const filter = onlyIds?.length
-      ? { _id: { $in: onlyIds }, deletedAt: null }
-      : { deletedAt: null };
+    const filter = onlyIds?.length ? { _id: { $in: onlyIds }, deletedAt: null } : { deletedAt: null };
     const docs = await this.rules.find(ctx, filter);
     const changed: string[] = [];
     await this.database.transaction(async (session) => {
@@ -541,9 +539,7 @@ export class CategoriesService {
     onlyIds?: string[],
   ): Promise<string[]> {
     if (!this.schedules) return [];
-    const filter = onlyIds?.length
-      ? { _id: { $in: onlyIds } }
-      : { categoryId: fromId };
+    const filter = onlyIds?.length ? { _id: { $in: onlyIds } } : { categoryId: fromId };
     const docs = await this.schedules.find(ctx, filter);
     const changed: string[] = [];
     await this.database.transaction(async (session) => {
@@ -873,8 +869,7 @@ export class CategoriesService {
         { session },
       );
       const name = body.name ?? keep.name;
-      const logoFileId =
-        body.logoFileId !== undefined ? body.logoFileId : (logoFrom?.logoFileId ?? keep.logoFileId);
+      const logoFileId = body.logoFileId !== undefined ? body.logoFileId : (logoFrom?.logoFileId ?? keep.logoFileId);
       const defaultCategoryId =
         body.defaultCategoryId !== undefined
           ? body.defaultCategoryId
@@ -985,11 +980,7 @@ export class CategoriesService {
       if (count > 0) throw CategoryErrors.payeeHasTx(count);
       await this.payees.deleteOne(ctx, { _id: id }, { session });
       await this.ledger.feed(ctx, [{ collection: 'payees', docId: id, op: 'tombstone' }], session);
-      await this.audit.record(
-        ctx,
-        { action: 'payee.deleted', target: { collection: 'payees', id } },
-        { session },
-      );
+      await this.audit.record(ctx, { action: 'payee.deleted', target: { collection: 'payees', id } }, { session });
     });
     return { payeeId: id };
   }
@@ -1104,7 +1095,8 @@ export function payeeView(
 ): z.input<typeof Payee> {
   const raw = p.logoFileId;
   const logoUrl =
-    raw && (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:') || raw.startsWith('file:'))
+    raw &&
+    (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:') || raw.startsWith('file:'))
       ? raw
       : logoUrlOf(raw);
   return {

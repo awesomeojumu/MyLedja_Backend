@@ -454,11 +454,7 @@ export class TransactionsService {
     }
     if (q.hasReceipt === 'true') {
       and.push({
-        $or: [
-          { 'receiptFileIds.0': { $exists: true } },
-          { notes: /^receipt:/i },
-          { notes: /^https?:\/\//i },
-        ],
+        $or: [{ 'receiptFileIds.0': { $exists: true } }, { notes: /^receipt:/i }, { notes: /^https?:\/\//i }],
       });
     }
     if (q.edited === 'true') {

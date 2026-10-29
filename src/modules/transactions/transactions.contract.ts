@@ -61,7 +61,10 @@ export const Transaction = z
       }),
     edited: z.boolean().meta({ description: 'True when this replaced an earlier version ("Edited").' }),
     reconciled: z.boolean().meta({ description: 'Locked by a finished reconcile (🔒).' }),
-    reconciliationId: z.string().nullable().meta({ description: 'Finished reconcile that locked this transaction, if any.' }),
+    reconciliationId: z
+      .string()
+      .nullable()
+      .meta({ description: 'Finished reconcile that locked this transaction, if any.' }),
     clearedAccountIds: z.array(z.string()),
     importId: z.string().nullable(),
     oneOff: z
@@ -98,18 +101,18 @@ export const TransactionQuery = z.object({
   payeeId: csv(Uuid).optional(),
   tagId: csv(Uuid).optional(),
   type: csv(z.enum(EVENT_TYPES)).optional(),
-  status: z
-    .enum(['live', 'all', 'posted', 'pending', 'waiting'])
-    .default('live')
-    .meta({
-      description:
-        '"live"/"posted" hide reversals and replaced versions; "pending" is uncleared bank/import rows; "waiting" is reserved for the client offline queue (server returns none); "all" includes history.',
-    }),
+  status: z.enum(['live', 'all', 'posted', 'pending', 'waiting']).default('live').meta({
+    description:
+      '"live"/"posted" hide reversals and replaced versions; "pending" is uncleared bank/import rows; "waiting" is reserved for the client offline queue (server returns none); "all" includes history.',
+  }),
   minAmount: MinorAmount.optional().meta({ description: 'On the size of the headline amount.' }),
   maxAmount: MinorAmount.optional(),
   q: z.string().trim().max(100).optional().meta({ description: 'Payee, note, category name or amount.' }),
   uncategorized: z.enum(['true', 'false']).optional(),
-  hasReceipt: z.enum(['true', 'false']).optional().meta({ description: 'Only rows with receiptFileIds or a receipt note.' }),
+  hasReceipt: z
+    .enum(['true', 'false'])
+    .optional()
+    .meta({ description: 'Only rows with receiptFileIds or a receipt note.' }),
   edited: z.enum(['true', 'false']).optional().meta({ description: 'Only corrected (edited) versions.' }),
   ...PageQuery,
 });

@@ -143,7 +143,9 @@ describe('categories', () => {
       null,
     );
     const beforeRules = await w.s.rules.list(w.ctx);
-    const rule = beforeRules.rules.find((r) => r.actions.some((a) => a.kind === 'setCategory' && a.value === w.food.id))!;
+    const rule = beforeRules.rules.find((r) =>
+      r.actions.some((a) => a.kind === 'setCategory' && a.value === w.food.id),
+    )!;
 
     const res = await w.s.categories.remove(w.ctx, w.food.id, w.eatOut.id, uuidv7());
     const month = await w.s.budget.get(w.ctx, '2026-10');

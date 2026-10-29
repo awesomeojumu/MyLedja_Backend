@@ -160,12 +160,16 @@ export const budgetRoutes = {
     path: '/v1/workspaces/:workspaceId/budget/templates/:templateId',
     tag,
     summary: 'Create or replace a budget template',
-    description: 'Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates). Optional kind/meta keep sentence rules in sync.',
+    description:
+      'Each rule sets a category planned amount when applied (DESIGN.md page 6, Templates). Optional kind/meta keep sentence rules in sync.',
     access: editor,
     params: WorkspaceParams.extend({ templateId: Uuid }),
     body: z.object({
       name: z.string().trim().min(1).max(80),
-      rules: z.array(BudgetTemplateRule.extend({ categoryId: Uuid })).min(1).max(200),
+      rules: z
+        .array(BudgetTemplateRule.extend({ categoryId: Uuid }))
+        .min(1)
+        .max(200),
     }),
     status: 200,
     response: BudgetTemplate,

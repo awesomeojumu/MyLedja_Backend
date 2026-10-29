@@ -14,11 +14,7 @@ import type { GoalAllocationsRepository } from '../goals/goals.repository.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
 import type { WorkspacesRepository } from '../workspaces/workspaces.repository.js';
 import type { BudgetCategory, BudgetMonth, BudgetTemplate, Dashboard } from './budget.contract.js';
-import type {
-  BudgetMonthsRepository,
-  BudgetTemplateDoc,
-  BudgetTemplatesRepository,
-} from './budget.repository.js';
+import type { BudgetMonthsRepository, BudgetTemplateDoc, BudgetTemplatesRepository } from './budget.repository.js';
 
 export const BudgetErrors = {
   notSpending: () =>

@@ -56,7 +56,11 @@ export class FilesService {
     const token = createHash('sha256').update(`${decoded}:${expiresAt.toISOString()}`).digest('hex').slice(0, 16);
     const dataUrl = `data:${entry.contentType};base64,${entry.bytes.toString('base64')}`;
     // data: URLs are valid for in-app preview when Cloudinary isn't configured.
-    return { url: `${dataUrl}#exp=${Math.floor(expiresAt.getTime() / 1000)}&t=${token}`, expiresAt: expiresAt.toISOString(), fileId: decoded };
+    return {
+      url: `${dataUrl}#exp=${Math.floor(expiresAt.getTime() / 1000)}&t=${token}`,
+      expiresAt: expiresAt.toISOString(),
+      fileId: decoded,
+    };
   }
 }
 

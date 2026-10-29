@@ -160,9 +160,7 @@ export const PayeesMerged = z
 
 export const MergeParams = WorkspaceParams.extend({ mergeId: Uuid });
 export const UndoParams = WorkspaceParams.extend({ undoId: Uuid });
-export const PayeeDeleted = z
-  .object({ payeeId: z.string() })
-  .meta({ id: 'PayeeDeleted' });
+export const PayeeDeleted = z.object({ payeeId: z.string() }).meta({ id: 'PayeeDeleted' });
 
 const tag = 'Categories, tags and payees';
 const ws = '/v1/workspaces/:workspaceId';
@@ -415,8 +413,7 @@ export const payeeRoutes = {
     path: `${ws}/payees/:payeeId`,
     tag,
     summary: 'Delete a payee with no transactions',
-    description:
-      'Allowed only when the payee has no transactions. Otherwise merge it into another payee (PU-46).',
+    description: 'Allowed only when the payee has no transactions. Otherwise merge it into another payee (PU-46).',
     access: editor,
     params: PayeeParams,
     status: 200,
