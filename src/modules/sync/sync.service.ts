@@ -315,8 +315,22 @@ export class SyncService {
         const assigned = payload.assigned;
         if (typeof assigned !== 'string') throw Errors.validation('assigned', 'Enter an amount.');
         const carryOver = typeof payload.carryOver === 'boolean' ? payload.carryOver : undefined;
+        const note = typeof payload.note === 'string' ? payload.note : undefined;
         return {
-          result: await this.budget.assign(ctx, month, targetId, { assigned, carryOver }),
+          result: await this.budget.assign(ctx, month, targetId, { assigned, carryOver, note }),
+          duplicate: false,
+        };
+      }
+      case 'budget.template.save': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the template to save.');
+        const name = typeof payload.name === 'string' ? payload.name : null;
+        const rules = Array.isArray(payload.rules) ? payload.rules : null;
+        if (!name || !rules) throw Errors.validation('rules', 'Add a name and at least one rule.');
+        return {
+          result: await this.budget.saveTemplate(ctx, targetId, {
+            name,
+            rules: rules as { categoryId: string; assigned: string; kind?: string; meta?: Record<string, string> }[],
+          }),
           duplicate: false,
         };
       }

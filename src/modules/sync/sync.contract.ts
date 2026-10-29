@@ -18,6 +18,7 @@ export const OPERATION_TYPES = [
   'payee.update',
   'tag.create',
   'budget.assign',
+  'budget.template.save',
   'schedule.create',
   'schedule.update',
   'goal.create',
