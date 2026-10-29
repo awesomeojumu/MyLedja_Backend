@@ -6,14 +6,30 @@ import { WorkspaceParams } from '../workspaces/workspaces.contract.js';
 /** Rules (DESIGN page 25, build plan B4.5). The same shape the app edits; runs on past transactions are corrections. */
 
 export const RuleCondition = z.object({
-  field: z.enum(['payee', 'description', 'amount', 'account', 'category', 'notes', 'date']),
-  op: z.enum(['contains', 'equals', 'lessThan', 'greaterThan', 'before', 'after']),
+  field: z.enum(['payee', 'description', 'amount', 'account', 'category', 'notes', 'date', 'money']),
+  op: z.enum([
+    'contains',
+    'equals',
+    'notEquals',
+    'startsWith',
+    'isOneOf',
+    'lessThan',
+    'greaterThan',
+    'between',
+    'before',
+    'after',
+    'dayOfMonth',
+    'isIn',
+    'isOut',
+    'isEmpty',
+  ]),
   value: z.string().max(200),
 });
 
 export const RuleAction = z.object({
   kind: z.enum(['setCategory', 'renamePayee', 'addNote', 'addTag', 'split', 'linkSchedule', 'moneyBack']),
-  value: z.string().max(200),
+  /** Split rows encode as `pct:cat=50|cat=50` or `amt:cat=1000|cat=2000` (naira). */
+  value: z.string().max(2000),
 });
 
 export const RuleBody = z.object({

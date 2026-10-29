@@ -9008,7 +9008,8 @@
                     "account",
                     "category",
                     "notes",
-                    "date"
+                    "date",
+                    "money"
                   ]
                 },
                 "op": {
@@ -9016,10 +9017,18 @@
                   "enum": [
                     "contains",
                     "equals",
+                    "notEquals",
+                    "startsWith",
+                    "isOneOf",
                     "lessThan",
                     "greaterThan",
+                    "between",
                     "before",
-                    "after"
+                    "after",
+                    "dayOfMonth",
+                    "isIn",
+                    "isOut",
+                    "isEmpty"
                   ]
                 },
                 "value": {
@@ -9055,7 +9064,7 @@
                 },
                 "value": {
                   "type": "string",
-                  "maxLength": 200
+                  "maxLength": 2000
                 }
               },
               "required": [
@@ -27013,7 +27022,8 @@
                             "account",
                             "category",
                             "notes",
-                            "date"
+                            "date",
+                            "money"
                           ]
                         },
                         "op": {
@@ -27021,10 +27031,18 @@
                           "enum": [
                             "contains",
                             "equals",
+                            "notEquals",
+                            "startsWith",
+                            "isOneOf",
                             "lessThan",
                             "greaterThan",
+                            "between",
                             "before",
-                            "after"
+                            "after",
+                            "dayOfMonth",
+                            "isIn",
+                            "isOut",
+                            "isEmpty"
                           ]
                         },
                         "value": {
@@ -27059,7 +27077,7 @@
                         },
                         "value": {
                           "type": "string",
-                          "maxLength": 200
+                          "maxLength": 2000
                         }
                       },
                       "required": [

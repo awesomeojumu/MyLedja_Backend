@@ -162,6 +162,7 @@ export class ImportsService {
               categoryId: r.categoryId ?? '',
               notes: r.notes ?? '',
               date: r.date ?? '',
+              direction: amount < 0n ? ('out' as const) : ('in' as const),
             };
           }),
         );

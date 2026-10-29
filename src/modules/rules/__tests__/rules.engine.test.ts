@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyRules, type RuleInput } from '../rules.engine.js';
+import { applyRules, conditionMatches, type RuleInput } from '../rules.engine.js';
 
 const row: RuleInput = {
   payeeName: 'BOLT',
@@ -9,6 +9,7 @@ const row: RuleInput = {
   categoryId: '',
   notes: '',
   date: '2026-10-12',
+  direction: 'out',
 };
 const rule = (over: Partial<Parameters<typeof applyRules>[0][number]>) => ({
   enabled: true,
@@ -47,5 +48,20 @@ describe('rules engine (B4.5)', () => {
         row,
       ).categoryId,
     ).toBe('cat-transport');
+  });
+
+  it('matches money in/out, day of month, and notEquals (PU-48)', () => {
+    expect(conditionMatches(row, { field: 'money', op: 'isOut', value: '' })).toBe(true);
+    expect(conditionMatches(row, { field: 'money', op: 'isIn', value: '' })).toBe(false);
+    expect(conditionMatches(row, { field: 'date', op: 'dayOfMonth', value: '12' })).toBe(true);
+    expect(conditionMatches(row, { field: 'payee', op: 'notEquals', value: 'Uber' })).toBe(true);
+    expect(conditionMatches(row, { field: 'payee', op: 'startsWith', value: 'BO' })).toBe(true);
+  });
+
+  it('collects addTag actions', () => {
+    expect(applyRules([rule({ actions: [{ kind: 'addTag', value: 'ride,work' }] })], row).tags).toEqual([
+      'ride',
+      'work',
+    ]);
   });
 });
