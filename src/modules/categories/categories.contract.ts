@@ -123,11 +123,14 @@ export const PayeeParams = WorkspaceParams.extend({ payeeId: Uuid });
 
 const Alias = z.string().trim().min(1).max(120);
 
+const LogoFileId = z.string().trim().min(1).max(240);
+
 export const CreatePayeeBody = z.object({
   id: Uuid.optional(),
   name: Name('payee').max(100),
   aliases: z.array(Alias).max(50).optional(),
   defaultCategoryId: Uuid.nullable().optional(),
+  logoFileId: LogoFileId.nullable().optional(),
 });
 
 export const UpdatePayeeBody = z.object({
@@ -135,12 +138,20 @@ export const UpdatePayeeBody = z.object({
   name: Name('payee').max(100).optional(),
   aliases: z.array(Alias).max(50).optional(),
   defaultCategoryId: Uuid.nullable().optional(),
+  /** Cloudinary public id (or cleared with null). PU-46 logo. */
+  logoFileId: LogoFileId.nullable().optional(),
 });
 
 export const MergePayeesBody = z.object({
   keepId: Uuid,
   mergeIds: z.array(Uuid).min(1, { error: 'Pick at least two payees' }).max(50),
   name: Name('payee').max(100).optional(),
+  /** Keep logo from this payee (defaults to keepId). PU-47. */
+  logoFromId: Uuid.optional(),
+  /** Keep usual category from this payee (defaults to keepId). PU-47. */
+  categoryFromId: Uuid.optional(),
+  logoFileId: LogoFileId.nullable().optional(),
+  defaultCategoryId: Uuid.nullable().optional(),
 });
 
 export const PayeesMerged = z
@@ -149,6 +160,9 @@ export const PayeesMerged = z
 
 export const MergeParams = WorkspaceParams.extend({ mergeId: Uuid });
 export const UndoParams = WorkspaceParams.extend({ undoId: Uuid });
+export const PayeeDeleted = z
+  .object({ payeeId: z.string() })
+  .meta({ id: 'PayeeDeleted' });
 
 const tag = 'Categories, tags and payees';
 const ws = '/v1/workspaces/:workspaceId';
@@ -393,6 +407,20 @@ export const payeeRoutes = {
     params: MergeParams,
     status: 200,
     response: z.object({ payees: z.array(Payee) }).meta({ id: 'PayeesRestored' }),
+    errors: [400, 401, 403, 404, 409],
+  }),
+  remove: defineRoute({
+    name: 'deletePayee',
+    method: 'DELETE',
+    path: `${ws}/payees/:payeeId`,
+    tag,
+    summary: 'Delete a payee with no transactions',
+    description:
+      'Allowed only when the payee has no transactions. Otherwise merge it into another payee (PU-46).',
+    access: editor,
+    params: PayeeParams,
+    status: 200,
+    response: PayeeDeleted,
     errors: [400, 401, 403, 404, 409],
   }),
 };

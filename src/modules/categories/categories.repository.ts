@@ -64,7 +64,12 @@ export type PayeeMergeDoc = {
   _id: string;
   workspaceId: string;
   keepId: string;
-  kept: { name: string; aliases: string[] };
+  kept: {
+    name: string;
+    aliases: string[];
+    defaultCategoryId: string | null;
+    logoFileId: string | null;
+  };
   merged: { payeeId: string; eventIds: string[] }[];
   at: Date;
   undoneAt: Date | null;

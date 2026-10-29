@@ -110,4 +110,9 @@ export class PayeesController {
   undoMerge(@In() i: Input<typeof p.undoMerge>, @Req() req: Req): Promise<Output<typeof p.undoMerge>> {
     return this.s.categories.undoMerge(req.ctx!, i.params.mergeId);
   }
+
+  @Route(p.remove)
+  remove(@In() i: Input<typeof p.remove>, @Req() req: Req): Promise<Output<typeof p.remove>> {
+    return this.s.categories.deletePayee(req.ctx!, i.params.payeeId);
+  }
 }
