@@ -218,6 +218,10 @@ export const debtRoutes = {
         accountId: Uuid,
         amount: MinorAmount,
         split: DebtPaymentSplit.optional().meta({ description: 'Default from interest due when omitted.' }),
+        overpayment: z
+          .enum(['gift', 'credit'])
+          .optional()
+          .meta({ description: 'TECH-SPEC 6.9: when principal exceeds outstanding, gift (income/expense) or keep as credit.' }),
       })
       .meta({ id: 'RecordDebtPaymentBody' }),
     status: 201,
