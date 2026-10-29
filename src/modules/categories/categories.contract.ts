@@ -80,6 +80,8 @@ export const DeleteCategoryBody = z.object({
   moveTo: Uuid.nullable().meta({
     description: 'Where its transactions move (each one as a correction). Required when it has any.',
   }),
+  /** Device-minted undo token (offline toast). When set, the server stores and returns this id. */
+  undoId: Uuid.optional(),
 });
 
 export const CategoryDeleted = z

@@ -23,8 +23,18 @@ export type CategoryDoc = Meta & {
   starterKey: string | null;
   sortOrder: number;
   deletedAt: Date | null;
-  /** Set on delete: where its transactions went, so Undo can bring them back. */
-  deletion: { undoId: string; movedTo: string | null; moves: { from: string; to: string }[] } | null;
+  /** Set on delete: where its transactions / plans / rules went, so Undo can bring them back. */
+  deletion: {
+    undoId: string;
+    movedTo: string | null;
+    moves: { from: string; to: string }[];
+    /** Budget amounts moved off this category (minor units as strings). */
+    budgetMoves?: { month: string; amountMinor: string }[];
+    /** Rules whose setCategory action was rewritten away from this category. */
+    ruleIds?: string[];
+    /** Schedules whose categoryId was rewritten. */
+    scheduleIds?: string[];
+  } | null;
 };
 
 export type GroupDoc = Meta & {

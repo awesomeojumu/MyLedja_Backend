@@ -115,6 +115,51 @@ describe('categories', () => {
     });
   });
 
+  it('honors a client-minted undoId so device toast Undo matches the server', async () => {
+    const w = await world();
+    await w.spend(w.food.id, '100000');
+    const clientUndoId = uuidv7();
+    const res = await w.s.categories.remove(w.ctx, w.food.id, w.eatOut.id, uuidv7(), clientUndoId);
+    expect(res.undoId).toBe(clientUndoId);
+    const back = await w.s.categories.undoRemove(w.ctx, clientUndoId, uuidv7());
+    expect(back.id).toBe(w.food.id);
+    expect(await w.s.categories.liveEventsIn(w.ctx, w.food.id)).toHaveLength(1);
+  });
+
+  it('delete moves budget amounts and setCategory rules; undo restores them', async () => {
+    const w = await world();
+    await w.s.budget.assign(w.ctx, '2026-10', w.food.id, { assigned: '1200000' } as never);
+    await w.s.rules.upsert(
+      w.ctx,
+      uuidv7(),
+      {
+        enabled: true,
+        stage: 'normal',
+        order: 0,
+        matchMode: 'all',
+        conditions: [{ field: 'payee', op: 'contains', value: 'Shoprite' }],
+        actions: [{ kind: 'setCategory', value: w.food.id }],
+      } as never,
+      null,
+    );
+    const beforeRules = await w.s.rules.list(w.ctx);
+    const rule = beforeRules.rules.find((r) => r.actions.some((a) => a.kind === 'setCategory' && a.value === w.food.id))!;
+
+    const res = await w.s.categories.remove(w.ctx, w.food.id, w.eatOut.id, uuidv7());
+    const month = await w.s.budget.get(w.ctx, '2026-10');
+    const eatOutRow = month.months[0]!.categories.find((c) => c.categoryId === w.eatOut.id);
+    expect(BigInt(eatOutRow?.assigned ?? '0')).toBeGreaterThanOrEqual(1_200_000n);
+    const afterRules = await w.s.rules.list(w.ctx);
+    expect(afterRules.rules.find((r) => r.id === rule.id)?.actions.some((a) => a.value === w.eatOut.id)).toBe(true);
+
+    await w.s.categories.undoRemove(w.ctx, res.undoId, uuidv7());
+    const restored = await w.s.budget.get(w.ctx, '2026-10');
+    const foodRow = restored.months[0]!.categories.find((c) => c.categoryId === w.food.id);
+    expect(foodRow?.assigned).toBe('1200000');
+    const rulesBack = await w.s.rules.list(w.ctx);
+    expect(rulesBack.rules.find((r) => r.id === rule.id)?.actions.some((a) => a.value === w.food.id)).toBe(true);
+  });
+
   it('built-in categories cannot be deleted, and moving across kinds is refused', async () => {
     const w = await world();
     const tree = await w.s.categories.tree(w.ctx);
