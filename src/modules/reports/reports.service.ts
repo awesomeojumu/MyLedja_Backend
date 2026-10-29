@@ -841,10 +841,28 @@ export class ReportsService {
     const before = await bandsFor(prev.from, prev.to);
     const income = now.filter((x) => x.kind === 'income').reduce((s, x) => s + x.amount, 0n);
     const share = (v: bigint) => (income > 0n ? String(divRoundHalfAwayFromZero(v * 10_000n, income)) : null);
+    /** Human labels for non-category bands (DESIGN.md 9.2 / page 22). */
+    const kindLabel = (kind: string) =>
+      (
+        ({
+          income: 'Income',
+          borrowed: 'Borrowed',
+          collected: 'Collected from loans',
+          returns: 'Sold investments',
+          transfers: 'Transfers',
+          spending: 'Spending',
+          goals: 'Goals',
+          debt_payments: 'Debt payments',
+          lent: 'Lent out',
+          investments: 'Investments',
+          left_over: 'Left over',
+          shortfall: 'From earlier money',
+        }) as Record<string, string>
+      )[kind] ?? kind;
     const labelOf = (band: (typeof now)[number]) =>
-      band.categoryId ? (b.categoryNames.get(band.categoryId) ?? '') : band.kind;
+      band.categoryId ? (b.categoryNames.get(band.categoryId) ?? '') : kindLabel(band.kind);
     const groupKey = (band: (typeof now)[number]) =>
-      band.kind === 'spending' ? `group:${band.groupId ?? NONE}` : band.kind === 'income' ? 'income' : band.kind;
+      band.kind === 'spending' ? `group:${band.groupId ?? NONE}` : band.kind;
     const groups = new Map<
       string,
       {
@@ -855,10 +873,12 @@ export class ReportsService {
         categories: { categoryId: string; label: string; amount: bigint }[];
       }
     >();
+    // Table under the diagram: where money went (P22-05) — out side only.
     for (const band of now) {
+      if (band.side !== 'out') continue;
       const key = groupKey(band);
       const g = groups.get(key) ?? {
-        label: band.kind === 'spending' ? (b.groupNames.get(band.groupId ?? '') ?? '') : band.kind,
+        label: band.kind === 'spending' ? (b.groupNames.get(band.groupId ?? '') ?? '') : kindLabel(band.kind),
         kind: band.kind,
         amount: 0n,
         previous: 0n,
@@ -870,11 +890,13 @@ export class ReportsService {
       groups.set(key, g);
     }
     for (const band of before) {
+      if (band.side !== 'out') continue;
       const g = groups.get(groupKey(band));
       if (g) g.previous += band.amount;
     }
     const totalIn = now.filter((x) => x.side === 'in').reduce((s, x) => s + x.amount, 0n);
     const left = now.find((x) => x.kind === 'left_over')?.amount ?? 0n;
+    const order = (kind: string) => (kind === 'spending' ? 0 : kind === 'left_over' ? 2 : 1);
     return {
       from: q.from,
       to: q.to,
@@ -889,18 +911,24 @@ export class ReportsService {
         out: toMinorString(totalIn - left),
         savedBasisPoints: share(left),
       },
-      groups: [...groups].map(([key, g]) => ({
-        key,
-        label: g.label,
-        kind: g.kind,
-        amount: toMinorString(g.amount),
-        shareBasisPoints: share(g.amount),
-        previous: toMinorString(g.previous),
-        change: toMinorString(g.amount - g.previous),
-        categories: g.categories
-          .sort((x, y) => (y.amount > x.amount ? 1 : y.amount < x.amount ? -1 : 0))
-          .map((c) => ({ ...c, amount: toMinorString(c.amount) })),
-      })),
+      groups: [...groups]
+        .map(([key, g]) => ({
+          key,
+          label: g.label,
+          kind: g.kind,
+          amount: toMinorString(g.amount),
+          shareBasisPoints: share(g.amount),
+          previous: toMinorString(g.previous),
+          change: toMinorString(g.amount - g.previous),
+          categories: g.categories
+            .sort((x, y) => (y.amount > x.amount ? 1 : y.amount < x.amount ? -1 : 0))
+            .map((c) => ({ ...c, amount: toMinorString(c.amount) })),
+        }))
+        .sort(
+          (a, b) =>
+            order(a.kind) - order(b.kind) ||
+            (BigInt(b.amount) > BigInt(a.amount) ? 1 : BigInt(b.amount) < BigInt(a.amount) ? -1 : 0),
+        ),
     };
   }
 
