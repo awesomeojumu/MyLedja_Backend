@@ -28,7 +28,7 @@ export class ExportsController {
 
   @Route(r.restore)
   restore(@In() i: Input<typeof r.restore>, @Req() req: Req): Promise<Output<typeof r.restore>> {
-    return this.s.exports.restore(req.auth!.userId, req.auth!.sessionId, i.body.content);
+    return this.s.exports.restore(req.auth!.userId, req.auth!.sessionId, i.body.content, i.body.workspaceName);
   }
 
   @Route(r.deleteAccount)

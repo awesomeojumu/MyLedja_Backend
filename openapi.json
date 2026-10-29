@@ -1182,6 +1182,18 @@
         ],
         "additionalProperties": false
       },
+      "ChangedEmail": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false
+      },
       "ChangePage": {
         "type": "object",
         "properties": {
@@ -8505,6 +8517,65 @@
         }
       }
     },
+    "/v1/auth/recheck/google": {
+      "post": {
+        "operationId": "recheckGoogle",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Confirm it's you with Google (accounts that have no password)",
+        "description": "Google-only accounts (no passwordHash) mark the session rechecked so sensitive actions can continue (PU-57).",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/recheck/passkey-options": {
       "post": {
         "operationId": "recheckPasskeyOptions",
@@ -9509,6 +9580,178 @@
         }
       }
     },
+    "/v1/me/email/confirm": {
+      "post": {
+        "operationId": "confirmEmailChange",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Confirm the new email with the code from that address (PU-61)",
+        "description": "Email only changes after this succeeds. The old address gets a notice.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "email",
+                  "code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangedEmail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/email/request": {
+      "post": {
+        "operationId": "requestEmailChange",
+        "tags": [
+          "Security"
+        ],
+        "summary": "Start changing email: send a 6-digit code to the new address (PU-61)",
+        "description": "Needs a recent re-check. An address already in use returns 409 email_in_use without saying why. The code goes to the NEW email.",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/passkeys": {
       "post": {
         "operationId": "addPasskey",
@@ -9725,7 +9968,7 @@
         "tags": [
           "Security"
         ],
-        "summary": "Change the password; other devices are signed out",
+        "summary": "Change the password; other devices are signed out unless signOutOtherDevices is false",
         "security": [
           {
             "bearer": []
@@ -9758,6 +10001,10 @@
                     "type": "string",
                     "minLength": 10,
                     "maxLength": 200
+                  },
+                  "signOutOtherDevices": {
+                    "default": true,
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -9840,6 +10087,11 @@
                     "type": "string",
                     "minLength": 2,
                     "maxLength": 50000000
+                  },
+                  "workspaceName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
                   }
                 },
                 "required": [

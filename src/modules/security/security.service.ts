@@ -17,10 +17,13 @@ import type { SessionsRepository, UserDoc, UsersRepository } from '../auth/auth.
 import { type AuthService, type RequestMeta, type SessionResult, waitMessage } from '../auth/auth.service.js';
 import type { PasswordHasher } from '../auth/tokens.js';
 import type { ClientSession } from 'mongodb';
+import type { Mailer } from '../notifications/email/email.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { WorkspacesService } from '../workspaces/workspaces.service.js';
 import {
   type ActivityEvent,
+  type ChangeEmailConfirmBody,
+  type ChangeEmailRequestBody,
   type ChangePasswordBody,
   type DeviceSession,
   type Passkey,
@@ -48,6 +51,9 @@ const MESSAGES = {
   alreadyOn: 'Two-factor is already on.',
   notOn: 'Two-factor is off.',
   setupFirst: 'Start setting up two-factor again.',
+  emailInUse: "That email can't be used",
+  emailSame: 'Enter a different email address',
+  googleRecheckOnly: 'Use your password or a passkey to confirm.',
 } as const;
 
 type PasskeyChallenge<K extends string> = { kind: K; challenge: string; userId: string | null; exp: number };
@@ -72,6 +78,7 @@ export class SecurityService {
     private readonly workspaces: WorkspacesService,
     private readonly now: () => Date = () => new Date(),
     private readonly notifications: NotificationsService | null = null,
+    private readonly mailer: Mailer | null = null,
   ) {
     auth.secondStep = (user, body) => this.secondStep(user, body);
     auth.afterSignIn = (user, deviceName, session) => this.noticeSignIn(user, deviceName, session);
@@ -388,6 +395,16 @@ export class SecurityService {
     return { challengeToken, options: options as unknown as Record<string, unknown> };
   }
 
+  /** Google-only accounts (no password) confirm sensitive actions without a password (PU-57). */
+  async recheckGoogle(userId: string, sessionId: string) {
+    const user = await this.mustUser(userId);
+    if (user.passwordHash !== null || !user.googleId) {
+      throw new AppError(400, 'google_recheck_unavailable', MESSAGES.googleRecheckOnly);
+    }
+    await this.sessions.markRechecked(sessionId, this.now());
+    return this.status(userId, sessionId);
+  }
+
   /* ---------- Settings › Security ---------- */
 
   async status(userId: string, sessionId: string): Promise<z.input<typeof SecurityStatus>> {
@@ -496,9 +513,44 @@ export class SecurityService {
     }
     await this.limits.clear(lockKey);
     await this.users.setFields(userId, { passwordHash: await this.hasher.hash(body.newPassword) });
-    await this.sessions.revokeAllForUser(userId, 'password_changed', sessionId);
+    if (body.signOutOtherDevices) {
+      await this.sessions.revokeAllForUser(userId, 'password_changed', sessionId);
+    }
     await this.record(userId, sessionId, 'user.password_changed');
     await this.notice(userId, 'Your password was changed');
+  }
+
+  /** PU-61 step 1: send a 6-digit code to the NEW email. Does not change the account yet. */
+  async requestEmailChange(userId: string, sessionId: string, body: z.output<typeof ChangeEmailRequestBody>) {
+    await this.requireRecent(sessionId);
+    const user = await this.mustUser(userId);
+    const email = body.email;
+    if (email === user.email) throw new AppError(400, 'email_same', MESSAGES.emailSame, { field: 'email' });
+    const other = await this.users.byEmail(email);
+    if (other && other._id !== userId) {
+      throw new AppError(409, 'email_in_use', MESSAGES.emailInUse, { field: 'email' });
+    }
+    const code = await this.auth.issueCode(email, 'change_email', true);
+    if (code) await this.mailer?.emailChangeCode(email, code);
+  }
+
+  /** PU-61 step 2: email only changes after the code from the new address is confirmed. */
+  async confirmEmailChange(userId: string, sessionId: string, body: z.output<typeof ChangeEmailConfirmBody>) {
+    const user = await this.mustUser(userId);
+    const email = body.email;
+    if (email === user.email) throw new AppError(400, 'email_same', MESSAGES.emailSame, { field: 'email' });
+    const other = await this.users.byEmail(email);
+    if (other && other._id !== userId) {
+      throw new AppError(409, 'email_in_use', MESSAGES.emailInUse, { field: 'email' });
+    }
+    const codeId = await this.auth.checkCode(email, 'change_email', body.code);
+    const oldEmail = user.email;
+    await this.users.update(userId, { email });
+    await this.auth.removeCode(codeId);
+    await this.record(userId, sessionId, 'user.email_changed');
+    if (this.mailer) await this.mailer.emailChangedNotice(oldEmail, email);
+    await this.notice(userId, 'Your email was changed');
+    return { email };
   }
 
   /* ---------- Activity log (B3.9) ---------- */
