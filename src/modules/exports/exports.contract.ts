@@ -16,6 +16,9 @@ export const ExportFile = z
   .meta({ id: 'ExportFile' });
 
 const BackupContent = z.object({ content: z.string().min(2).max(50_000_000) });
+const RestoreBody = BackupContent.extend({
+  workspaceName: z.string().trim().min(1).max(60).optional(),
+});
 
 export const RestorePreview = z
   .object({
@@ -86,7 +89,7 @@ export const exportRoutes = {
     tag,
     summary: 'Restore a backup into a new workspace (asks again)',
     access: { kind: 'user' },
-    body: BackupContent,
+    body: RestoreBody,
     status: 201,
     response: Restored,
     errors: [400, 401, 403],

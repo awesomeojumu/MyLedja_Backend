@@ -382,3 +382,32 @@ Format and rules: build plan section 14. The owner asked for the best profession
   - Sync: `income.stream.create`, `income.stream.update`; change feed `income_streams`.
 - Answer:
 - Status: open
+
+## Q-B33: Phase 5 decisions where the documents leave room
+
+- Task: B5.1 to B5.5
+- Raised by: backend agent
+- Documents: TECH-SPEC 6.1, 6.2, 6.5, 6.7, 6.8, 6.10, 6.13; DESIGN.md pages 17 to 23
+- Options and recommendations (all in effect; each can change without a data migration unless noted):
+  - **Lots are rebuilt from history, not stored.** Each buy (E20) and reinvested dividend (E22) carries `investment` (units, price, fees) and is its own lot (lot id = event id); each sale (E21) records the lots it took and their cost. The `lots` collection of TECH-SPEC 7 isn't needed: the app and server rebuild the same lots from the events, offline. Deleting a buy whose units were sold is refused until the sale is deleted.
+  - **A holding is an asset ledger account** (TECH-SPEC 6.1 "each holding (at cost)") whose id is the holding's id, held in an investment, pension, fixed deposit or other-asset account and in that account's currency. It never appears as an account of its own and can't be a cash account.
+  - **Units** are decimal strings with up to 6 places, held as whole millionths (no floats). Cost and value round half away from zero; selling what's left of a lot takes all its remaining cost, so costs add up exactly.
+  - **Dividends** post as type `income` (TECH-SPEC 6.2 E22) through a `dividend` input. Fixed-deposit and savings interest (E23) is an ordinary income to the Interest earned category.
+  - **Exchange rates:** a balance uses the latest rate entered on or before its date ("that date's rate" would leave most days without one). With none, it's left out and the figure is "Partial" (case 25).
+  - **Opening balances in another currency.** Equity system accounts (opening balances, adjustments, revaluation, exchange clearing) may hold lines in any currency. Before this, a dollar account couldn't be opened with a balance (a Phase 1 gap found by case 25).
+  - **Net worth** counts holdings at market value (cost plus unrealised gain), on Accounts, the Dashboard and reports.
+  - **Reports** read `period_totals` for whole-month reports by category, group or month, and the transactions otherwise (payee, tag, account, day and week need them). Dashboards and builder reports are stored (`report_dashboards`, `saved_reports`) and sync. The tax summary report stays "Later" (DESIGN.md page 19).
+  - **Health:** debt load uses debt payments made in each of the three months (principal and interest), because instalment schedules are optional. Liquid cash leaves out money borrowed in the last three months that's still owed, so borrowing never raises the score (P23-07). Essential spending is a category marked essential, or by default the Fixed type and the Home, Food, Getting around, Health and Education groups. A category with spending but no plan doesn't count in the Budget pillar.
+  - **Advice** is structured (pillar, link, amount or count); the app words it. AI rewording of advice isn't used.
+- Answer:
+- Status: open
+
+## Q-B34: Bank parsers for Premium Trust and Bank78
+
+- Task: B4.3
+- Raised by: backend agent
+- Documents: build plan B4.3 names GTB, Access, Zenith, UBA, Kuda, Premium Trust and Bank78; the Phase 4 work built the first five
+- Options: A, add parsers for Premium Trust and Bank78 once sample statements exist. B, rely on the AI fallback for them.
+- Recommendation: A. The AI fallback reads them meanwhile. Needs sample statements from the owner.
+- Answer:
+- Status: open

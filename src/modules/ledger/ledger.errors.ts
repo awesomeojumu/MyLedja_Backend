@@ -57,5 +57,24 @@ export const LedgerErrors = {
   notFoundEvent: () => new AppError(404, 'not_found', "We couldn't find this transaction. It may have been removed."),
   hasRefunds: () =>
     new AppError(409, 'has_refunds', 'This purchase has refunds. Delete them first, then change the purchase.'),
+  notHolding: (field = 'holdingId') =>
+    new AppError(400, 'holding_not_found', "We couldn't find this holding. It may have been removed.", { field }),
+  notEnoughUnits: (held: string) =>
+    new AppError(400, 'not_enough_units', `You hold ${held} units. Sell that many or fewer.`, { field: 'units' }),
+  lotsDontMatch: () =>
+    new AppError(400, 'lots_mismatch', 'The units from the chosen lots must add up to the units you sell.', {
+      field: 'lots',
+    }),
+  feesTooBig: () => new AppError(400, 'fees_too_big', 'The fees are more than the sale brings in.', { field: 'fees' }),
+  dividendTarget: () =>
+    new AppError(400, 'invalid_input', 'Choose the account it was paid into, or the units it bought.', {
+      field: 'accountId',
+    }),
+  lotSold: () =>
+    new AppError(
+      409,
+      'lot_sold',
+      'Units from this purchase were sold. Delete the sale first, then change the purchase.',
+    ),
   locked: () => new AppError(409, 'reconciled', 'This transaction is reconciled. Unlock it first to change it.'),
 };

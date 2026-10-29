@@ -200,4 +200,18 @@ export const goalRoutes = {
       .meta({ id: 'SpendFromGoalResult' }),
     errors: [400, 401, 403, 404, 409],
   }),
+  remove: defineRoute({
+    name: 'deleteGoal',
+    method: 'DELETE',
+    path: `${base}/:goalId`,
+    tag,
+    summary: 'Delete a goal without moving money (PU-30)',
+    description: 'Removes the goal and its allocation records. Money stays in the goal account.',
+    access: editor,
+    params: GoalParams,
+    body: z.object({ baseVersion: BaseVersion }).meta({ id: 'DeleteGoalBody' }),
+    status: 204,
+    response: z.void(),
+    errors: [400, 401, 403, 404, 409],
+  }),
 };

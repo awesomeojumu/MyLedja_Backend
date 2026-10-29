@@ -32,6 +32,19 @@ export const OPERATION_TYPES = [
   'income.stream.update',
   'rule.upsert',
   'rule.delete',
+  'holding.create',
+  'holding.update',
+  'holding.prices',
+  'holding.archive',
+  'holding.price.delete',
+  'exchange_rate.set',
+  'exchange_rate.delete',
+  'report_dashboard.create',
+  'report_dashboard.update',
+  'report_dashboard.delete',
+  'saved_report.create',
+  'saved_report.update',
+  'saved_report.delete',
 ] as const;
 
 export const CURRENT_SCHEMA_VERSION = 1;

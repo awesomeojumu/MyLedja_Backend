@@ -198,6 +198,23 @@ export const Dashboard = z
       hidden: z.boolean(),
       steps: z.array(z.object({ key: z.string(), done: z.boolean() })),
     }),
+    health: z
+      .object({
+        ready: z.boolean(),
+        score: z.number().int().nullable(),
+        band: z.enum(['strong', 'okay', 'needs_attention']).nullable(),
+        change: z.number().int().nullable(),
+      })
+      .nullable()
+      .meta({ description: 'Phase 5 Health card (DESIGN.md page 5).' }),
+    investments: z
+      .object({
+        value: MinorAmount,
+        unrealised: MinorAmount,
+        change: MinorAmount.meta({ description: 'Over the last month.' }),
+      })
+      .nullable()
+      .meta({ description: 'Phase 5 Investments card; null with no holdings.' }),
   })
   .meta({ id: 'Dashboard' });
 
