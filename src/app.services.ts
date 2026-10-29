@@ -122,6 +122,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const workspacesRepo = new WorkspacesRepository(db);
   const categoriesRepo = new CategoriesRepository(db);
   const payeesRepo = new PayeesRepository(db);
+  const files = fileStoreFor(config);
   const categories = new CategoriesService(
     database,
     categoriesRepo,
@@ -133,6 +134,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     audit,
     async (ctx, session) => (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN',
     now,
+    (logoFileId) => (logoFileId && files ? files.signedUrl(logoFileId, 'image') : null),
   );
   const currencyOf = async (ctx: WorkspaceContext, session?: ClientSession) =>
     (await workspacesRepo.get(ctx, { session }))?.currency ?? 'NGN';
@@ -342,7 +344,6 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const workspaceIndex = new WorkspaceIndex(db);
   jobs.register(billRemindersJob({ workspaces: workspaceIndex, workspaceDocs: workspacesRepo, schedules, now }));
   jobs.register(recurringDailyJob({ workspaces: workspaceIndex, schedules, now }));
-  const files = fileStoreFor(config);
   const security = new SecurityService(
     config,
     users,

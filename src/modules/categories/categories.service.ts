@@ -95,6 +95,12 @@ const meta = (now: Date) => ({ createdAt: now, updatedAt: now, version: 1 });
 export const CategoryErrors = {
   nameTaken: (what: string) =>
     new AppError(409, 'name_taken', `You already have a ${what} with this name.`, { field: 'name' }),
+  /** PU46-2: a bank name belongs to only one payee. */
+  aliasTaken: (ownerName: string) =>
+    new AppError(409, 'alias_taken', `That name already belongs to ${ownerName}.`, {
+      field: 'aliases',
+      ownerName,
+    }),
   groupKind: () =>
     new AppError(400, 'wrong_group', 'Move it to a group of the same kind (income or spending).', { field: 'groupId' }),
   system: () =>
@@ -105,6 +111,13 @@ export const CategoryErrors = {
     new AppError(400, 'wrong_category', 'Move them to a category of the same kind.', { field: 'moveTo' }),
   groupNotEmpty: () => new AppError(409, 'group_not_empty', 'Move or delete its categories first.'),
   mergeSelf: () => new AppError(400, 'invalid_input', 'Pick at least two different payees.', { field: 'mergeIds' }),
+  payeeHasTx: (n: number) =>
+    new AppError(
+      400,
+      'payee_has_transactions',
+      `This payee still has ${n} transactions. Merge it into another payee instead.`,
+      { field: 'payeeId', transactionCount: n },
+    ),
   undone: () => new AppError(409, 'already_undone', 'This was already undone.'),
   stale: (current: unknown) =>
     new AppError(409, 'already_changed', 'This was already changed on another device.', { current }),
@@ -123,6 +136,8 @@ export class CategoriesService {
     private readonly audit: AuditRepository,
     private readonly currencyOf: (ctx: WorkspaceContext, session?: ClientSession) => Promise<string>,
     private readonly now: () => Date = () => new Date(),
+    /** Resolve a stored logo file id to a URL the client can show (Cloudinary signed/public). */
+    private readonly logoUrlOf: (logoFileId: string | null) => string | null = () => null,
   ) {}
 
   /** The default groups and categories, each with its ledger account. Safe to run twice. */
@@ -568,7 +583,7 @@ export class CategoriesService {
       page.map((p) => p._id),
     );
     return {
-      items: page.map((p) => payeeView(p, stats.get(p._id))),
+      items: page.map((p) => this.viewPayee(p, stats.get(p._id))),
       nextCursor: docs.length > q.limit ? encodeCursor([page.at(-1)!.nameKey, page.at(-1)!._id]) : null,
     };
   }
@@ -576,7 +591,7 @@ export class CategoriesService {
   async getPayee(ctx: WorkspaceContext, id: string) {
     const p = await this.payees.findOne(ctx, { _id: id, mergedInto: null });
     if (!p) throw Errors.notFound();
-    return payeeView(p, (await this.payeeStats(ctx, [id])).get(id));
+    return this.viewPayee(p, (await this.payeeStats(ctx, [id])).get(id));
   }
 
   async createPayee(ctx: WorkspaceContext, body: z.output<typeof CreatePayeeBody>) {
@@ -587,8 +602,9 @@ export class CategoriesService {
       }
       if (await this.payees.findOne(ctx, { nameKey: keyOf(body.name), mergedInto: null }, { session }))
         throw CategoryErrors.nameTaken('payee');
-      await this.assertCategory(ctx, body.defaultCategoryId ?? null, session);
       const aliases = uniq(body.aliases ?? []);
+      await this.assertAliasKeysFree(ctx, [keyOf(body.name), ...aliases.map(keyOf)], null, session);
+      await this.assertCategory(ctx, body.defaultCategoryId ?? null, session);
       const p = await this.payees.insertOne(
         ctx,
         {
@@ -598,7 +614,7 @@ export class CategoriesService {
           aliases,
           aliasKeys: aliases.map(keyOf),
           defaultCategoryId: body.defaultCategoryId ?? null,
-          logoFileId: null,
+          logoFileId: body.logoFileId ?? null,
           mergedInto: null,
           ...meta(this.now()),
         },
@@ -607,7 +623,7 @@ export class CategoriesService {
       await this.ledger.feed(ctx, [{ collection: 'payees', docId: p._id, op: 'upsert' }], session);
       return p;
     });
-    return payeeView(doc, undefined);
+    return this.viewPayee(doc, undefined);
   }
 
   async updatePayee(ctx: WorkspaceContext, id: string, body: z.output<typeof UpdatePayeeBody>) {
@@ -629,21 +645,25 @@ export class CategoriesService {
         set.aliases = uniq(body.aliases);
         set.aliasKeys = set.aliases.map(keyOf);
       }
+      const nameKey = set.nameKey ?? before.nameKey;
+      const aliasKeys = set.aliasKeys ?? before.aliasKeys;
+      await this.assertAliasKeysFree(ctx, [nameKey, ...aliasKeys], id, session);
       if (body.defaultCategoryId !== undefined) {
         await this.assertCategory(ctx, body.defaultCategoryId, session);
         set.defaultCategoryId = body.defaultCategoryId;
       }
+      if (body.logoFileId !== undefined) set.logoFileId = body.logoFileId;
       const after = await this.payees.findOneAndUpdate(
         ctx,
         { _id: id, version: body.baseVersion },
         { $set: set, $inc: { version: 1 } },
         { session },
       );
-      if (!after) throw CategoryErrors.stale(payeeView(before, undefined));
+      if (!after) throw CategoryErrors.stale(this.viewPayee(before, undefined));
       await this.ledger.feed(ctx, [{ collection: 'payees', docId: id, op: 'upsert' }], session);
       return after;
     });
-    return payeeView(doc, (await this.payeeStats(ctx, [id])).get(id));
+    return this.viewPayee(doc, (await this.payeeStats(ctx, [id])).get(id));
   }
 
   /** Every transaction moves to the kept payee in place; merged names become its aliases (P24-04). */
@@ -654,6 +674,11 @@ export class CategoriesService {
       const keep = await this.payees.findOne(ctx, { _id: body.keepId, mergedInto: null }, { session });
       const others = await this.payees.find(ctx, { _id: { $in: ids }, mergedInto: null }, { session });
       if (!keep || others.length !== ids.length) throw Errors.notFound();
+      const pool = [keep, ...others];
+      const logoFrom = body.logoFromId ? pool.find((p) => p._id === body.logoFromId) : keep;
+      const categoryFrom = body.categoryFromId ? pool.find((p) => p._id === body.categoryFromId) : keep;
+      if (body.logoFromId && !logoFrom) throw Errors.notFound();
+      if (body.categoryFromId && !categoryFrom) throw Errors.notFound();
       const merged: { payeeId: string; eventIds: string[] }[] = [];
       let moved = 0;
       for (const o of others) {
@@ -676,7 +701,12 @@ export class CategoriesService {
         {
           _id: mergeId,
           keepId: keep._id,
-          kept: { name: keep.name, aliases: keep.aliases },
+          kept: {
+            name: keep.name,
+            aliases: keep.aliases,
+            defaultCategoryId: keep.defaultCategoryId,
+            logoFileId: keep.logoFileId,
+          },
           merged,
           at: this.now(),
           undoneAt: null,
@@ -684,11 +714,26 @@ export class CategoriesService {
         { session },
       );
       const name = body.name ?? keep.name;
+      const logoFileId =
+        body.logoFileId !== undefined ? body.logoFileId : (logoFrom?.logoFileId ?? keep.logoFileId);
+      const defaultCategoryId =
+        body.defaultCategoryId !== undefined
+          ? body.defaultCategoryId
+          : (categoryFrom?.defaultCategoryId ?? keep.defaultCategoryId);
+      if (defaultCategoryId) await this.assertCategory(ctx, defaultCategoryId, session);
       const after = await this.payees.findOneAndUpdate(
         ctx,
         { _id: keep._id },
         {
-          $set: { name, nameKey: keyOf(name), aliases, aliasKeys: aliases.map(keyOf), updatedAt: this.now() },
+          $set: {
+            name,
+            nameKey: keyOf(name),
+            aliases,
+            aliasKeys: aliases.map(keyOf),
+            logoFileId,
+            defaultCategoryId,
+            updatedAt: this.now(),
+          },
           $inc: { version: 1 },
         },
         { session },
@@ -715,7 +760,7 @@ export class CategoriesService {
       return { payee: after!, moved, mergeId };
     });
     return {
-      payee: payeeView(result.payee, (await this.payeeStats(ctx, [result.payee._id])).get(result.payee._id)),
+      payee: this.viewPayee(result.payee, (await this.payeeStats(ctx, [result.payee._id])).get(result.payee._id)),
       moved: result.moved,
       mergeId: result.mergeId,
     };
@@ -750,6 +795,8 @@ export class CategoriesService {
             nameKey: keyOf(m.kept.name),
             aliases: m.kept.aliases,
             aliasKeys: m.kept.aliases.map(keyOf),
+            defaultCategoryId: m.kept.defaultCategoryId ?? null,
+            logoFileId: m.kept.logoFileId ?? null,
             updatedAt: this.now(),
           },
           $inc: { version: 1 },
@@ -766,7 +813,26 @@ export class CategoriesService {
     });
     const docs = await this.payees.find(ctx, { _id: { $in: ids } });
     const stats = await this.payeeStats(ctx, ids);
-    return { payees: docs.map((p) => payeeView(p, stats.get(p._id))) };
+    return { payees: docs.map((p) => this.viewPayee(p, stats.get(p._id))) };
+  }
+
+  /** PU-46: delete only when the payee has no transactions. */
+  async deletePayee(ctx: WorkspaceContext, id: string) {
+    await this.database.transaction(async (session) => {
+      const before = await this.payees.findOne(ctx, { _id: id, mergedInto: null }, { session });
+      if (!before) throw Errors.notFound();
+      const stats = (await this.payeeStats(ctx, [id])).get(id);
+      const count = stats?.count ?? 0;
+      if (count > 0) throw CategoryErrors.payeeHasTx(count);
+      await this.payees.deleteOne(ctx, { _id: id }, { session });
+      await this.ledger.feed(ctx, [{ collection: 'payees', docId: id, op: 'tombstone' }], session);
+      await this.audit.record(
+        ctx,
+        { action: 'payee.deleted', target: { collection: 'payees', id } },
+        { session },
+      );
+    });
+    return { payeeId: id };
   }
 
   /** Count, spending this year and last use, from live transactions. */
@@ -811,6 +877,32 @@ export class CategoriesService {
     }
   }
 
+  /** PU46-2: name and alias keys must not belong to another live payee. */
+  private async assertAliasKeysFree(
+    ctx: WorkspaceContext,
+    keys: string[],
+    exceptId: string | null,
+    session: ClientSession,
+  ) {
+    const unique = [...new Set(keys.map(keyOf).filter(Boolean))];
+    for (const k of unique) {
+      const owner = await this.payees.findOne(
+        ctx,
+        {
+          mergedInto: null,
+          ...(exceptId ? { _id: { $ne: exceptId } } : {}),
+          $or: [{ nameKey: k }, { aliasKeys: k }],
+        } as never,
+        { session },
+      );
+      if (owner) throw CategoryErrors.aliasTaken(owner.name);
+    }
+  }
+
+  private viewPayee(p: PayeeDoc, s: Stats | undefined): z.input<typeof Payee> {
+    return payeeView(p, s, this.logoUrlOf);
+  }
+
   categoryById(ctx: WorkspaceContext, id: string, o: Opts = {}) {
     return this.categories.byId(ctx, id, o);
   }
@@ -846,13 +938,22 @@ const groupView = (g: GroupDoc): z.input<typeof CategoryGroup> => ({
 });
 const tagView = (t: TagDoc): z.input<typeof Tag> => ({ id: t._id, name: t.name, version: t.version });
 
-export function payeeView(p: PayeeDoc, s: Stats | undefined): z.input<typeof Payee> {
+export function payeeView(
+  p: PayeeDoc,
+  s: Stats | undefined,
+  logoUrlOf: (logoFileId: string | null) => string | null = () => null,
+): z.input<typeof Payee> {
+  const raw = p.logoFileId;
+  const logoUrl =
+    raw && (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:') || raw.startsWith('file:'))
+      ? raw
+      : logoUrlOf(raw);
   return {
     id: p._id,
     name: p.name,
     aliases: p.aliases,
     defaultCategoryId: p.defaultCategoryId,
-    logoUrl: null,
+    logoUrl,
     transactionCount: s?.count ?? 0,
     spentThisYear: toMinorString(s?.spent ?? 0n),
     lastUsed: s?.last ?? null,

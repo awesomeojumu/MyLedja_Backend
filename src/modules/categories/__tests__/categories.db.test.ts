@@ -176,7 +176,12 @@ describe('payees', () => {
     await w.spend(w.food.id, '1000', { payeeId: a.id });
     const { event } = await w.spend(w.food.id, '2000', { payeeId: b.id });
 
-    const merged = await w.s.categories.mergePayees(w.ctx, { keepId: a.id, mergeIds: [b.id] } as never);
+    const merged = await w.s.categories.mergePayees(w.ctx, {
+      keepId: a.id,
+      mergeIds: [b.id],
+      logoFromId: b.id,
+      categoryFromId: b.id,
+    } as never);
     expect(merged.moved).toBe(1);
     expect(merged.payee).toMatchObject({ transactionCount: 2, spentThisYear: '3000' });
     expect(merged.payee.aliases).toEqual(['SHOPRITE LEKKI', 'Shoprite Lekki Mall']);
@@ -188,6 +193,43 @@ describe('payees', () => {
     expect(undone.payees).toHaveLength(2);
     expect((await w.s.ledger.transactions.byId(w.ctx, event._id))?.payeeId).toBe(b.id);
     expect((await w.s.categories.getPayee(w.ctx, a.id)).aliases).toEqual([]);
+  });
+
+  it('PU46-2: rejects a bank name already owned by another payee', async () => {
+    const w = await world();
+    const a = await w.s.categories.createPayee(w.ctx, {
+      name: 'Shoprite',
+      aliases: ['POS SHOPRITE'],
+    } as never);
+    const b = await w.s.categories.createPayee(w.ctx, { name: 'Corner shop' } as never);
+    await expect(
+      w.s.categories.updatePayee(w.ctx, b.id, { baseVersion: b.version, aliases: ['POS SHOPRITE'] } as never),
+    ).rejects.toMatchObject({ code: 'alias_taken', extra: expect.objectContaining({ ownerName: 'Shoprite' }) });
+    await expect(
+      w.s.categories.createPayee(w.ctx, { name: 'Other', aliases: ['Shoprite'] } as never),
+    ).rejects.toMatchObject({ code: 'alias_taken' });
+    expect(a.id).toBeTruthy();
+  });
+
+  it('deletes a payee with no transactions; refuses when it has some', async () => {
+    const w = await world();
+    const empty = await w.s.categories.createPayee(w.ctx, { name: 'Unused' } as never);
+    await expect(w.s.categories.deletePayee(w.ctx, empty.id)).resolves.toEqual({ payeeId: empty.id });
+    await expect(w.s.categories.getPayee(w.ctx, empty.id)).rejects.toMatchObject({ code: 'not_found' });
+    const used = await w.s.categories.createPayee(w.ctx, { name: 'Used' } as never);
+    await w.spend(w.food.id, '500', { payeeId: used.id });
+    await expect(w.s.categories.deletePayee(w.ctx, used.id)).rejects.toMatchObject({
+      code: 'payee_has_transactions',
+    });
+  });
+
+  it('returns a logoUrl when logoFileId is a direct URL', async () => {
+    const w = await world();
+    const p = await w.s.categories.createPayee(w.ctx, {
+      name: 'With logo',
+      logoFileId: 'https://cdn.example/logo.png',
+    } as never);
+    expect(p.logoUrl).toBe('https://cdn.example/logo.png');
   });
 
   it('lists in name order across pages', async () => {

@@ -8,6 +8,7 @@ import type { BudgetService } from '../budget/budget.service.js';
 import {
   CreateCategoryBody,
   CreatePayeeBody,
+  MergePayeesBody,
   UpdateCategoryBody,
   UpdatePayeeBody,
 } from '../categories/categories.contract.js';
@@ -298,6 +299,18 @@ export class SyncService {
         if (!targetId) throw Errors.validation('targetId', 'Choose the payee to update.');
         const body = UpdatePayeeBody.parse({ ...payload, baseVersion: baseVersion ?? payload.baseVersion });
         return { result: await this.categories.updatePayee(ctx, targetId, body), duplicate: false };
+      }
+      case 'payee.merge': {
+        const body = MergePayeesBody.parse(payload);
+        return { result: await this.categories.mergePayees(ctx, body), duplicate: false };
+      }
+      case 'payee.merge.undo': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the merge to undo.');
+        return { result: await this.categories.undoMerge(ctx, targetId), duplicate: false };
+      }
+      case 'payee.delete': {
+        if (!targetId) throw Errors.validation('targetId', 'Choose the payee to delete.');
+        return { result: await this.categories.deletePayee(ctx, targetId), duplicate: false };
       }
       case 'tag.create': {
         const body = TagCreateBody.parse(payload);

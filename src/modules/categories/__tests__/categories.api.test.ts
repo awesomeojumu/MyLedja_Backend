@@ -428,3 +428,25 @@ sixPack('POST /v1/workspaces/:workspaceId/payees/merges/:mergeId/undo', {
     };
   },
 });
+
+sixPack('DELETE /v1/workspaces/:workspaceId/payees/:payeeId', {
+  t: () => t,
+  write: true,
+  prepare: async (owner) => {
+    const base = `/v1/workspaces/${owner.workspaceId}`;
+    const payee = (
+      await t.app.inject({
+        method: 'POST',
+        url: `${base}/payees`,
+        headers: { ...owner.auth, ...op() },
+        payload: { name: `Del ${Date.now()}` },
+      })
+    ).json();
+    return {
+      method: 'DELETE',
+      url: `${base}/payees/${payee.id}`,
+      badUrl: `${base}/payees/not-a-uuid`,
+      assert: (res) => expect(res.json()).toMatchObject({ payeeId: payee.id }),
+    };
+  },
+});
