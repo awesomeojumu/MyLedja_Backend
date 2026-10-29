@@ -42,6 +42,7 @@ import type { ReportsService } from '../reports/reports.service.js';
 import { reportRoutes } from '../reports/reports.contract.js';
 import { SetExchangeRateBody } from '../currencies/currencies.contract.js';
 import type { ReconcileService } from '../reconcile/reconcile.service.js';
+import type { NotificationsService } from '../notifications/notifications.service.js';
 import { CURRENT_SCHEMA_VERSION, type Change, type Operation, type OperationResult } from './sync.contract.js';
 
 const PREVIOUS_SCHEMA_VERSION = 0;
@@ -80,6 +81,7 @@ export class SyncService {
   currencies!: CurrenciesService;
   reports!: ReportsService;
   reconcile!: ReconcileService;
+  notifications!: NotificationsService;
 
   constructor(
     private readonly counters: CountersRepository,
@@ -724,6 +726,12 @@ export class SyncService {
         case 'reconciliations':
           try {
             return (await this.reconcile.get(ctx, row.docId)).reconciliation;
+          } catch {
+            return null;
+          }
+        case 'notifications':
+          try {
+            return await this.notifications.serialize(ctx, row.docId);
           } catch {
             return null;
           }

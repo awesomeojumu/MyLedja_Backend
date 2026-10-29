@@ -13,6 +13,21 @@ describe('planning jobs (B2.2)', () => {
   it('delivers a bill reminder once on the chosen local day', async () => {
     const w = await newWorkspace(t);
     const s = t.services;
+    const ownerEmail = `owner.${w.userId.slice(0, 8)}@example.test`;
+    const now = new Date();
+    await t.db.collection('users').insertOne({
+      _id: w.userId,
+      email: ownerEmail,
+      name: 'Owner',
+      passwordHash: 'x',
+      googleId: null,
+      emailVerifiedAt: now,
+      termsAcceptedAt: now,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      version: 1,
+    } as never);
     const bank = await s.accounts.create(
       w.ctx,
       { type: 'bank', name: 'GTBank', openingBalance: '5000000', openingDate: '2026-10-01' } as never,
@@ -38,6 +53,7 @@ describe('planning jobs (B2.2)', () => {
     );
     // 2026-10-27 08:00 in Africa/Lagos (UTC+1).
     t.clock.now = new Date('2026-10-27T07:00:00.000Z');
+    const emailsBefore = t.outbox.messages.length;
     await s.schedules.deliverReminders(w.ctx, { localDate: '2026-10-27', ownerUserId: w.userId });
     const listCtx = memberContext({
       workspaceId: w.workspaceId,
@@ -48,9 +64,13 @@ describe('planning jobs (B2.2)', () => {
     const first = await s.notifications.list(listCtx, { limit: 10 });
     expect(first.items).toHaveLength(1);
     expect(first.items[0]).toMatchObject({ kind: 'bill', title: 'Rent due tomorrow', amount: null });
+    const reminders = t.outbox.messages.slice(emailsBefore).filter((m) => m.template === 'bill_reminder');
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0]).toMatchObject({ to: ownerEmail, subject: 'Rent due tomorrow' });
     await s.schedules.deliverReminders(w.ctx, { localDate: '2026-10-27', ownerUserId: w.userId });
     const second = await s.notifications.list(listCtx, { limit: 10 });
     expect(second.items).toHaveLength(1);
+    expect(t.outbox.messages.slice(emailsBefore).filter((m) => m.template === 'bill_reminder')).toHaveLength(1);
   });
 
   it('bill-reminders job creates inbox rows without duplicate stubs', async () => {

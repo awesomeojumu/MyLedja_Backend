@@ -218,6 +218,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   );
   const notifications = new NotificationsService(database, new NotificationsRepository(db), ledger, now);
   const incomeStreamsRepo = new IncomeStreamsRepository(db);
+  const users = new UsersRepository(db);
   const schedules = new SchedulesService(
     database,
     schedulesRepoEarly,
@@ -228,6 +229,8 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     notifications,
     payeesRepo,
     incomeStreamsRepo,
+    mailer,
+    users,
     now,
   );
   const debts = new DebtsService(
@@ -241,15 +244,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
     now,
   );
   const goals = new GoalsService(database, new GoalsRepository(db), goalAllocationsRepo, ledger, audit, now);
-  const income = new IncomeService(
-    database,
-    incomeStreamsRepo,
-    schedules,
-    transactions,
-    ledger,
-    audit,
-    now,
-  );
+  const income = new IncomeService(database, incomeStreamsRepo, schedules, transactions, ledger, audit, now);
   const schedulesRepo = schedulesRepoEarly;
   const occurrencesRepo = new OccurrencesRepository(db);
   const reports = new ReportsService({
@@ -309,7 +304,6 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   const codes = new CodesRepository(db);
   const limits = new RateLimitRepository(db, now);
   const idempotency = new IdempotencyRepository(db);
-  const users = new UsersRepository(db);
   const hasher = new PasswordHasher(o.hasher ?? DEFAULT_HASHER);
   const auth = new AuthService(
     config,
@@ -393,6 +387,7 @@ export function buildServices(config: AppConfig, database: Database, o: ServiceO
   sync.currencies = currencies;
   sync.reports = reports;
   sync.reconcile = reconcile;
+  sync.notifications = notifications;
   const banking = new BankingService(
     config.mono ? new MonoProvider(config.mono) : null,
     config.mono?.webhookSecret ?? null,

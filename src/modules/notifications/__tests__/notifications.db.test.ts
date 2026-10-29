@@ -63,4 +63,27 @@ describe('notifications (B2.8)', () => {
     const page = await t.services.notifications.list(w.ctx, { kind: 'sync', limit: 10 });
     expect(page.items).toHaveLength(1);
   });
+
+  it('puts notification docs on the sync change feed (server→FE)', async () => {
+    const w = await newWorkspace(t);
+    const before = await t.services.sync.pull(w.ctx, { since: '0', limit: 500 });
+    const n = await t.services.notifications.createOnce(w.ctx, {
+      userId: w.ctx.userId!,
+      kind: 'security',
+      title: 'New sign-in on another device',
+      body: 'Was this you?',
+      security: true,
+      dedupeKey: `security:feed:${Date.now()}`,
+      actions: [{ key: 'security_review', label: 'Review', target: { path: '/settings/security' } }],
+    });
+    const after = await t.services.sync.pull(w.ctx, { since: before.nextSince, limit: 500 });
+    const change = after.changes.find((c) => c.collection === 'notifications' && c.id === n._id);
+    expect(change).toMatchObject({ op: 'upsert' });
+    expect(change!.doc).toMatchObject({
+      id: n._id,
+      kind: 'security',
+      security: true,
+      title: 'New sign-in on another device',
+    });
+  });
 });

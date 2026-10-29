@@ -9,6 +9,8 @@ import type { Database } from '../../db/client.js';
 import type { AuditRepository } from '../audit/audit.repository.js';
 import type { LedgerService } from '../ledger/ledger.service.js';
 import type { TransactionsService } from '../transactions/transactions.service.js';
+import type { UsersRepository } from '../auth/auth.repository.js';
+import type { Mailer } from '../notifications/email/email.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { PayeesRepository } from '../categories/categories.repository.js';
 import { scheduleRoutes as scheduleRouteDefs } from './schedules.contract.js';
@@ -59,8 +61,10 @@ const toOccurrence = (d: OccurrenceDoc): z.input<typeof Occurrence> => ({
 
 const reminderCopy = (name: string, occDate: string, daysBefore: string, kind: 'income' | 'bill' = 'bill') => {
   if (kind === 'income') {
-    if (daysBefore === '0') return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate}.` };
-    if (daysBefore === '1') return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected tomorrow (${occDate}).` };
+    if (daysBefore === '0')
+      return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate}.` };
+    if (daysBefore === '1')
+      return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected tomorrow (${occDate}).` };
     return { title: `Has your ${name.toLowerCase()} arrived?`, body: `Expected on ${occDate} (${daysBefore} days).` };
   }
   if (daysBefore === '0') return { title: `${name} due today`, body: `Due on ${occDate}.` };
@@ -79,6 +83,8 @@ export class SchedulesService {
     private readonly notifications: NotificationsService,
     private readonly payees: PayeesRepository,
     private readonly incomeStreams: IncomeStreamsRepository | null = null,
+    private readonly mailer: Mailer | null = null,
+    private readonly users: UsersRepository | null = null,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
@@ -377,9 +383,7 @@ export class SchedulesService {
       if (income || sched.kind === 'income') {
         if (!sched.accountId || !sched.categoryId)
           throw Errors.validation('categoryId', 'Choose an account and category.');
-        const stream = this.incomeStreams
-          ? await this.incomeStreams.findOne(ctx, { scheduleId: sched._id })
-          : null;
+        const stream = this.incomeStreams ? await this.incomeStreams.findOne(ctx, { scheduleId: sched._id }) : null;
         const { grossSplitFromStream } = await import('../income/gross-split.js');
         const split = stream ? grossSplitFromStream(stream) : null;
         const createAmount = parseMinor(amount);
@@ -589,7 +593,7 @@ export class SchedulesService {
             kind === 'income' && this.incomeStreams
               ? await this.incomeStreams.findOne(ctx, { scheduleId: s._id })
               : null;
-          await this.notifications.createOnce(ctx, {
+          const { created } = await this.notifications.createOnceDetailed(ctx, {
             userId: input.ownerUserId,
             kind,
             title: copy.title,
@@ -611,10 +615,19 @@ export class SchedulesService {
                     { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
                   ]
                 : [
-                    { key: 'mark_paid', label: 'Mark paid', target: { path: '/plan', params: { occurrenceId: occ._id } } },
+                    {
+                      key: 'mark_paid',
+                      label: 'Mark paid',
+                      target: { path: '/plan', params: { occurrenceId: occ._id, scheduleId: s._id, date: occ.date } },
+                    },
                     { key: 'remind_tomorrow', label: 'Remind me tomorrow', target: null },
                   ],
           });
+          // B2.8: email the owner once when the inbox row is first created.
+          if (created && this.mailer && this.users) {
+            const user = await this.users.byId(input.ownerUserId);
+            if (user?.email) await this.mailer.billReminder(user.email, copy.title, copy.body);
+          }
         }
       }
     }
