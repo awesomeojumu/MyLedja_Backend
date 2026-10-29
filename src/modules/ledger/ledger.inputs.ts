@@ -180,6 +180,45 @@ export const SalaryGrossInput = z
   })
   .meta({ id: 'SalaryGrossInput', description: 'E24: gross salary with statutory deductions (case 18).' });
 
+/** Whole units as a decimal string (stocks are whole; crypto may use fractions). */
+export const Units = z
+  .string()
+  .regex(/^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/, { error: 'Enter the number of units' })
+  .refine((v) => Number(v) > 0, { error: 'Enter the number of units' });
+
+export const InvestmentBuyInput = z
+  .object({
+    type: z.literal('investment_buy'),
+    holdingAccountId: Uuid.meta({ description: 'The holding asset account (H).' }),
+    cashAccountId: Uuid.meta({ description: 'Money from (cash or bank).' }),
+    units: Units,
+    pricePerUnit: PositiveMinor.meta({ description: 'Price per unit in minor units of the cash currency.' }),
+    fees: z
+      .string({ error: AMOUNT_ERROR })
+      .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
+      .default('0'),
+    holdingId: Uuid.optional(),
+    ...common,
+  })
+  .meta({ id: 'InvestmentBuyInput', description: 'E20: buy at cost; never spending (case 15).' });
+
+export const InvestmentSellInput = z
+  .object({
+    type: z.literal('investment_sell'),
+    holdingAccountId: Uuid,
+    cashAccountId: Uuid,
+    units: Units,
+    pricePerUnit: PositiveMinor,
+    fees: z
+      .string({ error: AMOUNT_ERROR })
+      .regex(/^(0|[1-9]\d{0,17})$/, { error: AMOUNT_ERROR })
+      .default('0'),
+    costOfLots: PositiveMinor.meta({ description: 'Cost basis of the lots sold (FIFO or chosen).' }),
+    holdingId: Uuid.optional(),
+    ...common,
+  })
+  .meta({ id: 'InvestmentSellInput', description: 'E21: sell; only the gain or loss counts as income (case 17).' });
+
 export const EventInput = z
   .discriminatedUnion('type', [
     IncomeInput,
@@ -194,6 +233,8 @@ export const EventInput = z
     CollectInput,
     WriteOffInput,
     SalaryGrossInput,
+    InvestmentBuyInput,
+    InvestmentSellInput,
   ])
   .meta({ id: 'EventInput' });
 

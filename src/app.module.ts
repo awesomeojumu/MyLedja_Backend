@@ -25,6 +25,7 @@ import { ExportsController } from './modules/exports/exports.controller.js';
 import { AiController } from './modules/ai/ai.controller.js';
 import { RulesController } from './modules/rules/rules.controller.js';
 import { BankingController } from './modules/banking/banking.controller.js';
+import { InvestmentsController } from './modules/investments/investments.controller.js';
 
 @Module({})
 export class AppModule {
@@ -57,6 +58,7 @@ export class AppModule {
         AiController,
         RulesController,
         BankingController,
+        InvestmentsController,
       ],
       providers: [
         { provide: SERVICES, useValue: services },

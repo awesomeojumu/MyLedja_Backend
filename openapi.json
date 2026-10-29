@@ -2710,6 +2710,12 @@
           },
           {
             "$ref": "#/components/schemas/SalaryGrossInput"
+          },
+          {
+            "$ref": "#/components/schemas/InvestmentBuyInput"
+          },
+          {
+            "$ref": "#/components/schemas/InvestmentSellInput"
           }
         ]
       },
@@ -3211,6 +3217,179 @@
         "required": [
           "status",
           "env"
+        ],
+        "additionalProperties": false
+      },
+      "Holding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "stock",
+              "fund",
+              "pension",
+              "crypto",
+              "fixed_deposit",
+              "other"
+            ]
+          },
+          "accountId": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "ledgerAccountId": {
+            "type": "string"
+          },
+          "units": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "value": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "type",
+          "accountId",
+          "currency",
+          "ledgerAccountId",
+          "units",
+          "cost",
+          "price",
+          "value",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "HoldingList": {
+        "type": "object",
+        "properties": {
+          "holdings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Holding"
+            }
+          }
+        },
+        "required": [
+          "holdings"
+        ],
+        "additionalProperties": false
+      },
+      "HoldingLot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "holdingId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "units": {
+            "type": "string"
+          },
+          "soldUnits": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "pricePerUnit": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          },
+          "fees": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          }
+        },
+        "required": [
+          "id",
+          "holdingId",
+          "date",
+          "units",
+          "soldUnits",
+          "cost",
+          "pricePerUnit",
+          "fees"
+        ],
+        "additionalProperties": false
+      },
+      "HoldingPrice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "holdingId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "price": {
+            "type": "string",
+            "pattern": "^-?(0|[1-9]\\d{0,17})$",
+            "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+          }
+        },
+        "required": [
+          "id",
+          "holdingId",
+          "date",
+          "price"
         ],
         "additionalProperties": false
       },
@@ -4025,6 +4204,182 @@
           "version"
         ],
         "additionalProperties": false
+      },
+      "InvestmentBuyInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "investment_buy"
+          },
+          "holdingAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "The holding asset account (H)."
+          },
+          "cashAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "description": "Money from (cash or bank)."
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$"
+          },
+          "pricePerUnit": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Price per unit in minor units of the cash currency."
+          },
+          "fees": {
+            "default": "0",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,17})$"
+          },
+          "holdingId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "holdingAccountId",
+          "cashAccountId",
+          "units",
+          "pricePerUnit",
+          "date"
+        ],
+        "description": "E20: buy at cost; never spending (case 15)."
+      },
+      "InvestmentSellInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "investment_sell"
+          },
+          "holdingAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "cashAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "units": {
+            "type": "string",
+            "pattern": "^(?:0|[1-9]\\d*)(?:\\.\\d{1,8})?$"
+          },
+          "pricePerUnit": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Whole minor units (kobo) above zero, as a string: \"1845000\" is ₦18,450.00."
+          },
+          "fees": {
+            "default": "0",
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d{0,17})$"
+          },
+          "costOfLots": {
+            "type": "string",
+            "pattern": "^[1-9]\\d{0,17}$",
+            "description": "Cost basis of the lots sold (FIFO or chosen)."
+          },
+          "holdingId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "YYYY-MM-DD in the workspace time zone."
+          },
+          "payeeId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tagIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "holdingAccountId",
+          "cashAccountId",
+          "units",
+          "pricePerUnit",
+          "costOfLots",
+          "date"
+        ],
+        "description": "E21: sell; only the gain or loss counts as income (case 17)."
       },
       "LendBody": {
         "type": "object",
@@ -6079,7 +6434,11 @@
                   "enum": [
                     "setCategory",
                     "renamePayee",
-                    "addNote"
+                    "addNote",
+                    "addTag",
+                    "split",
+                    "linkSchedule",
+                    "moneyBack"
                   ]
                 },
                 "value": {
@@ -6880,6 +7239,8 @@
               "collect",
               "write_off",
               "salary_gross",
+              "investment_buy",
+              "investment_sell",
               "reversal"
             ]
           },
@@ -16316,6 +16677,251 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/exchange-rates": {
+      "get": {
+        "operationId": "listExchangeRates",
+        "tags": [
+          "Exchange rates"
+        ],
+        "summary": "Hand-entered exchange rates",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                            "description": "YYYY-MM-DD in the workspace time zone."
+                          },
+                          "rate": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "manual",
+                              "download"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "currency",
+                          "date",
+                          "rate",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "rates"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "saveExchangeRate",
+        "tags": [
+          "Exchange rates"
+        ],
+        "summary": "Save a rate for a currency and date (case 25)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                    "description": "YYYY-MM-DD in the workspace time zone."
+                  },
+                  "rate": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d{1,10})?$"
+                  },
+                  "source": {
+                    "default": "manual",
+                    "type": "string",
+                    "enum": [
+                      "manual",
+                      "download"
+                    ]
+                  }
+                },
+                "required": [
+                  "currency",
+                  "date",
+                  "rate"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                      "description": "YYYY-MM-DD in the workspace time zone."
+                    },
+                    "rate": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "currency",
+                    "date",
+                    "rate",
+                    "source"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/exports/transactions": {
       "post": {
         "operationId": "exportTransactionsCsv",
@@ -18629,6 +19235,935 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/investments/buy": {
+      "post": {
+        "operationId": "buyHolding",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "E20 buy at cost",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holdingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "units": {
+                    "type": "string"
+                  },
+                  "pricePerUnit": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "fees": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "cashAccountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                    "description": "YYYY-MM-DD in the workspace time zone."
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "holdingId",
+                  "units",
+                  "pricePerUnit",
+                  "cashAccountId",
+                  "date"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactionId": {
+                      "type": "string"
+                    },
+                    "lotId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "transactionId",
+                    "lotId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/dividend": {
+      "post": {
+        "operationId": "recordDividend",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "E22 dividend or reinvested dividend",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holdingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "amount": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                    "description": "YYYY-MM-DD in the workspace time zone."
+                  },
+                  "cashAccountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "reinvested": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "units": {
+                    "type": "string"
+                  },
+                  "pricePerUnit": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "holdingId",
+                  "amount",
+                  "date",
+                  "cashAccountId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactionId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "transactionId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/holdings": {
+      "get": {
+        "operationId": "listHoldings",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Holdings in the workspace",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldingList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createHolding",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Add a holding (no money moves)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "symbol": {
+                    "type": "string",
+                    "maxLength": 20
+                  },
+                  "type": {
+                    "default": "stock",
+                    "type": "string",
+                    "enum": [
+                      "stock",
+                      "fund",
+                      "pension",
+                      "crypto",
+                      "fixed_deposit",
+                      "other"
+                    ]
+                  },
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  },
+                  "currentPrice": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  }
+                },
+                "required": [
+                  "name",
+                  "accountId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Holding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/holdings/{holdingId}/lots": {
+      "get": {
+        "operationId": "listLots",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Lots for a holding (FIFO order)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "holdingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lots": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HoldingLot"
+                      }
+                    }
+                  },
+                  "required": [
+                    "lots"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/holdings/{holdingId}/prices": {
+      "get": {
+        "operationId": "listPrices",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Price history for a holding",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "viewer",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "holdingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HoldingPrice"
+                      }
+                    }
+                  },
+                  "required": [
+                    "prices"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/prices": {
+      "post": {
+        "operationId": "savePrices",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "Update holding prices (not income)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                    "description": "YYYY-MM-DD in the workspace time zone."
+                  },
+                  "prices": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "holdingId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "price": {
+                          "type": "string",
+                          "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                          "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                        }
+                      },
+                      "required": [
+                        "holdingId",
+                        "price"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "date",
+                  "prices"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "saved": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "saved"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{workspaceId}/investments/sell": {
+      "post": {
+        "operationId": "sellHolding",
+        "tags": [
+          "Investments"
+        ],
+        "summary": "E21 sell (FIFO or chosen lots)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "holdingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "units": {
+                    "type": "string"
+                  },
+                  "pricePerUnit": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "fees": {
+                    "type": "string",
+                    "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                    "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                  },
+                  "cashAccountId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                    "description": "YYYY-MM-DD in the workspace time zone."
+                  },
+                  "lotIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "operationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "holdingId",
+                  "units",
+                  "pricePerUnit",
+                  "cashAccountId",
+                  "date"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactionId": {
+                      "type": "string"
+                    },
+                    "gain": {
+                      "type": "string",
+                      "pattern": "^-?(0|[1-9]\\d{0,17})$",
+                      "description": "Whole minor units (kobo) as a string, for example \"1845000\" for ₦18,450.00."
+                    }
+                  },
+                  "required": [
+                    "transactionId",
+                    "gain"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/notifications": {
       "get": {
         "operationId": "listNotifications",
@@ -20656,6 +22191,326 @@
         }
       }
     },
+    "/v1/workspaces/{workspaceId}/rules/{ruleId}": {
+      "put": {
+        "operationId": "upsertRule",
+        "tags": [
+          "Rules"
+        ],
+        "summary": "Create or replace a rule (device id)",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "ruleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "stage": {
+                    "type": "string",
+                    "enum": [
+                      "first",
+                      "normal",
+                      "last"
+                    ]
+                  },
+                  "order": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "matchMode": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "any"
+                    ]
+                  },
+                  "conditions": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "field": {
+                          "type": "string",
+                          "enum": [
+                            "payee",
+                            "description",
+                            "amount",
+                            "account",
+                            "category",
+                            "notes",
+                            "date"
+                          ]
+                        },
+                        "op": {
+                          "type": "string",
+                          "enum": [
+                            "contains",
+                            "equals",
+                            "lessThan",
+                            "greaterThan",
+                            "before",
+                            "after"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "field",
+                        "op",
+                        "value"
+                      ]
+                    }
+                  },
+                  "actions": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "setCategory",
+                            "renamePayee",
+                            "addNote",
+                            "addTag",
+                            "split",
+                            "linkSchedule",
+                            "moneyBack"
+                          ]
+                        },
+                        "value": {
+                          "type": "string",
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    }
+                  },
+                  "matchedCount": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "lastUsedAt": {
+                    "type": "string"
+                  },
+                  "baseVersion": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "The `version` the change started from."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "enabled",
+                  "stage",
+                  "order",
+                  "matchMode",
+                  "conditions",
+                  "actions"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Rule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The input was refused; `field` names the field and `message` can be shown beside it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRule",
+        "tags": [
+          "Rules"
+        ],
+        "summary": "Delete a rule",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-min-role": "editor",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "ruleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "X-Operation-Id",
+            "in": "header",
+            "required": true,
+            "description": "A UUID made on the device. Retries reuse it, and the server runs the change once.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in, or the details are wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found, or not in a workspace you belong to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workspaces/{workspaceId}/schedules": {
       "get": {
         "operationId": "listSchedules",
@@ -22295,6 +24150,8 @@
                   "collect",
                   "write_off",
                   "salary_gross",
+                  "investment_buy",
+                  "investment_sell",
                   "reversal"
                 ]
               }

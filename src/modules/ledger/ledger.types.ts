@@ -20,7 +20,7 @@ export const SYSTEM_ACCOUNTS = {
 export type SystemKey = keyof typeof SYSTEM_ACCOUNTS;
 export const SYSTEM_KEYS = Object.keys(SYSTEM_ACCOUNTS) as SystemKey[];
 
-/** Phase 1 event types (E1 to E12 and E25). Phase 2 adds E13–E17 and E24. */
+/** Phase 1–5 event types (E1–E25). Phase 5 adds investment_buy / investment_sell. */
 export const EVENT_TYPES = [
   'income',
   'expense',
@@ -34,6 +34,8 @@ export const EVENT_TYPES = [
   'collect',
   'write_off',
   'salary_gross',
+  'investment_buy',
+  'investment_sell',
   'reversal',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
