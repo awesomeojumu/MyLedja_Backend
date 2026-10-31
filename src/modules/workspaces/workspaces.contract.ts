@@ -35,6 +35,11 @@ const SetupAccount = z.object({
     description: 'Whole kobo. For a card or loan, what you owe, as a positive figure.',
   }),
   openingDate: LocalDate,
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/)
+    .optional()
+    .meta({ description: "This account's currency. Defaults to the workspace currency." }),
 });
 
 const SetupCategory = z.object({
@@ -49,7 +54,7 @@ export const SetupBody = z.object({
     .trim()
     .min(1, { error: 'Add a name' })
     .max(60, { error: 'Use 60 characters or fewer' }),
-  currency: z.literal('NGN', { error: 'Choose naira' }),
+  currency: z.string().regex(/^[A-Z]{3}$/, { error: 'Choose a currency' }),
   weekStart: z.enum(WEEK_STARTS, { error: 'Choose the first day of your week' }),
   accounts: z.array(SetupAccount).max(50),
   categories: z.array(SetupCategory).max(200),
