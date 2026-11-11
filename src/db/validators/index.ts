@@ -424,7 +424,27 @@ export async function installValidators(db: Db): Promise<void> {
   const existing = new Set((await db.listCollections({}, { nameOnly: true }).toArray()).map((c) => c.name));
   for (const [name, schema] of Object.entries(VALIDATORS)) {
     const options = { validator: { $jsonSchema: schema }, validationAction: 'error', validationLevel: 'strict' };
-    if (existing.has(name)) await db.command({ collMod: name, ...options });
-    else await db.createCollection(name, options);
+    if (existing.has(name)) {
+      try {
+        await db.command({ collMod: name, ...options });
+      } catch (err: unknown) {
+        const error = err as { code?: number; message?: string };
+        if (error?.code === 8000 || error?.code === 13 || String(error?.message).includes('collMod')) {
+          continue;
+        }
+        throw err;
+      }
+    } else {
+      try {
+        await db.createCollection(name, options);
+      } catch (err: unknown) {
+        const error = err as { code?: number; message?: string };
+        if (error?.code === 8000 || error?.code === 13 || String(error?.message).includes('collMod')) {
+          await db.createCollection(name).catch(() => {});
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 }

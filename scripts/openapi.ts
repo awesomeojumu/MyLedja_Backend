@@ -16,7 +16,7 @@ if (process.argv.includes('--check')) {
   } catch {
     // missing file is reported below
   }
-  if (committed !== text) {
+  if (committed.replace(/\r\n/g, '\n') !== text.replace(/\r\n/g, '\n')) {
     console.error('openapi:check: openapi.json is out of date. Run npm run openapi and commit it.');
     process.exit(1);
   }
