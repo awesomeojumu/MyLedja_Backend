@@ -142,8 +142,7 @@ export class SyncService {
     if (since <= 0n) return false;
     const oldest = await this.changes.oldest(ctx);
     if (!oldest) {
-      const current = await this.counters.current(ctx);
-      return current > since;
+      return true;
     }
     // Gap in the feed: tombstones/changes before `oldest.seq` are gone.
     if (since + 1n < oldest.seq) return true;
