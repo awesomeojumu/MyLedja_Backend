@@ -5,7 +5,18 @@ import { PositiveMinor } from '../ledger/ledger.inputs.js';
 import { WorkspaceParams } from '../workspaces/workspaces.contract.js';
 
 /** DESIGN.md page 17, Add / edit holding. */
-export const HOLDING_TYPES = ['stock', 'fund', 'pension', 'crypto', 'fixed_deposit', 'other'] as const;
+export const HOLDING_TYPES = [
+  'stock',
+  'fund',
+  'pension',
+  'crypto',
+  'fixed_deposit',
+  'land',
+  'real_estate',
+  'precious_metals',
+  'private_equity',
+  'other',
+] as const;
 export const HoldingType = z.enum(HOLDING_TYPES);
 
 /** Investment, pension, fixed deposit and other asset accounts can hold holdings. */
