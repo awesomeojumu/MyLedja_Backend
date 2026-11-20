@@ -1,5 +1,6 @@
 import type { Db } from 'mongodb';
 import { BaseRepository } from '../../common/repository/base.repository.js';
+import type { HOLDING_TYPES } from './investments.contract.js';
 
 export type HoldingDoc = {
   /** Also the id of the holding's ledger account. */
@@ -7,7 +8,7 @@ export type HoldingDoc = {
   workspaceId: string;
   name: string;
   symbol: string | null;
-  type: 'stock' | 'fund' | 'pension' | 'crypto' | 'fixed_deposit' | 'other';
+  type: (typeof HOLDING_TYPES)[number];
   accountId: string;
   currency: string;
   archivedAt: Date | null;
