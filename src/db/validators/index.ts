@@ -1,4 +1,5 @@
 import type { Db, Document } from 'mongodb';
+import { HOLDING_TYPES } from '../../modules/investments/investments.contract.js';
 
 const str = { bsonType: 'string' };
 const date = { bsonType: 'date' };
@@ -132,6 +133,7 @@ export const VALIDATORS: Record<string, Document> = {
     accountType: nullable(str),
     institution: nullable(str),
     last4: { bsonType: ['string', 'null'], pattern: '^\\d{4}$' },
+    purpose: { enum: ['income', 'operating', 'bills', 'emergency', 'savings', 'investment', 'project', null] },
     onBudget: { bsonType: 'bool' },
     archivedAt: nullable(date),
     sortOrder: int,
@@ -142,7 +144,7 @@ export const VALIDATORS: Record<string, Document> = {
   holdings: record(['name', 'type', 'accountId', 'currency', 'archivedAt'], {
     name: str,
     symbol: nullable(str),
-    type: { enum: ['stock', 'fund', 'pension', 'crypto', 'fixed_deposit', 'other'] },
+    type: { enum: [...HOLDING_TYPES] },
     accountId: uuid,
     currency: currency,
     archivedAt: nullable(date),

@@ -3,10 +3,21 @@ import { ROLES } from '../../common/auth/roles.js';
 import { defineRoute } from '../../common/http/contract.js';
 import { LocalDate, MinorAmount, Uuid } from '../../common/http/schemas.js';
 import { User } from '../auth/auth.contract.js';
+import { ACCOUNT_PURPOSES } from '../ledger/ledger.repository.js';
 
 export const BUDGET_STYLES = ['tracking', 'envelope'] as const;
 export const WEEK_STARTS = ['monday', 'sunday', 'saturday'] as const;
-export const SETUP_ACCOUNT_TYPES = ['bank', 'cash', 'wallet', 'card', 'savings', 'investment', 'loan'] as const;
+export const SETUP_ACCOUNT_TYPES = [
+  'bank',
+  'cash',
+  'wallet',
+  'card',
+  'savings',
+  'fixed_deposit',
+  'investment',
+  'pension',
+  'loan',
+] as const;
 
 export const WorkspaceParams = z.object({ workspaceId: Uuid });
 
@@ -40,6 +51,11 @@ const SetupAccount = z.object({
     .regex(/^[A-Z]{3}$/)
     .optional()
     .meta({ description: "This account's currency. Defaults to the workspace currency." }),
+  purpose: z
+    .enum(ACCOUNT_PURPOSES)
+    .nullable()
+    .optional()
+    .meta({ description: 'What the account is for (income, operating, bills, emergency, savings, investment, project).' }),
 });
 
 const SetupCategory = z.object({

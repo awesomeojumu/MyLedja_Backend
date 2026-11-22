@@ -291,6 +291,14 @@ const m0016: Migration = {
   },
 };
 
+/** Account purpose, and the land / real estate / precious metals / private equity holding types. */
+const m0017: Migration = {
+  name: '0017-account-purpose-and-holding-types',
+  async up(db) {
+    await installValidators(db);
+  },
+};
+
 export const MIGRATIONS: Migration[] = [
   m0001,
   m0002,
@@ -308,6 +316,7 @@ export const MIGRATIONS: Migration[] = [
   m0014,
   m0015,
   m0016,
+  m0017,
 ];
 
 /** Runs every migration not yet recorded in `migrations`, in order. Safe to run twice. */

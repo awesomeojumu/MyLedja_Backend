@@ -78,6 +78,26 @@
               "null"
             ]
           },
+          "purpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "income",
+                  "operating",
+                  "bills",
+                  "emergency",
+                  "savings",
+                  "investment",
+                  "project"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the account is for (income, operating, bills, emergency, savings, investment, project)."
+          },
           "currency": {
             "type": "string"
           },
@@ -152,6 +172,7 @@
           "name",
           "institution",
           "last4",
+          "purpose",
           "currency",
           "onBudget",
           "archived",
@@ -2060,6 +2081,10 @@
               "pension",
               "crypto",
               "fixed_deposit",
+              "land",
+              "real_estate",
+              "precious_metals",
+              "private_equity",
               "other"
             ]
           },
@@ -4560,6 +4585,10 @@
               "pension",
               "crypto",
               "fixed_deposit",
+              "land",
+              "real_estate",
+              "precious_metals",
+              "private_equity",
               "other"
             ]
           },
@@ -7391,6 +7420,10 @@
                     "pension",
                     "crypto",
                     "fixed_deposit",
+                    "land",
+                    "real_estate",
+                    "precious_metals",
+                    "private_equity",
                     "other"
                   ]
                 },
@@ -10975,6 +11008,10 @@
               "pension",
               "crypto",
               "fixed_deposit",
+              "land",
+              "real_estate",
+              "precious_metals",
+              "private_equity",
               "other"
             ]
           }
@@ -14390,6 +14427,26 @@
                     ],
                     "description": "Optional. MyLedja never stores a full account number."
                   },
+                  "purpose": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "income",
+                          "operating",
+                          "bills",
+                          "emergency",
+                          "savings",
+                          "investment",
+                          "project"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Optional. What the account is for; drives the Accounts page groups and goal suggestions."
+                  },
                   "currency": {
                     "description": "Defaults to the workspace's.",
                     "type": "string",
@@ -14645,6 +14702,26 @@
                       }
                     ],
                     "description": "Optional. MyLedja never stores a full account number."
+                  },
+                  "purpose": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "income",
+                          "operating",
+                          "bills",
+                          "emergency",
+                          "savings",
+                          "investment",
+                          "project"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Optional. What the account is for; drives the Accounts page groups and goal suggestions."
                   },
                   "onBudget": {
                     "type": "boolean"
@@ -27999,7 +28076,9 @@
                             "wallet",
                             "card",
                             "savings",
+                            "fixed_deposit",
                             "investment",
+                            "pension",
                             "loan"
                           ]
                         },
@@ -28017,6 +28096,26 @@
                           "description": "This account's currency. Defaults to the workspace currency.",
                           "type": "string",
                           "pattern": "^[A-Z]{3}$"
+                        },
+                        "purpose": {
+                          "description": "What the account is for (income, operating, bills, emergency, savings, investment, project).",
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "income",
+                                "operating",
+                                "bills",
+                                "emergency",
+                                "savings",
+                                "investment",
+                                "project"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [

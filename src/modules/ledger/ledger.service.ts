@@ -150,6 +150,7 @@ export class LedgerService {
       currency: string;
       institution?: string | null;
       last4?: string | null;
+      purpose?: LedgerAccountDoc['purpose'];
       onBudget?: boolean;
       sortOrder?: number;
       operationId?: string | null;
@@ -164,6 +165,7 @@ export class LedgerService {
       accountType: a.accountType,
       institution: a.institution ?? null,
       last4: a.last4 ?? null,
+      ...(a.purpose ? { purpose: a.purpose } : {}),
       onBudget: a.onBudget ?? true,
       sortOrder: a.sortOrder ?? 0,
       operationId: a.operationId ?? null,

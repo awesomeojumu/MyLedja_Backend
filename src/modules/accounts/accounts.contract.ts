@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineRoute } from '../../common/http/contract.js';
 import { BaseVersion, LocalDate, MinorAmount, Uuid } from '../../common/http/schemas.js';
-import { ACCOUNT_TYPES } from '../ledger/ledger.repository.js';
+import { ACCOUNT_PURPOSES, ACCOUNT_TYPES } from '../ledger/ledger.repository.js';
 import { WorkspaceParams } from '../workspaces/workspaces.contract.js';
 
 export const ACCOUNT_GROUPS = ['cash_bank', 'cards_credit', 'investments', 'property', 'loans', 'other'] as const;
@@ -17,6 +17,10 @@ export const Account = z
     name: z.string(),
     institution: z.string().nullable().meta({ description: 'An Institution id from GET /v1/institutions.' }),
     last4: z.string().nullable(),
+    purpose: z
+      .enum(ACCOUNT_PURPOSES)
+      .nullable()
+      .meta({ description: 'What the account is for (income, operating, bills, emergency, savings, investment, project).' }),
     currency: z.string(),
     onBudget: z.boolean().meta({ description: '"Count in budget". Off shows the "Tracking" tag.' }),
     archived: z.boolean(),
@@ -49,6 +53,11 @@ export const NetWorth = z
 
 export const AccountList = z.object({ accounts: z.array(Account), netWorth: NetWorth }).meta({ id: 'AccountList' });
 
+export const Purpose = z
+  .enum(ACCOUNT_PURPOSES)
+  .nullable()
+  .meta({ description: 'Optional. What the account is for; drives the Accounts page groups and goal suggestions.' });
+
 const Last4 = z
   .string()
   .regex(/^\d{4}$/, { error: 'Enter only the last 4 digits' })
@@ -61,6 +70,7 @@ export const CreateAccountBody = z.object({
   name: z.string().trim().min(1, { error: 'Add a name for this account' }).max(100),
   institution: z.string().max(60).nullable().optional(),
   last4: Last4.optional(),
+  purpose: Purpose.optional(),
   currency: z
     .string()
     .regex(/^[A-Z]{3}$/)
@@ -78,6 +88,7 @@ export const UpdateAccountBody = z.object({
   name: z.string().trim().min(1, { error: 'Add a name for this account' }).max(100).optional(),
   institution: z.string().max(60).nullable().optional(),
   last4: Last4.optional(),
+  purpose: Purpose.optional(),
   onBudget: z.boolean().optional(),
 });
 

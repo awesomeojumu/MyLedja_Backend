@@ -24,6 +24,10 @@ export const ACCOUNT_TYPES = [
 ] as const;
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
 
+/** What a person uses an account for (Accounts page groups, goals). Independent of the ledger type. */
+export const ACCOUNT_PURPOSES = ['income', 'operating', 'bills', 'emergency', 'savings', 'investment', 'project'] as const;
+export type AccountPurpose = (typeof ACCOUNT_PURPOSES)[number];
+
 export type LedgerAccountDoc = {
   _id: string;
   workspaceId: string;
@@ -38,6 +42,8 @@ export type LedgerAccountDoc = {
   accountType: AccountType | null;
   institution: string | null;
   last4: string | null;
+  /** Set on real accounts only; null when the person never chose one. */
+  purpose?: AccountPurpose | null;
   onBudget: boolean;
   archivedAt: Date | null;
   sortOrder: number;
