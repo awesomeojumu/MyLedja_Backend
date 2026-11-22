@@ -51,11 +51,9 @@ const SetupAccount = z.object({
     .regex(/^[A-Z]{3}$/)
     .optional()
     .meta({ description: "This account's currency. Defaults to the workspace currency." }),
-  purpose: z
-    .enum(ACCOUNT_PURPOSES)
-    .nullable()
-    .optional()
-    .meta({ description: 'What the account is for (income, operating, bills, emergency, savings, investment, project).' }),
+  purpose: z.enum(ACCOUNT_PURPOSES).nullable().optional().meta({
+    description: 'What the account is for (income, operating, bills, emergency, savings, investment, project).',
+  }),
 });
 
 const SetupCategory = z.object({

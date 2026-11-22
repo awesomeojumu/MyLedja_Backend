@@ -17,10 +17,9 @@ export const Account = z
     name: z.string(),
     institution: z.string().nullable().meta({ description: 'An Institution id from GET /v1/institutions.' }),
     last4: z.string().nullable(),
-    purpose: z
-      .enum(ACCOUNT_PURPOSES)
-      .nullable()
-      .meta({ description: 'What the account is for (income, operating, bills, emergency, savings, investment, project).' }),
+    purpose: z.enum(ACCOUNT_PURPOSES).nullable().meta({
+      description: 'What the account is for (income, operating, bills, emergency, savings, investment, project).',
+    }),
     currency: z.string(),
     onBudget: z.boolean().meta({ description: '"Count in budget". Off shows the "Tracking" tag.' }),
     archived: z.boolean(),
