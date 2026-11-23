@@ -28127,7 +28127,7 @@
                     }
                   },
                   "categories": {
-                    "maxItems": 200,
+                    "maxItems": 500,
                     "type": "array",
                     "items": {
                       "type": "object",

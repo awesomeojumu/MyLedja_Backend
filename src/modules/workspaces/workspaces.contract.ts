@@ -71,7 +71,8 @@ export const SetupBody = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/, { error: 'Choose a currency' }),
   weekStart: z.enum(WEEK_STARTS, { error: 'Choose the first day of your week' }),
   accounts: z.array(SetupAccount).max(50),
-  categories: z.array(SetupCategory).max(200),
+  // Each catalogue category and its subcategories (up to about 230 with income).
+  categories: z.array(SetupCategory).max(500),
   budgetStyle: z.enum(BUDGET_STYLES, { error: 'Choose a budget style' }),
   monthlyTakeHome: MinorAmount.nullable(),
   skippedSteps: z
